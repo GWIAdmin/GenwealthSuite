@@ -25,9 +25,10 @@ howManyBlind  = sheet["B12"].value
 
 HSA = sheet["B13"].value
 businesses = sheet["B14"].value
-children/Dependents = sheet["B15"].value
+# children/Dependents = sheet["B15"].value
 ownsHome = sheet["B16"].value
-_401K/IRA = sheet["B17"].value
+# _401K/IRA = sheet["B17"].value
+# Issue here is the '/' sign^^^
 
 date = sheet["B19"].value
 
