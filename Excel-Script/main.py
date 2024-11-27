@@ -21,14 +21,13 @@ def calculate_se_tax(schedule_c_income, w2_income, year, partnership_income=0, c
     medicare_tax = adjusted_income * MEDICARE_RATE
     
     ss_wage_base = MAX_SS_WAGE_BASE[year]
-    social_security_tax = adjusted_income * SOCIAL_SECURITY_RATE
+    social_security_tax = min(adjusted_income, ss_wage_base) * SOCIAL_SECURITY_RATE
     
+    w2_ss_tax = min(w2_income, ss_wage_base) * SOCIAL_SECURITY_RATE
+    w2_medicare_tax = w2_income * MEDICARE_RATE
     
-    w2_ss_tax = min(w2_income, ss_wage_base) * SOCIAL_SECURITY_RATE  
-    w2_medicare_tax = w2_income * MEDICARE_RATE  
-
     social_security_tax = max(social_security_tax - w2_ss_tax, 0)
-    medicare_tax = max(medicare_tax - w2_medicare_tax, 0) 
+    medicare_tax = max(medicare_tax - w2_medicare_tax, 0)
 
     total_se_tax = medicare_tax + social_security_tax
     
@@ -43,9 +42,9 @@ def calculate_se_tax(schedule_c_income, w2_income, year, partnership_income=0, c
 
 client_partnership_income = 0
 client_schedule_c_income = 1000000 + client_partnership_income
-client_w2_income = 50000  
-client_c_corp_income = 0  
-year = 2023  
+client_w2_income = 50000
+client_c_corp_income = 0
+year = 2023
 filing_status = 'married_jointly'
 
 se_tax_details = calculate_se_tax(
@@ -57,13 +56,11 @@ se_tax_details = calculate_se_tax(
     filing_status=filing_status
 )
 
-print(f"")
 print(f"---------------------------------------") 
-print(f"Adjusted Income: ${se_tax_details['adjusted_income']}")
-print(f"Medicare Tax: ${se_tax_details['medicare_tax']}")
-print(f"Social Security Tax: ${se_tax_details['social_security_tax']}")
-print(f"W-2 Social Security Tax: ${se_tax_details['w2_ss_tax']}")
-print(f"W-2 Medicare Tax: ${se_tax_details['w2_medicare_tax']}")
-print(f"Total Self-Employment Tax: ${se_tax_details['total_se_tax']}")
+print(f"Adjusted Income: ${se_tax_details['adjusted_income']:,.2f}")
+print(f"Medicare Tax: ${se_tax_details['medicare_tax']:,.2f}")
+print(f"Social Security Tax: ${se_tax_details['social_security_tax']:,.2f}")
+print(f"W-2 Social Security Tax: ${se_tax_details['w2_ss_tax']:,.2f}")
+print(f"W-2 Medicare Tax: ${se_tax_details['w2_medicare_tax']:,.2f}")
+print(f"Total Self-Employment Tax: ${se_tax_details['total_se_tax']:,.2f}")
 print(f"---------------------------------------")
-print(f"")
