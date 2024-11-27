@@ -55,9 +55,9 @@ se_tax_details = calculate_se_tax(
 
 print(f"")
 print(f"---------------------------------------")
-print(f"Adjusted Income: {se_tax_details['adjusted_income']}")
-print(f"Medicare Tax: {se_tax_details['medicare_tax']}")
-print(f"Social Security Tax: {se_tax_details['social_security_tax']}")
-print(f"Total Self-Employment Tax: {se_tax_details['total_se_tax']}")
+print(f"Adjusted Income: ${se_tax_details['adjusted_income']}")
+print(f"Medicare Tax: ${se_tax_details['medicare_tax']}")
+print(f"Social Security Tax: ${se_tax_details['social_security_tax']}")
+print(f"Total Self-Employment Tax: ${se_tax_details['total_se_tax']}")
 print(f"---------------------------------------")
 print(f"")
