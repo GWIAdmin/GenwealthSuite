@@ -7,7 +7,6 @@ workbook = load_workbook(file_path)
 sheet = workbook.active
 
 # Extraction of Data
-#  = sheet[""].value
 year = sheet["B2"].value
 state = sheet["B3"].value
 residentInState = sheet["B4"]
