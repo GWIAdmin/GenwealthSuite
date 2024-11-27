@@ -1,4 +1,5 @@
 # Author: Asim Sheikh (Software Enigneer @ Genwealth 360 Inc.)
+
 import pandas as pd
 from openpyxl import load_workbook
 
@@ -38,8 +39,8 @@ def calculate_se_tax(schedule_c_income, year, partnership_income=0, c_corp_incom
     }
 
 
-client_partnership_income = 0
-client_schedule_c_income = 1000000  + client_partnership_income
+client_partnership_income = 50000
+client_schedule_c_income = 100000  + client_partnership_income
 
 client_c_corp_income = 0  
 year = 2023  
