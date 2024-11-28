@@ -8,7 +8,7 @@ from openpyxl import load_workbook
 # workbook = load_workbook(file_path)
 # sheet = workbook.active
 
-def calculate_se_tax(schedule_c_income, w2_income, year, partnership_income=0, c_corp_income=0, filing_status='single'):
+def calculate_se_tax(schedule_c_income, w2_income, year, partnership_income=0, filing_status='single'):
     SS_WAGE_BASE_2022 = 147000
     SS_WAGE_BASE_2023 = 160200
     SS_WAGE_BASE_2024 = 168600
@@ -43,7 +43,6 @@ def calculate_se_tax(schedule_c_income, w2_income, year, partnership_income=0, c
 client_partnership_income = 0
 client_schedule_c_income = 1000000 + client_partnership_income
 client_w2_income = 50000
-client_c_corp_income = 0
 year = 2023
 filing_status = 'married_jointly'
 
@@ -52,7 +51,6 @@ se_tax_details = calculate_se_tax(
     client_w2_income,
     year,
     partnership_income=client_partnership_income,
-    c_corp_income=client_c_corp_income,
     filing_status=filing_status
 )
 
