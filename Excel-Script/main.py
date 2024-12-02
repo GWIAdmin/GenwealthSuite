@@ -5,6 +5,7 @@ from openpyxl import load_workbook
 
 # To Load in Excel Sheet
 # file_path = "template.xlsx"
+# file_path = "20241018 Master Template V 8.6.xlsx"
 # workbook = load_workbook(file_path)
 # sheet = workbook.active
 
@@ -12,7 +13,6 @@ def calculate_se_tax(schedule_c_income, w2_income, year, partnership_income, fil
     SS_WAGE_BASE = {2022: 147000, 2023: 160200, 2024: 168600}[year]
     SOCIAL_SECURITY_RATE = 0.124  # 12.4% total 
     MEDICARE_RATE = 0.029         # 2.9% total
-    ADDITIONAL_MEDICARE_RATE = 0.009  # 0.9%
     SE_INCOME_FACTOR = 0.9235     # Adjustment factor for self-employment income
 
     # Adjust incomes
@@ -36,27 +36,25 @@ def calculate_se_tax(schedule_c_income, w2_income, year, partnership_income, fil
         additional_medicare_income = total_medicare_wages - 200000
     elif filing_status == 'married_jointly' and total_medicare_wages > 250000:
         additional_medicare_income = total_medicare_wages - 250000
-    additional_medicare_tax = additional_medicare_income * ADDITIONAL_MEDICARE_RATE
 
     # Total Self-Employment Tax
-    total_se_tax = social_security_tax_se + medicare_tax_se + additional_medicare_tax
+    total_se_tax = social_security_tax_se + medicare_tax_se
 
     return {
         'adjusted_schedule_c_income': adjusted_schedule_c_income,
         'adjusted_partnership_income': adjusted_partnership_income,
         'social_security_tax_se': social_security_tax_se,
         'medicare_tax_se': medicare_tax_se,
-        'additional_medicare_tax': additional_medicare_tax,
         'total_se_tax': total_se_tax,
         'total_adjusted_se_income': total_adjusted_se_income
     }
 
 # Test Case:
-client_partnership_income = 200000
-client_schedule_c_income = 150000 
-client_w2_income = 250000
-year = 2023
-filing_status = 'single'
+client_partnership_income = 0
+client_schedule_c_income = 1000000
+client_w2_income = 0
+year = 2024
+filing_status = 'married_jointly'
 
 se_tax_details = calculate_se_tax(
     client_schedule_c_income,
@@ -71,6 +69,5 @@ print(f"Adjusted Schedule C Income: ${se_tax_details['adjusted_schedule_c_income
 print(f"Adjusted Partnership Income: ${se_tax_details['adjusted_partnership_income']:,.2f}")
 print(f"Social Security Tax (Self-Employment): ${se_tax_details['social_security_tax_se']:,.2f}")
 print(f"Medicare Tax (Self-Employment): ${se_tax_details['medicare_tax_se']:,.2f}")
-print(f"Additional Medicare Tax: ${se_tax_details['additional_medicare_tax']:,.2f}")
 print(f"Total Self-Employment Tax: ${se_tax_details['total_se_tax']:,.2f}")
 print(f"---------------------------------------")
