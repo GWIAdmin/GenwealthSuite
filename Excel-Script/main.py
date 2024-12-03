@@ -49,7 +49,7 @@ def calculate_se_tax(schedule_c_income, w2_income, year, partnership_income, fil
     }
 
 # Test Case:
-client_partnership_income = 0
+client_partnership_income = 50000
 client_schedule_c_income = 1000000
 client_w2_income = 0
 year = 2024
