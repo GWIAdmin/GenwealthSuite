@@ -47,7 +47,7 @@ def calculate_se_tax(schedule_c_income, w2_income, year, partnership_income, fil
     additional_medicare_tax = additional_medicare_income * 0.009
 
     # Total Self-Employment Tax (including W2 and self-employment, plus the additional Medicare tax)
-    total_se_tax = social_security_tax_w2 + social_security_tax_se + medicare_tax_w2 + medicare_tax_se + additional_medicare_tax
+    total_se_tax = social_security_tax_w2 + social_security_tax_se + medicare_tax_w2 + medicare_tax_se
 
     return {
         'adjusted_schedule_c_income': adjusted_schedule_c_income,
