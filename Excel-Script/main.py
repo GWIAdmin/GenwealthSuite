@@ -14,6 +14,9 @@ def calculate_se_tax(schedule_c_income, w2_income, year, partnership_income, fil
     adjusted_partnership_income = partnership_income * SE_INCOME_FACTOR
     total_adjusted_se_income = adjusted_schedule_c_income + adjusted_partnership_income
 
+    # Ensure partnership income is zero if none is provided
+    adjusted_partnership_income = 0  # This will explicitly make sure partnership income is zero
+
     # Calculate Social Security Tax (for both W2 and self-employment)
     total_ss_wages = min(w2_income, SS_WAGE_BASE)
     ss_taxable_limit = SS_WAGE_BASE - total_ss_wages
