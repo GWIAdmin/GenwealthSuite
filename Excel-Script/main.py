@@ -1,21 +1,26 @@
 # Author: Asim Sheikh (Software Enigneer @ Genwealth 360 Inc.)
 
-import openpyxl
+import pandas as pd
 
-# Function to calculate self-employment tax
 def calculate_se_tax(schedule_c_income, w2_income, year, partnership_income, filing_status):
-    SS_WAGE_BASE = {2022: 147000, 2023: 160200, 2024: 168600}[year]
-    SOCIAL_SECURITY_RATE = 0.124  # 12.4% total 
+    """
+    Function to calculate the self-employment tax based on given income details.
+    """
+    # Constants for tax rates
+    SS_WAGE_BASE = {2022: 147000, 2023: 160200, 2024: 168600}[year]  # Social Security wage base
+    SOCIAL_SECURITY_RATE = 0.124  # 12.4% total
     MEDICARE_RATE = 0.029         # 2.9% total
     SE_INCOME_FACTOR = 0.9235     # Adjustment factor for self-employment income
-
-    # Adjust incomes
+    
+    # Replace NaN with 0 for numeric inputs
+    schedule_c_income = schedule_c_income if pd.notnull(schedule_c_income) else 0
+    w2_income = w2_income if pd.notnull(w2_income) else 0
+    partnership_income = partnership_income if pd.notnull(partnership_income) else 0
+    
+    # Adjust incomes for self-employment tax calculation
     adjusted_schedule_c_income = schedule_c_income * SE_INCOME_FACTOR
-    adjusted_partnership_income = partnership_income * SE_INCOME_FACTOR
+    adjusted_partnership_income = partnership_income * SE_INCOME_FACTOR if partnership_income else 0
     total_adjusted_se_income = adjusted_schedule_c_income + adjusted_partnership_income
-
-    # Ensure partnership income is zero if none is provided
-    adjusted_partnership_income = 0  # This will explicitly make sure partnership income is zero
 
     # Calculate Social Security Tax (for both W2 and self-employment)
     total_ss_wages = min(w2_income, SS_WAGE_BASE)
@@ -64,52 +69,96 @@ def calculate_se_tax(schedule_c_income, w2_income, year, partnership_income, fil
         'total_adjusted_se_income': total_adjusted_se_income
     }
 
-# Function to process Excel spreadsheet
-def process_client_spreadsheet(file_path):
-    # Load the Excel file
-    workbook = openpyxl.load_workbook(file_path)
-    sheet = workbook.active  # Assuming data is in the first sheet
+def process_excel(file_path):
+    import pandas as pd  # Ensure pandas is imported
 
-    # Iterate through rows (starting from row 2, skipping the header)
-    for idx, row in enumerate(sheet.iter_rows(min_row=2, max_row=sheet.max_row), start=2):  # start=2 to give the correct row number
-        client_id = row[0].value
-        client_name = row[1].value
-        year = int(row[2].value) if row[2].value else 2024
-        schedule_c_income = row[3].value
-        w2_income = row[4].value
-        partnership_income = row[5].value
-        filing_status = row[6].value.lower() if row[6].value else "single"
+    # Read the Excel file into a DataFrame
+    df = pd.read_excel(file_path, header=None)
 
-        # Skip rows where income or necessary info is missing
-        if None in [schedule_c_income, w2_income, partnership_income]:
-            continue
+    # Create a dictionary to store the extracted data
+    client_data = {}
 
-        # Calculate the self-employment tax using the calculate_se_tax function
-        se_tax_details = calculate_se_tax(
-            schedule_c_income,
-            w2_income,
-            year,
-            partnership_income,
-            filing_status
-        )
+    # Loop through the rows to extract the necessary information
+    for index, row in df.iterrows():
+        label = row[0]  # Column A (label)
+        value = row[1]  # Column B (value)
 
-        # Write the calculated tax details back to the spreadsheet
-        sheet.cell(row=idx, column=8).value = se_tax_details['adjusted_schedule_c_income']
-        sheet.cell(row=idx, column=9).value = se_tax_details['adjusted_partnership_income']
-        sheet.cell(row=idx, column=10).value = se_tax_details['social_security_tax_w2']
-        sheet.cell(row=idx, column=11).value = se_tax_details['social_security_tax_se']
-        sheet.cell(row=idx, column=12).value = se_tax_details['medicare_tax_w2']
-        sheet.cell(row=idx, column=13).value = se_tax_details['medicare_tax_se']
-        sheet.cell(row=idx, column=14).value = se_tax_details['additional_medicare_tax']
-        sheet.cell(row=idx, column=15).value = se_tax_details['total_se_tax']
+        # Normalize the label
+        normalized_label = str(label).strip().lower()
 
-    # Save the updated workbook
-    workbook.save(file_path)
+        # Assign data to the dictionary based on labels, handling NaN values
+        if normalized_label == "client_id":
+            client_data["client_id"] = value
+        elif normalized_label == "client name":
+            client_data["client_name"] = value
+        elif normalized_label == "year":
+            client_data["year"] = int(value) if pd.notnull(value) else 2023
+        elif normalized_label == "schedule c income":
+            client_data["schedule_c_income"] = float(value) if pd.notnull(value) else 0
+        elif normalized_label == "w2 income":
+            client_data["w2_income"] = float(value) if pd.notnull(value) else 0
+        elif normalized_label == "partnership income":
+            client_data["partnership_income"] = float(value) if pd.notnull(value) else 0
+        elif normalized_label == "filing status":
+            client_data["filing_status"] = str(value).strip().lower() if pd.notnull(value) else 'single'
 
-# Example usage
-process_client_spreadsheet('Excel-Script\client_data.xlsx')
+    # Perform self-employment tax calculations using the provided function
+    results = calculate_se_tax(
+        client_data.get("schedule_c_income", 0),
+        client_data.get("w2_income", 0),
+        client_data.get("year", 2023),
+        client_data.get("partnership_income", 0),
+        client_data.get("filing_status", 'single')
+    )
+
+    # Ensure no NaN values in results
+    for key in results:
+        if pd.isnull(results[key]):
+            results[key] = 0
+
+    # Optional: Print results for debugging
+    print("Results:", results)
+
+    # Write the calculated results back to the Excel sheet in the appropriate rows
+    for index, row in df.iterrows():
+        label = row[0]  # Column A (label)
+        normalized_label = str(label).strip().lower()
+
+        # Update the correct row in Column B with the calculated values
+        if normalized_label == "adjusted schedule c income":
+            df.at[index, 1] = results["adjusted_schedule_c_income"]
+        elif normalized_label == "adjusted partnership income":
+            df.at[index, 1] = results["adjusted_partnership_income"]
+        elif normalized_label == "social security tax (w2)":
+            df.at[index, 1] = results["social_security_tax_w2"]
+        elif normalized_label == "social security tax (se)":
+            df.at[index, 1] = results["social_security_tax_se"]
+        elif normalized_label == "medicare tax (w2)":
+            df.at[index, 1] = results["medicare_tax_w2"]
+        elif normalized_label == "medicare tax (self-employment)":
+            df.at[index, 1] = results["medicare_tax_se"]
+        elif normalized_label == "additional medicare tax":
+            df.at[index, 1] = results["additional_medicare_tax"]
+        elif normalized_label == "total self-employment tax":
+            df.at[index, 1] = results["total_se_tax"]
+        elif normalized_label == "total adjusted se income":
+            df.at[index, 1] = results["total_adjusted_se_income"]
+
+    # Save the updated Excel file with results written
+    df.to_excel(file_path, index=False, header=False)
+
+    print("Calculations completed and written back to the Excel file.")
 
 
+def main():
+    # Specify the file path (update this to your actual file path)
+    file_path = 'Excel-Script\client_data.xlsx'  # Update this path
+
+    # Process the Excel file and write the results back to the Excel sheet
+    process_excel(file_path)
+
+if __name__ == "__main__":
+    main()
 
 
 # import pandas as pd
