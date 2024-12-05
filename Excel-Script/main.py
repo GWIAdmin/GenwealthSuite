@@ -8,8 +8,8 @@ def calculate_se_tax(schedule_c_income, w2_income, year, partnership_income, fil
     """
     # Constants for tax rates
     SS_WAGE_BASE = {2022: 147000, 2023: 160200, 2024: 168600}[year]  # Social Security wage base
-    SOCIAL_SECURITY_RATE = 0.124  # 12.4% total
-    MEDICARE_RATE = 0.029         # 2.9% total
+    SOCIAL_SECURITY_RATE = 0.062  # Employee's portion for Social Security (6.2%)
+    MEDICARE_RATE = 0.029         # Total Medicare rate (2.9%)
     SE_INCOME_FACTOR = 0.9235     # Adjustment factor for self-employment income
     
     # Replace NaN with 0 for numeric inputs
@@ -27,12 +27,13 @@ def calculate_se_tax(schedule_c_income, w2_income, year, partnership_income, fil
     ss_taxable_limit = SS_WAGE_BASE - total_ss_wages
     ss_taxable_se_income = min(total_adjusted_se_income, ss_taxable_limit)
     
-    # Social Security tax for W2 and self-employment income
+    # Social Security tax for W2 (6.2% employee's portion)
     social_security_tax_w2 = total_ss_wages * SOCIAL_SECURITY_RATE
+    # Social Security tax for self-employment income (6.2%)
     social_security_tax_se = ss_taxable_se_income * SOCIAL_SECURITY_RATE
 
     # Calculate Medicare Tax (for both W2 and self-employment - no wage base limit)
-    medicare_tax_w2 = w2_income * MEDICARE_RATE
+    medicare_tax_w2 = w2_income * (MEDICARE_RATE / 2)  # 1.45% for W2
     medicare_tax_se = total_adjusted_se_income * MEDICARE_RATE
 
     # Total wages including W2 and Self-Employment for Additional Medicare Tax
@@ -54,9 +55,10 @@ def calculate_se_tax(schedule_c_income, w2_income, year, partnership_income, fil
     # Additional Medicare Tax
     additional_medicare_tax = additional_medicare_income * 0.009
 
-    # Total Self-Employment Tax (including W2 and self-employment, plus the additional Medicare tax)
-    total_se_tax = social_security_tax_w2 + social_security_tax_se + medicare_tax_w2 + medicare_tax_se
+    # Total Self-Employment Tax (including W2 and self-employment)
+    total_se_tax = social_security_tax_w2 + social_security_tax_se + medicare_tax_w2 + medicare_tax_se + additional_medicare_tax
 
+    # Return results without rounding intermediate steps
     return {
         'adjusted_schedule_c_income': adjusted_schedule_c_income,
         'adjusted_partnership_income': adjusted_partnership_income,
@@ -65,7 +67,7 @@ def calculate_se_tax(schedule_c_income, w2_income, year, partnership_income, fil
         'medicare_tax_w2': medicare_tax_w2,
         'medicare_tax_se': medicare_tax_se,
         'additional_medicare_tax': additional_medicare_tax,
-        'total_se_tax': total_se_tax,
+        'total_se_tax': round(total_se_tax, 2),  # Round only the final total SE tax
         'total_adjusted_se_income': total_adjusted_se_income
     }
 
