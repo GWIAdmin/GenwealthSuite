@@ -39,7 +39,6 @@ def calculate_se_tax(schedule_c_income, w2_income, year, partnership_income, fil
     # Total wages including W2 and Self-Employment for Additional Medicare Tax
     total_medicare_wages = w2_income + total_adjusted_se_income
 
-    # Additional Medicare Tax based on Filing Status
     additional_medicare_income = 0
     if filing_status == 'single' and total_medicare_wages > 200000:
         additional_medicare_income = total_medicare_wages - 200000
