@@ -1,0 +1,9 @@
+@startuml
+actor User as U
+package "TaxCalculator" {
+    U -> Input : Provide W2 Income
+    Input -> "calculate_employer_employee_tax()" : Call Function
+    "calculate_employer_employee_tax()" <- "Tax Rules (YAML/JSON)" : Fetch Configurations
+    "calculate_employer_employee_tax()" -> Output : Returns Calculated Taxes
+}
+@enduml
