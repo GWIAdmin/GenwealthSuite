@@ -1,0 +1,60 @@
+@startuml TaxAutomationSystem
+
+title Tax Automation System - Architecture and Data Flow
+
+' User actor
+actor User as U
+
+' High-Level System Overview
+package "Tax Automation System" {
+    
+    package "Input Module" as InputModule {
+        component "Excel Reader" as ExcelReader
+        component "Input Validator" as InputValidator
+    }
+    
+    package "Processing Layer" as ProcessingLayer {
+        component "Employer/Employee Tax Calculator" as EETaxCalculator
+        component "401(k) Calculator" as RetirementCalculator
+        component "Child Tax Credit Calculator" as ChildTaxCalculator
+        component "Long Term Gains Calculator" as CapitalGainsCalculator
+        component "Strategy Engine" as StrategyEngine
+    }
+
+    package "Output Module" as OutputModule {
+        component "Excel Writer" as ExcelWriter
+        component "PDF Generator" as PDFGenerator
+    }
+}
+
+' Interactions
+U -> ExcelReader : Upload Client Excel Data
+ExcelReader --> InputValidator : Validate Input Data
+InputValidator --> ProcessingLayer : Pass Validated Data
+
+' Processing Flow
+ProcessingLayer --> EETaxCalculator : Calculate Employer/Employee Taxes
+ProcessingLayer --> RetirementCalculator : Calculate 401(k) Contributions
+ProcessingLayer --> ChildTaxCalculator : Calculate Child Tax Credit
+ProcessingLayer --> CapitalGainsCalculator : Calculate Long Term Gains
+ProcessingLayer --> StrategyEngine : Generate Tax Strategy
+
+' Output Flow
+ProcessingLayer --> ExcelWriter : Write Calculated Results to Excel
+ProcessingLayer --> PDFGenerator : Generate Summary Report
+
+ExcelWriter --> U : Provide Updated Excel File
+PDFGenerator --> U : Provide Tax Summary PDF
+
+' Detailed Data Flow within Processing Layer
+package "Employer/Employee Tax Calculator" as EETaxDetails {
+    component "Social Security Tax Logic" as SSTax
+    component "Medicare Tax Logic" as MedicareTax
+    component "Additional Medicare Tax Logic" as AddMedicareTax
+
+    EETaxCalculator --> SSTax : Calculate Social Security Tax
+    EETaxCalculator --> MedicareTax : Calculate Medicare Tax
+    EETaxCalculator --> AddMedicareTax : Handle Additional Medicare Tax
+}
+
+@enduml
