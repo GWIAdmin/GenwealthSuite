@@ -1,0 +1,19 @@
+{
+    "standard_deduction": {
+      "single": 13850,
+      "married_jointly": 27700,
+      "head_of_household": 20800
+    },
+    "child_tax_credit": {
+      "max_credit_per_child": 2000,
+      "phase_out": {
+        "threshold": {
+          "single": 200000,
+          "married_jointly": 400000,
+          "head_of_household": 200000
+        },
+        "reduction_rate_per_1000": 50
+      }
+    }
+  }
+  
