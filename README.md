@@ -25,5 +25,7 @@ If the data verification is successful, the system utilizes GPT-4 to provide per
 <br>
 > [!CAUTION]
 > ## Common Issues
-> File Not Found or Invalid Format: Ensure that the Excel files are placed in the correct directory and are in a supported format. <br>
-> Data Mismatches: Verify that the data labels in the Excel file match the expected format defined in the system to avoid extraction errors.
+> ### File Not Found or Invalid Format <br>
+> Ensure that the Excel files are placed in the correct directory and are in a supported format. <br>
+> ### Data Mismatches <br>
+> Verify that the data labels in the Excel file match the expected format defined in the system to avoid extraction errors.
