@@ -1,39 +1,29 @@
 # GenwealthSuite
 
 ## Overview
-This system verifies tax calculations from an Excel template using Python. It reads client data, checks the accuracy of tax-related values against predefined rules, and provides AI-generated tax optimization strategies if the calculations are correct.
+This is a sophisticated Python-based system designed to verify tax calculations extracted from Excel templates. The system reads client data, validates tax-related values against predefined rules, and, if the calculations are accurate, generates AI-driven tax optimization strategies using GPT-4.
 
-Project Structure
-bash
-Copy code
-project/
-   main.py               # Main script for processing and strategy generation
-   tax_rules.json         # JSON file with tax rules for a specific year
-   client_data.xlsx       # Excel file with client input data
+> [!IMPORTANT]
+> ## Requirements
+> Please ensure the following dependencies are installed: <br>
+> -Python 3.9+ <br>
+> -Pandas (for reading Excel files) <br>
+> -OpenPYXL (for handling Excel I/O) <br>
+> -OpenAI (for AI-driven strategy suggestions) <br>
 
-## Requirements
-Python 3.9+
-pandas (for reading Excel files)
-openpyxl (for handling Excel I/O)
-openai (optional, for AI-driven strategy suggestions)
-Key Functions
-Loading Tax Rules
-Load tax rules from a JSON file into the system to validate the calculations.
+## Workflow
 
-### Extracting Data
-Extract data from an Excel sheet, normalizing labels and mapping them to internal keys.
+### 1. Data Extraction
+The system extracts client data from an Excel file, normalizing labels and mapping them to internal identifiers for accurate processing.
 
-### Verification
-Check the extracted data against the tax rules to ensure accuracy.
+### 2. Data Verification
+Once the data is extracted, it is validated against a set of predefined tax rules to ensure the accuracy and integrity of the calculations.
 
-### AI Strategy Generation
-If verifications pass, use AI (GPT-4) to suggest personalized tax optimization strategies.
-
-### Common Issues
-File not found or invalid: Ensure files are in the correct directory.
-Data mismatches: Verify that data labels in the Excel file match the expected format.
-After Verification
-Once data is validated, the system can generate AI-driven suggestions for tax optimization based on the verified data.
-
-### Conclusion
-This system streamlines tax verification and provides actionable tax strategies, improving efficiency and accuracy in tax filing.
+### 3. AI-Powered Strategy Generation
+If the data verification is successful, the system utilizes GPT-4 to provide personalized tax optimization strategies tailored to the client's financial profile.
+<br>
+<br>
+> [!CAUTION]
+> ## Common Issues
+> File Not Found or Invalid Format: Ensure that the Excel files are placed in the correct directory and are in a supported format. <br>
+> Data Mismatches: Verify that the data labels in the Excel file match the expected format defined in the system to avoid extraction errors.
