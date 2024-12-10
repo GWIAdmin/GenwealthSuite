@@ -124,16 +124,15 @@ def extract_values_from_excel(file_path, label_map):
     lower_label_map = {k.lower(): v for k, v in label_map.items()}
 
     for i, row in df.iterrows():
-        # Stop reading once we go beyond row 148
         if i > 148:
             break
 
-        label = row[0]  # Label from column A
+        label = row[0]  
         print("Found label in Excel:", label)
         
         if label in lower_label_map:
             internal_key = lower_label_map[label]
-            value = row[1]  # Data from column B
+            value = row[1] 
             if pd.isnull(value):
                 value = 0
             final_values[internal_key] = value
