@@ -7,14 +7,10 @@ from tabulate import tabulate
 
 def load_tax_rules(year):
     rules_file = "C:\\Users\\GenWealth360\\Downloads\\GenwealthSuite\\Excel-Script\\tax_rules_2024.json"
-    #print("Attempting to load:", rules_file)
     with open(rules_file, 'r', encoding='utf-8-sig') as f:
         content = f.read()
-        #print("File content read:", content[:1000])  # Print first 1000 chars for debugging
         return json.loads(content)
 
-
-# Update this mapping based on the expected labels in the first column
 label_map = {
     # Income Section
     "Wages, salaries, tips - ": "wages_1",
@@ -144,7 +140,6 @@ def extract_values_from_excel(file_path: str, label_map: dict) -> dict:
         if df.empty:
             raise ValueError("Excel file is empty")
         
-        # Normalize labels
         df[0] = df[0].astype(str).str.strip()
         final_values = {}
         
@@ -197,7 +192,6 @@ def verify_taxable_income(final_values):
 def run_verifications(final_values, client_data, rules):
     all_passed = True
 
-    # Basic checks
     if not verify_total_income(final_values):
         print("Verification failed for total_income")
         all_passed = False
