@@ -3,6 +3,7 @@
 import pandas as pd
 import json
 import os
+from tabulate import tabulate
 
 def load_tax_rules(year):
     rules_file = "C:\\Users\\GenWealth360\\Downloads\\GenwealthSuite\\Excel-Script\\tax_rules_2024.json"
@@ -256,7 +257,9 @@ def main():
     excel_file = "Excel-Script\Master_Template.xlsx"
 
     final_values = extract_values_from_excel(excel_file, label_map)
-    print("Extracted final_values:", final_values)
+    print("\nExtracted final_values:")
+    table = [[key, value] for key, value in final_values.items()]
+    print(tabulate(table, headers=["Label", "Value"], tablefmt="grid"))
 
     if run_verifications(final_values, client_data, rules):
         print("All verifications passed.")
