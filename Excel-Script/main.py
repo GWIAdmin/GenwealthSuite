@@ -2,14 +2,14 @@
 
 import pandas as pd
 import json
-import openpyxl
+import os
 
 def load_tax_rules(year):
     rules_file = "C:\\Users\\GenWealth360\\Downloads\\GenwealthSuite\\Excel-Script\\tax_rules_2024.json"
-    print("Attempting to load:", rules_file)
+    #print("Attempting to load:", rules_file)
     with open(rules_file, 'r', encoding='utf-8-sig') as f:
         content = f.read()
-        print("File content read:", content[:1000])  # Print first 1000 chars for debugging
+        #print("File content read:", content[:1000])  # Print first 1000 chars for debugging
         return json.loads(content)
 
 
@@ -84,13 +84,13 @@ label_map = {
     "Child Tax Credit": "child_tax_credit",
     "Other Credits": "other_credits",
     "Total Federal tax": "total_federal_tax",
-
+  
     # Payments
-    "Withholdings": "withholdings",
+    "Federal Withholdings": "withholdings",
     "Withholding on medicare wages": "medicare_withholding",
     "Estimated tax payments": "estimated_payments",
     "Other payments and credits": "other_payments",
-    "Penalty": "penalty",
+    "Federal Penalty": "penalty",
     "Estimated Refund (Overpayment)": "refund",
     "Estimated Balance Due": "balance_due",
 
@@ -102,43 +102,73 @@ label_map = {
     "State Taxable Income": "state_taxable_income",
     "Local tax after credits": "state_local_tax",
     "Total Tax ": "state_total_tax",
-    "Withholdings": "state_withholdings",
+    "State Withholdings": "state_withholdings",
     "Payments and credits": "state_payments",
     "Interest": "state_interest",
-    "Penalty": "state_penalty",
+    "State Penalty": "state_penalty",
     "Estimated Refund (Overpayment)": "state_refund",
     "Estimated Balance Due": "state_balance_due",
     
     # Final Calculations
-    "Total Tax ": "total_tax",
+    "Total Tax": "total_tax",
     "Total Estimated Difference in Federal & State Taxes Saved:": "tax_savings"
 }
 
-def extract_values_from_excel(file_path, label_map):
-    df = pd.read_excel(file_path, header=None)
-    # Column A (index 0) contains labels, Column B (index 1) contains data
+def extract_values_from_excel(file_path: str, label_map: dict) -> dict:
+    """
+    Extract values from Excel file using label mapping.
     
-    # Normalize labels
-    df[0] = df[0].astype(str).str.strip().str.lower()
-    final_values = {}
-    lower_label_map = {k.lower(): v for k, v in label_map.items()}
+    Args:
+        file_path: Path to Excel file
+        label_map: Dictionary mapping Excel labels to internal names
+    
+    Returns:
+        Dictionary of extracted values
+    
+    Raises:
+        FileNotFoundError: If Excel file doesn't exist
+        ValueError: If file is empty or invalid
+        TypeError: If input parameters are wrong type
+    """
+    # Input validation
+    if not isinstance(file_path, str):
+        raise TypeError("file_path must be a string")
+    if not isinstance(label_map, dict):
+        raise TypeError("label_map must be a dictionary")
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"File not found: {file_path}")
 
-    for i, row in df.iterrows():
-        if i > 148:
-            break
-
-        label = row[0]  
-        print("Found label in Excel:", label)
+    try:
+        df = pd.read_excel(file_path, header=None)
+        if df.empty:
+            raise ValueError("Excel file is empty")
         
-        if label in lower_label_map:
-            internal_key = lower_label_map[label]
-            value = row[1] 
-            if pd.isnull(value):
-                value = 0
-            final_values[internal_key] = value
-
-    return final_values
-
+        # Normalize labels
+        df[0] = df[0].astype(str).str.strip()
+        final_values = {}
+        
+        # Case-insensitive mapping
+        lower_label_map = {}
+        for key, value in label_map.items():
+            lower_key = key.lower()
+            if lower_key in lower_label_map:
+                raise ValueError(f"Duplicate key after normalization: {key}")
+            lower_label_map[lower_key] = value
+            
+        # Extract values
+        for idx, row in df.iterrows():
+            label = row[0].lower()
+            if label in lower_label_map and not pd.isna(row[1]):
+                final_values[lower_label_map[label]] = row[1]
+                
+        return final_values
+        
+    except pd.errors.EmptyDataError:
+        raise ValueError("Excel file is empty")
+    except pd.errors.ParserError:
+        raise ValueError("Invalid Excel file format")
+    except Exception as e:
+        raise Exception(f"Unexpected error processing Excel file: {str(e)}")
 
 def verify_total_income(final_values):
     computed = (final_values.get("wages_1", 0) + final_values.get("wages_2", 0)
