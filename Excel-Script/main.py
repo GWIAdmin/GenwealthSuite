@@ -212,6 +212,32 @@ def run_verifications(final_values, client_data, rules):
 
     return all_passed
 
+def main():
+    client_data = {
+        "year": 2024,
+        "filing_status": "married_jointly",
+        "num_children": 2
+    }
+
+    rules = load_tax_rules(client_data["year"])
+    excel_file = "Excel-Script\Master_Template.xlsx"
+
+    final_values = extract_values_from_excel(excel_file, label_map)
+    print("\nExtracted final_values:")
+    table = [[key, value] for key, value in final_values.items()]
+    print(tabulate(table, headers=["Label", "Value"], tablefmt="grid"))
+
+    if run_verifications(final_values, client_data, rules):
+        print("All verifications passed.")
+        # strategies = get_tax_strategy_suggestions(final_values, client_data)
+        # print("Tax Optimization Strategies:")
+        # print(strategies)
+    else:
+        print("Verification failed. Please review discrepancies.")
+
+if __name__ == "__main__":
+    main()
+
 # def get_tax_strategy_suggestions(final_values, client_data):
 #     # Optional: Only run if you have OpenAI access
 #     import os
@@ -239,32 +265,6 @@ def run_verifications(final_values, client_data, rules):
 #     )
 
 #     return response.choices[0].text.strip()
-
-def main():
-    client_data = {
-        "year": 2024,
-        "filing_status": "married_jointly",
-        "num_children": 2
-    }
-
-    rules = load_tax_rules(client_data["year"])
-    excel_file = "Excel-Script\Master_Template.xlsx"
-
-    final_values = extract_values_from_excel(excel_file, label_map)
-    print("\nExtracted final_values:")
-    table = [[key, value] for key, value in final_values.items()]
-    print(tabulate(table, headers=["Label", "Value"], tablefmt="grid"))
-
-    if run_verifications(final_values, client_data, rules):
-        print("All verifications passed.")
-        # strategies = get_tax_strategy_suggestions(final_values, client_data)
-        # print("Tax Optimization Strategies:")
-        # print(strategies)
-    else:
-        print("Verification failed. Please review discrepancies.")
-
-if __name__ == "__main__":
-    main()
 
 # ----------------------------------------------------------------------------------------------------------
 # import pandas as pd
