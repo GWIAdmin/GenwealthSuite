@@ -9,7 +9,7 @@ def load_tax_rules(year):
     print("Attempting to load:", rules_file)
     with open(rules_file, 'r', encoding='utf-8-sig') as f:
         content = f.read()
-        print("File content read:", content[:100])  # Print first 100 chars for debugging
+        print("File content read:", content[:1000])  # Print first 1000 chars for debugging
         return json.loads(content)
 
 
@@ -68,7 +68,7 @@ label_map = {
     "Carryover Loss": "carryover_loss",
     "Casualty and Theft Losses": "casualty_losses",
     "Miscellaneous Deductions": "misc_deductions",
-    "Standard or Itemized Deduction": "total_deduction",
+    "Standard or Itemized Deduction": "standard_or_itemized_deduction",
 
     # Tax and Credits
     "Taxable Income": "taxable_income",
@@ -116,25 +116,30 @@ label_map = {
 
 def extract_values_from_excel(file_path, label_map):
     df = pd.read_excel(file_path, header=None)
-    # Column 1 (A in Excel) contains labels (row[0])
-    # Column 2 (B in Excel) contains user-filled data (row[1])
-
+    # Column A (index 0) contains labels, Column B (index 1) contains data
+    
     # Normalize labels
     df[0] = df[0].astype(str).str.strip().str.lower()
     final_values = {}
     lower_label_map = {k.lower(): v for k, v in label_map.items()}
 
-    for _, row in df.iterrows():
-        label = row[0]  # Labels from column 1 (index 0)
+    for i, row in df.iterrows():
+        # Stop reading once we go beyond row 148
+        if i > 148:
+            break
+
+        label = row[0]  # Label from column A
         print("Found label in Excel:", label)
+        
         if label in lower_label_map:
             internal_key = lower_label_map[label]
-            value = row[1]  # User data from column 2 (index 1)
+            value = row[1]  # Data from column B
             if pd.isnull(value):
                 value = 0
             final_values[internal_key] = value
 
     return final_values
+
 
 def verify_total_income(final_values):
     computed = (final_values.get("wages_1", 0) + final_values.get("wages_2", 0)
@@ -219,7 +224,7 @@ def main():
     }
 
     rules = load_tax_rules(client_data["year"])
-    excel_file = "Excel-Script\\20241018 Master Template V 8.61.xlsx"
+    excel_file = "Excel-Script\Master_Template.xlsx"
 
     final_values = extract_values_from_excel(excel_file, label_map)
     print("Extracted final_values:", final_values)
