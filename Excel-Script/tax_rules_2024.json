@@ -1,8 +1,8 @@
 {
     "standard_deduction": {
-      "single": 13850,
-      "married_jointly": 27700,
-      "head_of_household": 20800
+      "single": 14600,
+      "married_jointly": 29200,
+      "head_of_household": 21900
     },
     "child_tax_credit": {
       "max_credit_per_child": 2000,
@@ -16,4 +16,3 @@
       }
     }
   }
-  
