@@ -4,6 +4,9 @@ import pandas as pd
 import json
 import os
 from tabulate import tabulate
+from typing import Dict, Any
+import logging
+from decimal import Decimal
 
 def load_tax_rules(year):
     rules_file = "C:\\Users\\GenWealth360\\Downloads\\GenwealthSuite\\Excel-Script\\tax_rules.json"
@@ -180,52 +183,137 @@ def extract_values_from_excel(file_path: str, label_map: dict) -> dict:
         raise ValueError("Invalid Excel file format")
     except Exception as e:
         raise Exception(f"Unexpected error processing Excel file: {str(e)}")
+   
+# Constants
+EPSILON = Decimal('0.01')  # Replace magic number 1e-2
+MAX_CREDIT_KEY = "max_credit_per_child"
 
-def verify_total_income(final_values):
-    computed = (final_values.get("wages_1", 0) + final_values.get("wages_2", 0)
-                + final_values.get("taxable_interest", 0)
-                + final_values.get("qualified_dividends", 0)
-                + (final_values.get("schedule_c1_income", 0) + final_values.get("schedule_c2_income", 0)))
-    return abs(final_values.get("total_income", 0) - computed) < 1e-2
+def verify_total_income(final_values: Dict[str, Decimal]) -> bool:
+    """
+    Verify total income calculation matches sum of individual components.
+    
+    Args:
+        final_values: Dictionary containing tax values
+    
+    Returns:
+        bool: True if verification passes within epsilon tolerance
+    """
+    try:
+        income_components = [
+            "wages_1",
+            "wages_2", 
+            "taxable_interest",
+            "qualified_dividends",
+            "schedule_c1_income",
+            "schedule_c2_income"
+        ]
+        
+        computed = sum(final_values.get(comp, Decimal('0')) for comp in income_components)
+        actual = final_values.get("total_income", Decimal('0'))
+        
+        return abs(actual - computed) < EPSILON
+    except Exception as e:
+        logging.error(f"Error in total income verification: {e}")
+        return False
+    
+def verify_standard_deduction(
+    final_values: Dict[str, Decimal],
+    rules: Dict[str, Any],
+    filing_status: str
+) -> bool:
+    """
+    Verify standard deduction matches rules for filing status.
+    
+    Args:
+        final_values: Dictionary containing tax values
+        rules: Tax rules dictionary
+        filing_status: Filing status of taxpayer
+    
+    Returns:
+        bool: True if verification passes within epsilon tolerance
+    """
+    try:
+        expected = Decimal(str(rules["standard_deduction"][filing_status]))
+        actual = final_values.get("standard_or_itemized_deduction", Decimal('0'))
+        return abs(actual - expected) < EPSILON
+    except KeyError as e:
+        logging.error(f"Missing key in standard deduction verification: {e}")
+        return False
+    except Exception as e:
+        logging.error(f"Error in standard deduction verification: {e}")
+        return False
 
-def verify_standard_deduction(final_values, rules, filing_status):
-    expected = rules["standard_deduction"][filing_status]
-    actual = final_values.get("standard_or_itemized_deduction", 0)
-    return abs(actual - expected) < 1e-2
+def verify_child_tax_credit(
+    final_values: Dict[str, Decimal],
+    rules: Dict[str, Any],
+    filing_status: str,
+    num_children: int = 0
+) -> bool:
+    """
+    Verify child tax credit doesn't exceed maximum allowed amount.
+    
+    Args:
+        final_values: Dictionary containing tax values
+        rules: Tax rules dictionary
+        filing_status: Filing status of taxpayer
+        num_children: Number of qualifying children
+    
+    Returns:
+        bool: True if verification passes within epsilon tolerance
+    """
+    try:
+        max_credit = Decimal(str(rules["child_tax_credit"][MAX_CREDIT_KEY]))
+        expected_max = max_credit * Decimal(str(num_children))
+        actual = final_values.get("child_tax_credit", Decimal('0'))
+        return actual <= (expected_max + EPSILON)
+    except Exception as e:
+        logging.error(f"Error in child tax credit verification: {e}")
+        return False
 
-def verify_child_tax_credit(final_values, rules, filing_status, num_children=0):
-    max_credit_per_child = rules["child_tax_credit"]["max_credit_per_child"]
-    expected_max = max_credit_per_child * num_children
-    actual = final_values.get("child_tax_credit", 0)
-    return actual <= expected_max + 1e-2
+def verify_taxable_income(final_values: Dict[str, Decimal]) -> bool:
+    """
+    Verify taxable income calculation is correct.
+    
+    Args:
+        final_values: Dictionary containing tax values
+    
+    Returns:
+        bool: True if verification passes within epsilon tolerance
+    """
+    try:
+        computed = (final_values.get("total_income", Decimal('0')) 
+                   - final_values.get("standard_or_itemized_deduction", Decimal('0')))
+        actual = final_values.get("taxable_income", Decimal('0'))
+        return abs(actual - computed) < EPSILON
+    except Exception as e:
+        logging.error(f"Error in taxable income verification: {e}")
+        return False
 
-def verify_taxable_income(final_values):
-    computed = (final_values.get("total_income", 0) 
-                - final_values.get("standard_or_itemized_deduction", 0))
-    return abs(final_values.get("taxable_income", 0) - computed) < 1e-2
-
-def run_verifications(final_values, client_data, rules):
-    all_passed = True
-
-    if not verify_total_income(final_values):
-        print("Verification failed for total_income")
-        all_passed = False
-
-    if not verify_taxable_income(final_values):
-        print("Verification failed for taxable_income")
-        all_passed = False
-
-    filing_status = client_data.get("filing_status", "single")
-    if not verify_standard_deduction(final_values, rules, filing_status):
-        print("Verification failed for standard deduction")
-        all_passed = False
-
-    num_children = client_data.get("num_children", 0)
-    if not verify_child_tax_credit(final_values, rules, filing_status, num_children=num_children):
-        print("Verification failed for child tax credit")
-        all_passed = False
-
-    return all_passed
+def run_verifications(
+    final_values: Dict[str, Decimal],
+    client_data: Dict[str, Any],
+    rules: Dict[str, Any]
+) -> bool:
+    """
+    Run all tax calculation verifications.
+    
+    Args:
+        final_values: Dictionary containing calculated tax values
+        client_data: Dictionary containing client information
+        rules: Dictionary containing tax rules
+    
+    Returns:
+        bool: True if all verifications pass
+    """
+    logging.info("Starting tax calculations verification")
+    verifications = [
+        verify_total_income(final_values),
+        verify_standard_deduction(final_values, rules, client_data["filing_status"]),
+        verify_child_tax_credit(final_values, rules, client_data["filing_status"], 
+                              client_data.get("num_children", 0)),
+        verify_taxable_income(final_values)
+    ]
+    return all(verifications)
 
 def main():
     excel_file = "Excel-Script\Master_Template.xlsx"
