@@ -318,7 +318,7 @@ def run_verifications(
         verify_total_income(final_values),
         verify_standard_deduction(final_values, rules, client_data["filing_status"]),
         verify_child_tax_credit(final_values, rules, client_data["filing_status"], 
-                              client_data.get("num_children", 0)),
+        client_data.get("num_children", 0)),
         verify_taxable_income(final_values)
     ]
     return all(verifications)
