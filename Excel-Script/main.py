@@ -5,11 +5,8 @@ import json
 import os
 from tabulate import tabulate
 
-# 12/10/2024
-# TODO: Add more tax rules for 2022, 2023, and 2024
-
 def load_tax_rules(year):
-    rules_file = "C:\\Users\\GenWealth360\\Downloads\\GenwealthSuite\\Excel-Script\\tax_rules_2024.json"
+    rules_file = "C:\\Users\\GenWealth360\\Downloads\\GenwealthSuite\\Excel-Script\\tax_rules.json"
     with open(rules_file, 'r', encoding='utf-8-sig') as f:
         content = f.read()
         return json.loads(content)
