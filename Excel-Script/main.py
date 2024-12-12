@@ -8,10 +8,25 @@ from tabulate import tabulate
 def load_tax_rules(year):
     rules_file = "C:\\Users\\GenWealth360\\Downloads\\GenwealthSuite\\Excel-Script\\tax_rules.json"
     with open(rules_file, 'r', encoding='utf-8-sig') as f:
-        content = f.read()
-        return json.loads(content)
+        all_rules = json.load(f)
+        return all_rules.get(str(year), {})
 
 label_map = {
+    # Client Information
+    "Year:": "year",
+    "Filing Status:": "filing_status",
+    "State:": "state",
+    "Resident in State:": "resident_state",
+    "If Additional Income from different State in same period:": "additional_state_income",
+    "How Many 65 or Older:": "num_65_or_older",
+    "How Many Blind:": "num_blind",
+    "HSA (?):": "hsa",
+    "Businesses: ": "businesses",
+    "Children/Dependents (?):": "num_children",
+    "Owns House (?):": "owns_house",
+    "401k/IRA (?):": "has_401k_ira",
+    #TODO: Add children over/under 18
+
     # Income Section
     "Wages, salaries, tips - ": "wages_1",
     "Wages, salaries, tips - ": "wages_2",
@@ -213,19 +228,21 @@ def run_verifications(final_values, client_data, rules):
     return all_passed
 
 def main():
-    client_data = {
-        "year": 2024,
-        "filing_status": "married_jointly",
-        "num_children": 2
-    }
-
-    rules = load_tax_rules(client_data["year"])
     excel_file = "Excel-Script\Master_Template.xlsx"
 
     final_values = extract_values_from_excel(excel_file, label_map)
+
+    client_data = {
+        "year": int(final_values.get("year", 2024)),
+        "filing_status": final_values.get("filing_status", "single"),
+        "num_children": int(final_values.get("num_children", 0)),
+    }
+
     print("\nExtracted final_values:")
     table = [[key, value] for key, value in final_values.items()]
     print(tabulate(table, headers=["Label", "Value"], tablefmt="grid"))
+
+    rules = load_tax_rules(client_data["year"])
 
     if run_verifications(final_values, client_data, rules):
         print("All verifications passed.")
