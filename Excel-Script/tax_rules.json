@@ -1,4 +1,43 @@
 {
+  "2022": {
+    "standard_deduction": {
+      "single": 12950,
+      "married_jointly": 25900,
+      "head_of_household": 19400
+    },
+    "child_tax_credit": {
+      "max_credit_per_child": 2000,
+      "refundable_portion": 1500,
+      "phase_out": {
+        "threshold": {
+          "single": 200000,
+          "married_jointly": 400000,
+          "head_of_household": 200000
+        },
+        "reduction_rate_per_1000": 50
+      }
+    }
+  },
+  "2023": {
+    "standard_deduction": {
+      "single": 13850,
+      "married_jointly": 27700,
+      "head_of_household": 20800
+    },
+    "child_tax_credit": {
+      "max_credit_per_child": 2000,
+      "refundable_portion": 1600,
+      "phase_out": {
+        "threshold": {
+          "single": 200000,
+          "married_jointly": 400000,
+          "head_of_household": 200000
+        },
+        "reduction_rate_per_1000": 50
+      }
+    }
+  },
+  "2024": {
     "standard_deduction": {
       "single": 14600,
       "married_jointly": 29200,
@@ -6,6 +45,7 @@
     },
     "child_tax_credit": {
       "max_credit_per_child": 2000,
+      "refundable_portion": 1700,
       "phase_out": {
         "threshold": {
           "single": 200000,
@@ -16,3 +56,4 @@
       }
     }
   }
+}
