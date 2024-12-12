@@ -8,6 +8,14 @@ from typing import Dict, Any
 import logging
 from decimal import Decimal
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler()
+    ]
+)
+
 def load_tax_rules(year):
     rules_file = "C:\\Users\\GenWealth360\\Downloads\\GenwealthSuite\\Excel-Script\\tax_rules.json"
     with open(rules_file, 'r', encoding='utf-8-sig') as f:
