@@ -16,6 +16,9 @@ logging.basicConfig(
     ]
 )
 
+#TODO: Add more tax rules for different years
+#TODO: Add more tax rules for different states
+
 def load_tax_rules(year):
     rules_file = "C:\\Users\\GenWealth360\\Downloads\\GenwealthSuite\\Excel-Script\\tax_rules.json"
     with open(rules_file, 'r', encoding='utf-8-sig') as f:
