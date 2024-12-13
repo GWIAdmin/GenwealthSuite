@@ -1,31 +1,57 @@
 # GenwealthSuite
 
 ## Overview
-This is a sophisticated Python-based system designed to verify tax calculations extracted from Excel templates. The system reads client data, validates tax-related values against predefined rules, and, if the calculations are accurate, generates AI-driven tax optimization strategies using GPT-4.
+
+GenwealthSuite is a Python-based system that combines Excel-based tax calculations with a straightforward web interface. The system enables a user to input client data through a webpage and pass these inputs to a server-side Python script, which integrates with an Excel file to process tax calculations. After performing the computations, GenwealthSuite can use GPT-4 to provide AI-generated tax optimization insights.
+
+## Key Features
+
+- **Excel-Based Calculations:**  
+  The system leverages existing Excel templates to perform tax-related calculations, minimizing the need to rewrite logic.
+  
+- **Server-Side Processing:**  
+  A Python server (using frameworks such as Flask or FastAPI) handles incoming data, updates the Excel file, triggers recalculations, and extracts results programmatically.
+  
+- **Web Interface for Input:**  
+  The interface is a static webpage where users enter client information. Input is sent to the server via a POST request, and the server returns calculated results as JSON.
+  
+- **AI-Generated Insights:**  
+  Once calculations are complete, GPT-4 can be used to provide tax strategy suggestions based on the computed values.
+
+## Requirements
+
+- Python 3.9+  
+- Pandas (for reading Excel files)  
+- OpenPYXL (for Excel I/O)  
+- Flask or FastAPI (for server-side API functionality)  
+- OpenAI (for GPT-4 based strategy generation)
 
 > [!IMPORTANT]
-> ## Requirements
-> Please ensure the following dependencies are installed: <br>
-> -Python 3.9+ <br>
-> -Pandas (for reading Excel files) <br>
-> -OpenPYXL (for handling Excel I/O) <br>
-> -OpenAI (for AI-driven strategy suggestions) <br>
+> ## Installation of required packages:
+> - pip install -r requirements.txt
 
 ## Workflow
 
-### 1. Data Extraction
-The system extracts client data from an Excel file, normalizing labels and mapping them to internal identifiers for accurate processing.
+1. **Data Input via Webpage:**  
+   A user enters client data into a static webpage form.
 
-### 2. Data Verification
-Once the data is extracted, it is validated against a set of predefined tax rules to ensure the accuracy and integrity of the calculations.
+2. **Server Request:**  
+   On submission, the frontend sends the input data to the Python server.
 
-### 3. AI-Powered Strategy Generation
-If the data verification is successful, the system utilizes GPT-4 to provide personalized tax optimization strategies tailored to the client's financial profile.
-<br>
-<br>
+3. **Excel Processing:**  
+   The server updates the Excel file with the provided inputs and triggers recalculations using the existing formulas within the spreadsheet.
+
+4. **Returning Results:**  
+   The server returns the computed results as JSON, and the webpage displays the updated values.
+
+5. **AI Insights (Optional):**  
+   If enabled, the system uses GPT-4 to generate tax optimization insights based on the computed results.
+
 > [!CAUTION]
 > ## Common Issues
-> ### File Not Found or Invalid Format <br>
-> Ensure that the Excel files are placed in the correct directory and are in a supported format. <br>
-> ### Data Mismatches <br>
-> Verify that the data labels in the Excel file match the expected format defined in the system to avoid extraction errors.
+> 
+> ### File Not Found or Invalid Format
+> Check the file paths and ensure the Excel file is in a supported format. Update file references in the server code as necessary.
+>
+> ### Data Formatting
+> Ensure that the Excel spreadsheet follows consistent naming conventions and structures so that data extraction and calculation run smoothly.
