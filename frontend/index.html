@@ -1,81 +1,141 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
-    <title>Genwealth 360</title>
+    <title>Genwealth 360 - Data Input</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link 
+      href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500&family=Source+Code+Pro:ital@1&display=swap" 
+      rel="stylesheet">
+
+    <!-- Custom CSS -->
     <link rel="stylesheet" href="style.css" />
+
+    <!-- jQuery (if needed for form submission; remove if not used) -->
+    <script
+        src="https://code.jquery.com/jquery-3.4.1.js"
+        integrity="sha256-WpOohJOqMqqyKL9FccASB9O0KwACQJpFTUBLTYOVvVU="
+        crossorigin="anonymous"></script>
+    <script>
+        // Placeholder for form submission logic.
+        // In a real scenario, you would send a POST request to your backend server.
+        function sendData() {
+            alert("Form data submitted. Waiting for results...");
+            // Add AJAX call here if needed.
+        }
+    </script>
 </head>
-<body>
+
+<body id="top">
+    <!-- HEADER/ HERO SECTION -->
     <header>
-        <div class="top-bar">
-            <img src="images/genwealth_logo.png" alt="Genwealth 360 Logo" class="logo">
-            <nav>
-                <ul class="nav-links">
-                    <li><a href="#">Home</a></li>
-                    <li><a href="#services">Services</a></li>
-                    <li><a href="#approach">Our Approach</a></li>
-                    <li><a href="#contact">Contact</a></li>
-                </ul>
-            </nav>
+        <div class="bg-img">
+            <div class="container">
+                <!-- Top navigation aligned to the right, similar to provided code -->
+                <div class="topNav">
+                    <a href="#Contact">Contact</a>
+                    <a href="#Process">Process</a>
+                    <a href="#Services">Services</a>
+                    <a href="#About">About</a>
+                </div>
+            </div>
         </div>
     </header>
 
-    <section class="hero">
-        <div class="hero-content">
-            <h1>Your Vision for a Financially Sound Future</h1>
-            <p>At Genwealth 360, we aim to align your financial strategies with your life goals.  
-            Explore tailored insights that put tax planning at the heart of your financial journey.</p>
-            <button class="cta-button">Get Started</button>
+    <!-- SCROLL TO TOP ICON -->
+    <div class="scroll-container">
+        <a href="#top"> 
+            <img src="images/angles-up-solid.png" alt="arrow up">
+        </a>
+    </div>
+
+    <!-- INTRODUCTORY TEXT BOX, similar positioning style -->
+    <section class="intro-box">
+        <div class="box1">
+            <h2>Hello</h2>
+            <h1>Welcome to <span>Genwealth 360</span></h1>
+            <h2>Tax Planning Interface</h2>
+            <p>Enter client data and receive instant, Excel-driven calculations.  
+            We place tax planning at the cornerstone of financial success.</p>
         </div>
     </section>
 
-    <main>
-        <section class="services" id="services">
-            <h2>Our Services</h2>
-            <div class="service-cards">
-                <div class="card">
-                    <h3>Tax Analysis</h3>
-                    <p>Review your tax documents and extract key insights for better financial decisions.</p>
-                </div>
-                <div class="card">
-                    <h3>Strategy Generation</h3>
-                    <p>Utilize cutting-edge AI to derive personalized optimization strategies.</p>
-                </div>
-                <div class="card">
-                    <h3>Excel Integration</h3>
-                    <p>Incorporate existing Excel templates to streamline and standardize calculations.</p>
-                </div>
-            </div>
+    <!-- MAIN CONTENT SECTIONS -->
+    <div class="content">
+        
+        <!-- ABOUT SECTION -->
+        <section id="About" class="box" style="margin-top: 800px;">
+            <h2><span>About</span> Us</h2>
+            <p>We integrate your trusted Excel templates with a user-friendly web interface.  
+            Simply input client data, and the system updates the spreadsheet, recalculates values,  
+            and returns results quickly. Efficient, straightforward, and reliable.</p>
         </section>
 
-        <section class="approach" id="approach">
-            <h2>Our Approach</h2>
-            <p>We place tax planning at the cornerstone of every financial plan. Our process begins by understanding your needs, verifying data from trusted sources, and leveraging familiar tools like Excel. Next, we incorporate tailored tax optimization strategies using AI insights. This integrated approach helps ensure you receive comprehensive guidance without unnecessary complexity.</p>
+        <!-- SERVICES SECTION -->
+        <section id="Services" class="box">
+            <h2><span>Our</span> Services</h2>
+            <ul>
+                <li>Data Input & Processing</li>
+                <li>Excel-Based Calculations</li>
+                <li>Real-Time Result Updates</li>
+                <li>Tax Optimization Insights</li>
+            </ul>
         </section>
 
-        <section class="testimonials">
-            <h2>What Clients Say</h2>
-            <div class="testimonial-box">
-                <p>"Genwealth 360 gave me clarity on my tax situation and helped me uncover opportunities I didn’t know existed. The results were both insightful and actionable."</p>
-                <span>- A satisfied client</span>
-            </div>
+        <!-- PROCESS SECTION -->
+        <section id="Process" class="box">
+            <h2><span>How It</span> Works</h2>
+            <h3>1. Input Client Data</h3>
+            <p>Enter relevant financial metrics (income, deductions, filing status) into the form.</p>
+            <h3>2. Server Calculation</h3>
+            <p>Your data is sent to a Python backend, updating the Excel file and triggering calculations.</p>
+            <h3>3. Results Returned</h3>
+            <p>The backend returns computed results as JSON, instantly displayed here for review.</p>
         </section>
 
-        <section class="contact" id="contact">
-            <h2>Contact Us</h2>
-            <p>Have a question or need more information? Reach out and we’ll respond promptly.</p>
-            <form class="contact-form">
-                <input type="text" placeholder="Name" required>
-                <input type="email" placeholder="Email" required>
-                <textarea placeholder="Message" rows="5" required></textarea>
-                <button type="submit" class="cta-button">Submit</button>
+        <!-- CONTACT / DATA INPUT FORM SECTION -->
+        <section id="Contact" class="box">
+            <h2><span>Enter Client</span> Data</h2>
+            <form id="dataForm" onsubmit="event.preventDefault(); sendData();">
+                <label>Client Name</label><br><br>
+                <input name="client_name" placeholder="e.g. John Doe" required /><br><br>
+
+                <label>Annual Income ($)</label><br><br>
+                <input name="annual_income" type="number" placeholder="e.g. 85000" required /><br><br>
+
+                <label>Filing Status</label><br><br>
+                <select name="filing_status" required>
+                    <option value="" disabled selected>Select one</option>
+                    <option value="single">Single</option>
+                    <option value="married_joint">Married Filing Jointly</option>
+                    <option value="married_separate">Married Filing Separately</option>
+                    <option value="head_household">Head of Household</option>
+                </select><br><br>
+
+                <label>Deductions ($)</label><br><br>
+                <input name="deductions" type="number" placeholder="e.g. 10000" required /><br><br>
+
+                <button type="submit">Submit</button>
             </form>
         </section>
-    </main>
 
-    <footer>
-        <p>© 2024 Genwealth 360. All rights reserved.</p>
-    </footer>
+        <!-- RESULTS SECTION (When results are ready to be displayed) -->
+        <section id="Results" class="box" style="display:none;">
+            <h2><span>Calculated</span> Results</h2>
+            <p>Total Tax: <span id="total-tax">$0</span></p>
+            <p>Effective Tax Rate: <span id="tax-rate">0%</span></p>
+            <p>Estimated Refund/Owed: <span id="refund-owed">$0</span></p>
+        </section>
+
+        <!-- FOOTER SECTION -->
+        <footer>
+            <p>&copy; 2024 Genwealth 360. All Rights Reserved.</p>
+        </footer>
+
+    </div>
 </body>
 </html>

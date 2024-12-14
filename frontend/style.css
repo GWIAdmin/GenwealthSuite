@@ -1,0 +1,210 @@
+:root{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    /* Adjusting the design to similar aesthetic, but with new brand colors */
+    --bg-color: #1A2238;           /* Keeping a dark background similar to the original */
+    --text-color: #FFFFFF;         /* White text for contrast */
+    --main-color: #FDB927;         /* Gold for highlights */
+    --accent-color: #552583;       /* Purple brand color */
+    --other-color: #12141c;        /* Slightly off-black for boxes */
+    --font-family: 'Quicksand', sans-serif;
+    scroll-behavior: smooth;
+    text-align: justify;
+}
+
+body{
+    background: var(--bg-color);
+    color: var(--text-color);
+    text-align: center;
+    font-family: var(--font-family);
+}
+
+/* Background image area similar to original */
+.bg-img {
+    background: var(--other-color);
+    height: 300px; /* Adjust as needed */
+    width: 100%;
+    position: relative;
+}
+
+/* Top navigation aligned to right */
+.topNav a {
+    color: var(--text-color);
+    text-decoration: none;
+    padding: 14px 12px;
+    font-size: 20px;
+    float: right;
+}
+
+.topNav a:hover {
+    color: var(--main-color);
+}
+
+.container {
+    position: relative;
+}
+
+/* Floating image similar to original "asim-photo" */
+#floating-image {
+    width: 35rem;
+    height: 35rem;
+    position: absolute;
+    top: 115px;
+    left: 125px;
+    border-radius: 10%;
+    object-fit: cover; /* Ensure image fits nicely */
+    border: 3px solid var(--main-color);
+}
+
+.content {
+    max-width: 640px;
+    margin: auto;
+}
+
+/* Intro box styling similar to original box1 */
+.box1 {
+    position: absolute;
+    padding: 10px;
+    box-sizing: border-box;
+    text-align: left;
+    width: 100%;
+    margin: 10px;
+    cursor: pointer;
+    top: 250px;
+    left: 800px;
+}
+
+.box1 h2 {
+    font-size: 2rem;
+}
+
+.box1 h1 {
+    font-size: 2.5rem;
+    margin: 10px 0;
+}
+
+.box1 p {
+    margin-top: 10px;
+    line-height: 1.5;
+}
+
+span {
+    color: var(--main-color);
+}
+
+/* Generic .box styling for sections (About, Services, Process, Contact) */
+.box {
+    background-color: var(--other-color);
+    padding: 50px;
+    box-sizing: border-box;
+    text-align: center;
+    width: 100%;
+    margin: 15px auto;
+    cursor: pointer;
+    border-radius: 8px;
+    border: 2px solid var(--accent-color);
+}
+
+.box h2 {
+    font-size: 2rem;
+    margin-bottom: 20px;
+}
+
+.box h2 span {
+    color: var(--main-color);
+}
+
+.box h3 {
+    font-size: 1.5rem;
+    margin: 15px 0;
+}
+
+/* Scroll-to-top container and image */
+.scroll-container {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+}
+
+.scroll-container img {
+    position: fixed;
+    bottom: 1.5em;
+    right: 1em;
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    background: var(--main-color);
+    border-radius: 50%;
+}
+
+/* Form Styling */
+#Contact form input,
+#Contact form select,
+#Contact form textarea {
+    width: 80%;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+#Contact form button {
+    background: var(--accent-color);
+    color: var(--text-color);
+    border: none;
+    padding: 10px 20px;
+    font-size: 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#Contact form button:hover {
+    background: var(--main-color);
+    color: #000;
+}
+
+/* Footer */
+footer {
+    margin-top: 20px;
+    font-size: 0.9rem;
+    color: var(--text-color);
+    text-align: center;
+}
+
+/* Responsive Adjustments */
+@media (min-width: 768px) {
+    .box, .box1 {
+        width: 600px;
+    }
+}
+
+@media (max-width: 768px) {
+    /* On smaller screens, stack elements nicely */
+    #floating-image {
+        position: static;
+        width: 80%;
+        height: auto;
+        margin: 20px auto;
+        display: block;
+    }
+
+    .box1 {
+        position: static;
+        left: 0;
+        top: 0;
+        margin-top: 20px;
+        text-align: center;
+    }
+
+    .topNav a {
+        float: none;
+        display: inline-block;
+    }
+
+    .scroll-container img {
+        width: 35px;
+        height: 35px;
+    }
+}
