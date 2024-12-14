@@ -7,14 +7,14 @@
     --text-color: #FFFFFF;         /* White text for contrast */
     --main-color: #FDB927;         /* Gold for highlights */
     --accent-color: #552583;       /* Purple brand color */
-    --other-color: #12141c;        /* Slightly off-black for boxes */
+    --other-color: #140a39c6;        /* Slightly off-black for boxes #1A2238*/
     --font-family: 'Quicksand', sans-serif;
     scroll-behavior: smooth;
     text-align: justify;
 }
 
 body{
-    background: var(--bg-color);
+    background: var(--accent-color);
     color: var(--text-color);
     text-align: center;
     font-family: var(--font-family);
@@ -22,7 +22,7 @@ body{
 
 /* Background image area similar to original */
 .bg-img {
-    background: var(--other-color);
+    background: var(--accent-color);
     height: 300px; /* Adjust as needed */
     width: 100%;
     position: relative;
@@ -45,34 +45,21 @@ body{
     position: relative;
 }
 
-/* Floating image similar to original "asim-photo" */
-#floating-image {
-    width: 35rem;
-    height: 35rem;
-    position: absolute;
-    top: 115px;
-    left: 125px;
-    border-radius: 10%;
-    object-fit: cover; /* Ensure image fits nicely */
-    border: 3px solid var(--main-color);
-}
-
 .content {
     max-width: 640px;
     margin: auto;
 }
 
 /* Intro box styling similar to original box1 */
+
 .box1 {
     position: absolute;
-    padding: 10px;
-    box-sizing: border-box;
-    text-align: left;
-    width: 100%;
-    margin: 10px;
-    cursor: pointer;
-    top: 250px;
-    left: 800px;
+    inset: 0px;
+    width: 12rem;
+    height: 50rem;
+    max-width: 100vw;
+    max-height: 100dvh;
+    margin: auto;
 }
 
 .box1 h2 {
@@ -80,7 +67,7 @@ body{
 }
 
 .box1 h1 {
-    font-size: 2.5rem;
+    font-size: 3.5rem;
     margin: 10px 0;
 }
 
