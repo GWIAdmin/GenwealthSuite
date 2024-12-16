@@ -8,7 +8,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Merriweather:wght@700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <!-- Main Container -->
   <div class="container">
     <h1>GenwealthSuite Tax Input Form</h1>
 
@@ -38,26 +37,54 @@
             <option value="Qualifying Widow(er)">Qualifying Widow(er)</option>
           </select>
         </div>
+        <div class="form-group">
+          <label for="dependents">Number of Dependents:</label>
+          <input type="number" id="dependents" name="dependents" min="0">
+        </div>
       </section>
 
       <!-- Income Section -->
       <section>
         <h2>Income</h2>
         <div class="form-group">
-          <label for="wages">Wages, Salaries, Tips:</label>
-          <input type="number" id="wages" name="wages" required>
+          <label for="wages">Wages, Salaries, Tips (W-2):</label>
+          <input type="number" id="wages" name="wages" step="0.01">
         </div>
         <div class="form-group">
           <label for="taxableInterest">Taxable Interest:</label>
-          <input type="number" id="taxableInterest" name="taxableInterest">
+          <input type="number" id="taxableInterest" name="taxableInterest" step="0.01">
+        </div>
+        <div class="form-group">
+          <label for="taxExemptInterest">Tax-Exempt Interest:</label>
+          <input type="number" id="taxExemptInterest" name="taxExemptInterest" step="0.01">
+        </div>
+        <div class="form-group">
+          <label for="dividends">Ordinary Dividends:</label>
+          <input type="number" id="dividends" name="dividends" step="0.01">
+        </div>
+        <div class="form-group">
+          <label for="qualifiedDividends">Qualified Dividends:</label>
+          <input type="number" id="qualifiedDividends" name="qualifiedDividends" step="0.01">
         </div>
         <div class="form-group">
           <label for="capitalGains">Capital Gains:</label>
-          <input type="number" id="capitalGains" name="capitalGains">
+          <input type="number" id="capitalGains" name="capitalGains" step="0.01">
         </div>
         <div class="form-group">
-          <label for="businessIncome">Business Income:</label>
-          <input type="number" id="businessIncome" name="businessIncome">
+          <label for="iraDistributions">IRA Distributions (Taxable):</label>
+          <input type="number" id="iraDistributions" name="iraDistributions" step="0.01">
+        </div>
+        <div class="form-group">
+          <label for="pensions">Pensions and Annuities (Taxable):</label>
+          <input type="number" id="pensions" name="pensions" step="0.01">
+        </div>
+        <div class="form-group">
+          <label for="socialSecurity">Social Security Benefits (Taxable):</label>
+          <input type="number" id="socialSecurity" name="socialSecurity" step="0.01">
+        </div>
+        <div class="form-group">
+          <label for="otherIncome">Other Income:</label>
+          <input type="number" id="otherIncome" name="otherIncome" step="0.01">
         </div>
       </section>
 
@@ -66,11 +93,41 @@
         <h2>Deductions</h2>
         <div class="form-group">
           <label for="stdDeduction">Standard Deduction:</label>
-          <input type="number" id="stdDeduction" name="stdDeduction" required>
+          <input type="number" id="stdDeduction" name="stdDeduction" step="0.01">
         </div>
         <div class="form-group">
           <label for="itemizedDeductions">Itemized Deductions:</label>
-          <input type="number" id="itemizedDeductions" name="itemizedDeductions">
+          <input type="number" id="itemizedDeductions" name="itemizedDeductions" step="0.01">
+        </div>
+      </section>
+
+      <!-- Tax Credits Section -->
+      <section>
+        <h2>Tax Credits</h2>
+        <div class="form-group">
+          <label for="childTaxCredit">Child Tax Credit:</label>
+          <input type="number" id="childTaxCredit" name="childTaxCredit" step="0.01">
+        </div>
+        <div class="form-group">
+          <label for="earnedIncomeCredit">Earned Income Tax Credit (EITC):</label>
+          <input type="number" id="earnedIncomeCredit" name="earnedIncomeCredit" step="0.01">
+        </div>
+        <div class="form-group">
+          <label for="educationCredits">Education Credits:</label>
+          <input type="number" id="educationCredits" name="educationCredits" step="0.01">
+        </div>
+      </section>
+
+      <!-- Payments Section -->
+      <section>
+        <h2>Payments</h2>
+        <div class="form-group">
+          <label for="withheldTax">Federal Tax Withheld (W-2/1099):</label>
+          <input type="number" id="withheldTax" name="withheldTax" step="0.01">
+        </div>
+        <div class="form-group">
+          <label for="estimatedPayments">Estimated Tax Payments:</label>
+          <input type="number" id="estimatedPayments" name="estimatedPayments" step="0.01">
         </div>
       </section>
 
