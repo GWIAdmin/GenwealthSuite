@@ -2,7 +2,7 @@
 
 ## Overview
 
-GenwealthSuite is a Python-based system that combines Excel-based tax calculations with a straightforward web interface. The system enables a user to input client data through a webpage and pass these inputs to a server-side Python script, which integrates with an Excel file to process tax calculations. After performing the computations, GenwealthSuite can use GPT-4 to provide AI-generated tax optimization insights.
+GenwealthSuite is a Python-based system that combines Excel-based tax calculations with a straightforward web interface. The system enables a user to input client data through a webpage and pass these inputs to a server-side Python script, which integrates with an Excel file to process tax calculations and returns the results back to the user. After performing the computations, GenwealthSuite can use GPT-4 to provide AI-generated tax optimization insights.
 
 ## Key Features
 
