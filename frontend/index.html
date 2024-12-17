@@ -13,9 +13,9 @@
 
     <form id="taxForm">
       <!-- Personal Information Section -->
-      <section>
+        <section>
         <h2>Personal Information</h2>
-        
+
         <div class="form-group">
           <label for="firstName">First Name:</label>
           <input type="text" id="firstName" name="firstName" required>
@@ -107,10 +107,26 @@
         </div>
 
         <div class="form-group">
-          <label for="dependents">Number of Dependents:</label>
-          <input type="number" id="dependents" name="dependents" min="0">
+          <label for="olderthan65">How many 65 or older:</label>
+          <input type="number" id="olderthan65" name="olderthan65" min="0">
         </div>
-      </section>
+
+        <div class="form-group">
+            <label for="blind">How many blind:</label>
+            <input type="number" id="blind" name="blind" min="0">
+        </div>
+
+        <div class="form-group">
+          <label for="childrenUnder18">Children Age Under 18:</label>
+          <input type="number" id="childrenUnder18" name="childrenUnder18" min="0">
+        </div>
+
+        <div class="form-group">
+          <label for="childrenOver18">Children Age 18 or Over:</label>
+          <input type="number" id="childrenOver18" name="childrenOver18" min="0">
+        </div>
+
+        </section>
 
       <!-- Income Section -->
       <section>
