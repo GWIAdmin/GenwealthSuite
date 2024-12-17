@@ -98,7 +98,8 @@ section {
     margin-bottom: 30px;
     padding: 20px;
     background-color: #3e3851;
-    border: 1px solid #552583; 
+    /* border: 1px solid #552583; */
+    border: 1px solid #fdb927;
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
 }
