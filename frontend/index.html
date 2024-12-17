@@ -8,12 +8,26 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Merriweather:wght@700&display=swap" rel="stylesheet">
 </head>
 <body>
+  <nav class="navbar">
+    <div class="dropdown">
+      <button class="dropbtn">Menu</button>
+      <div class="dropdown-content">
+        <a href="#personalInformation">Personal Information</a>
+        <a href="#income">Income</a>
+        <a href="#adjustedGrossIncome">Adjusted Gross Income</a>
+        <a href="#taxCredits">Tax Credits</a>
+        <a href="#payments">Payments</a>
+        <a href="#submitButton">Submit</a>
+      </div>
+    </div>
+  </nav>
+
   <div class="container">
     <h1>GenwealthSuite Tax Input Form</h1>
 
     <form id="taxForm">
       <!-- Personal Information Section -->
-        <section>
+        <section id="personalInformation">
         <h2>Personal Information</h2>
 
         <div class="form-group">
@@ -138,7 +152,7 @@
         </section>
 
       <!-- Income Section -->
-      <section>
+      <section id="income">
         <h2>Income</h2>
 
         <div class="form-group">
@@ -229,7 +243,7 @@
       </section>
 
       <!-- Adjusted Gross Income -->
-      <section>
+      <section id="adjustedGrossIncome">
         <h2>Adjusted Gross Income</h2>
         <div class="form-group">
           <label for="stdDeduction">Standard Deduction:</label>
@@ -237,7 +251,7 @@
         </div>
 
       <!-- Tax Credits Section -->
-      <section>
+      <section id="taxCredits">
         <h2>Tax Credits</h2>
         <div class="form-group">
           <label for="childTaxCredit">Child Tax Credit:</label>
@@ -254,7 +268,7 @@
       </section>
 
       <!-- Payments Section -->
-      <section>
+      <section id="payments">
         <h2>Payments</h2>
         <div class="form-group">
           <label for="withheldTax">Federal Tax Withheld (W-2/1099):</label>
@@ -267,14 +281,20 @@
       </section>
 
       <!-- Submit Button -->
-      <button type="submit">Submit</button>
+      <button type="submit" id="submitButton">Submit</button>
     </form>
   </div>
+
+
 
   <div class="quote-section">
     <p>“If you want to keep most of your paycheck, start by thinking beyond it.”</p>
     <p>— Shawn L. Davenport</p>
-  </div>
+  </div>  
+  <!-- Back to Top Button -->
+  <button id="backToTopBtn" title="Go to top">Top</button>
+  <script src="script.js"></script>
+  
   <h3 style="text-align: center;">&#169; 2024 Genwealth 360 Inc.</h3>
 </body>
 </html>

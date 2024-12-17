@@ -37,4 +37,25 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
       resultsDiv.innerHTML = '<p>Error processing your data. Try again later.</p>';
     }
   });
-  
+
+// Show or hide the "Back to Top" button based on scroll position
+window.onscroll = function() {
+    scrollFunction();
+};
+
+function scrollFunction() {
+    const backToTopBtn = document.getElementById("backToTopBtn");
+    if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+        backToTopBtn.style.display = "block";
+    } else {
+        backToTopBtn.style.display = "none";
+    }
+}
+
+// Scroll to the top of the page when the button is clicked
+document.getElementById('backToTopBtn').addEventListener('click', function() {
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth' // Smooth scroll
+    });
+});
