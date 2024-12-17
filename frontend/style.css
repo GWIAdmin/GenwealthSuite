@@ -1,10 +1,9 @@
-/* General Styles */
 body {
     font-family: 'Roboto', sans-serif;
-    background-color: #2C3E50; /* Charcoal Black */
+    background-color: #2C3E50;
     margin: 0;
     padding: 0;
-    color: #E5E5E5; /* Light Gray Text */
+    color: #E5E5E5;
   }
   
   h1, h2 {
@@ -15,21 +14,21 @@ body {
   h1 {
     text-align: center;
     font-size: 2.5rem;
-    color: #e0e2e3; /* Light Gray */
+    color: #e0e2e3;
   }
   
   h2 {
     font-size: 1.8rem;
-    border-bottom: 1px solid #566573; /* Muted Gray Divider */
+    border-bottom: 1px solid #566573;
     padding-bottom: 10px;
-    color: #a2d0e2; /* Light Gray */
+    color: #a2d0e2; 
   }
   
   /* Main Container */
   .container {
     max-width: 900px;
     margin: 40px auto;
-    background-color: #3B4C5A; /* Dark Slate Gray */
+    background-color: #3B4C5A;
     padding: 30px;
     border-radius: 10px;
     box-shadow: 0 6px 10px rgba(0, 0, 0, 0.3);
@@ -39,8 +38,8 @@ body {
   section {
     margin-bottom: 30px;
     padding: 20px;
-    background-color: #4A5B6A; /* Deep Slate */
-    border: 1px solid #566573; /* Muted Gray Border */
+    background-color: #4A5B6A;
+    border: 1px solid #566573; 
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
   }
@@ -54,22 +53,22 @@ body {
     display: block;
     font-weight: bold;
     margin-bottom: 5px;
-    color: #a2d0e2; /* Light Gray */
+    color: #a2d0e2;
   }
   
   input, select {
     width: 100%;
     padding: 10px;
     font-size: 1rem;
-    background-color: #3B4C5A; /* Dark Slate Gray */
-    border: 1px solid #566573; /* Muted Gray */
-    color: #E5E5E5; /* Light Gray */
+    background-color: #3B4C5A;
+    border: 1px solid #566573;
+    color: #cff2f3;
     border-radius: 5px;
     box-sizing: border-box;
   }
   
   input:focus, select:focus {
-    border-color: #1ABC9C; /* Teal Accent */
+    border-color: #1ABC9C;
     box-shadow: 0 0 5px rgba(26, 188, 156, 0.5);
     outline: none;
   }
@@ -78,8 +77,8 @@ body {
   button {
     display: block;
     width: 100%;
-    background-color: #1ABC9C; /* Teal */
-    color: #E5E5E5; /* Light Gray */
+    background-color: #1ABC9C;
+    color: #E5E5E5;
     padding: 12px;
     border: none;
     font-size: 1.2rem;
@@ -90,7 +89,7 @@ body {
   }
   
   button:hover {
-    background-color: #16A085; /* Slightly Darker Teal */
+    background-color: #16A085;
   }
   
   /* Quote Section */
@@ -98,10 +97,10 @@ body {
     margin-top: 40px;
     text-align: center;
     font-style: italic;
-    color: #E5E5E5; /* Light Gray */
+    color: #E5E5E5;
     font-size: 1.2rem;
     padding: 15px;
-    background-color: #3B4C5A; /* Dark Slate Gray */
+    background-color: #3B4C5A;
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
   }
