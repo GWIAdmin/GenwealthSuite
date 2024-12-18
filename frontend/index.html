@@ -156,13 +156,13 @@
         <h2>Income</h2>
 
         <div class="form-group">
-          <label for="wages">Wages, Salaries, Tips (W-2):</label>
+          <label for="wages">Wages, Salaries, Tips:</label>
           <input type="number" id="wages" name="wages" step="5000.00" min="0">
         </div>
 
         <div class="form-group">
-          <label for="taxableInterest">Taxable Interest:</label>
-          <input type="number" id="taxableInterest" name="taxableInterest" step="0.01">
+          <label for="reasonableCompensation">Reasonable Compensation:</label>
+          <input type="number" id="reasonableCompensation" name="reasonableCompensation" step="5000.00" min="0">
         </div>
 
         <div class="form-group">
@@ -171,73 +171,133 @@
         </div>
 
         <div class="form-group">
-          <label for="dividends">Ordinary Dividends:</label>
-          <input type="number" id="dividends" name="dividends" step="0.01">
+          <label for="taxableInterest">Taxable Interest:</label>
+          <input type="number" id="taxableInterest" name="taxableInterest" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="taxableIRA">Taxable IRA:</label>
+          <input type="number" id="taxableIRA" name="taxableIRA" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="taxableDividends">Taxable Ordinary Dividends:</label>
+          <input type="number" id="taxableDividends" name="taxableDividends" step="0.01">
         </div>
 
         <div class="form-group">
           <label for="qualifiedDividends">Qualified Dividends:</label>
           <input type="number" id="qualifiedDividends" name="qualifiedDividends" step="0.01">
         </div>
-
+        
         <div class="form-group">
-          <label for="taxableRefunds">Taxable Refunds, Credits or Offsets of State and Local Income Taxes:</label>
-          <input type="number" id="taxableRefunds" name="taxableRefunds" step="0.01">
-        </div>
-
-        <div class="form-group">
-          <label for="alimony">Alimony Received:</label>
-          <input type="number" id="alimony" name="alimony" step="0.01">
-        </div>
-
-        <div class="form-group">
-          <label for="businessIncome">Business Income or (loss):</label>
-          <input type="number" id="businessIncome" name="businessIncome" step="0.01">
-        </div>
-
-        <div class="form-group">
-          <label for="capitalGains">Capital Gain or (loss):</label>
-          <input type="number" id="capitalGains" name="capitalGains" step="0.01">
-        </div>
-
-        <div class="form-group">
-          <label for="otherGains">Other Gains or (loss):</label>
-          <input type="number" id="otherGains" name="otherGains" step="0.01">
-        </div>
-
-        <div class="form-group">
-          <label for="iraDistributions">IRA Distributions (Taxable):</label>
+          <label for="iraDistributions">IRA Distributions:</label>
           <input type="number" id="iraDistributions" name="iraDistributions" step="0.01">
         </div>
-
+        
         <div class="form-group">
-          <label for="pensions">Pensions and Annuities (Taxable):</label>
+          <label for="pensions">Taxable Pensions and Annuities:</label>
           <input type="number" id="pensions" name="pensions" step="0.01">
         </div>
-
+        
         <div class="form-group">
-          <label for="rentalIncome">Rental Real Estate, Royalties, Partnerships, S Corporations, Trusts, etc.:</label>
-          <input type="number" id="rentalIncome" name="rentalIncome" step="0.01">
+          <label for="longTermCapitalGains">Long-Term Capital Gain or (loss):</label>
+          <input type="number" id="longTermCapitalGains" name="longTermCapitalGains" step="0.01">
         </div>
 
         <div class="form-group">
-          <label for="farmIncome">Farm Income or (loss):</label>
-          <input type="number" id="farmIncome" name="farmIncome" step="0.01">
+          <label for="shortTermCapitalGains">Short-Term Capital Gain or (loss):</label>
+          <input type="number" id="shortTermCapitalGains" name="shortTermCapitalGains" step="0.01">
         </div>
 
         <div class="form-group">
-          <label for="unemployment">Unemployment Compensation:</label>
-          <input type="number" id="unemployment" name="unemployment" step="0.01">
+          <label for="business1Income">Business 1 Income:</label>
+          <input type="number" id="business1Income" name="business1Income" step="0.01">
         </div>
 
         <div class="form-group">
-          <label for="socialSecurity">Social Security Benefits (Taxable):</label>
-          <input type="number" id="socialSecurity" name="socialSecurity" step="0.01">
+          <label for="business1Expenses">Business 1 Expenses:</label>
+          <input type="number" id="business1Expenses" name="business1Expenses" step="0.01">
         </div>
 
         <div class="form-group">
-          <label for="otherIncome">Other Income:</label>
+          <label for="business2Income">Business 2 Income:</label>
+          <input type="number" id="business2Income" name="business2Income" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="business2Expenses">Business 2 Expenses:</label>
+          <input type="number" id="business2Expenses" name="business2Expenses" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="scheduleC1Income">Schedule C-1 Income:</label>
+          <input type="number" id="scheduleC1Income" name="scheduleC1Income" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="scheduleC1Expenses">Schedule C-1 Expenses:</label>
+          <input type="number" id="scheduleC1Expenses" name="scheduleC1Expenses" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="scheduleC2Income">Schedule C-2 Income:</label>
+          <input type="number" id="scheduleC2Income" name="scheduleC2Income" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="scheduleC2Expenses">Schedule C-2 Expenses:</label>
+          <input type="number" id="scheduleC2Expenses" name="scheduleC2Expenses" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="scheduleE1Income">Schedule E-1 Income:</label>
+          <input type="number" id="scheduleE1Income" name="scheduleE1Income" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="scheduleE1Expenses">Schedule E-1 Expenses:</label>
+          <input type="number" id="scheduleE1Expenses" name="scheduleE1Expenses" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="scheduleE2Income">Schedule E-2 Income:</label>
+          <input type="number" id="scheduleC2Income" name="scheduleC2Income" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="scheduleE2Expenses">Schedule E-2 Expenses:</label>
+          <input type="number" id="scheduleE2Expenses" name="scheduleE2Expenses" step="0.01">
+        </div>
+        
+        <div class="form-group">
+          <label for="otherIncome">Other Income (Loss Carryforward):</label>
           <input type="number" id="otherIncome" name="otherIncome" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="interestPrivateBonds">Interest from Private Activity Bonds:</label>
+          <input type="number" id="interestPrivateBonds" name="interestPrivateBonds" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="depreciation">Depreciation:</label>
+          <input type="number" id="depreciation" name="depreciation" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="passiveActivityLossAdjustments">Passive Activity Loss Adjustments:</label>
+          <input type="number" id="passiveActivityLossAdjustments" name="passiveActivityLossAdjustments" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="qualifiedBusinessDeduction">Qualified Business Deduction:</label>
+          <input type="number" id="qualifiedBusinessDeduction" name="qualifiedBusinessDeduction" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="totalIncome">Total Income:</label>
+          <input type="number" id="totalIncome" name="totalIncome" step="0.01">
         </div>
 
       </section>
@@ -245,39 +305,280 @@
       <!-- Adjusted Gross Income -->
       <section id="adjustedGrossIncome">
         <h2>Adjusted Gross Income</h2>
+
         <div class="form-group">
-          <label for="stdDeduction">Standard Deduction:</label>
-          <input type="number" id="stdDeduction" name="stdDeduction" step="0.01">
+          <label for="halfSETax">Half of Self-Employemnt Tax:</label>
+          <input type="number" id="halfSETax" name="halfSETax" step="0.01">
         </div>
 
-      <!-- Tax Credits Section -->
-      <section id="taxCredits">
-        <h2>Tax Credits</h2>
+        <div class="form-group">
+          <label for="retirementDeduction">Retirement Deduction:</label>
+          <input type="number" id="retirementDeduction" name="retirementDeduction" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="medicalReimbursementPlan">Medical Reimbursement Plan:</label>
+          <input type="number" id="medicalReimbursementPlan" name="medicalReimbursementPlan" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="SEHealthInsurance">Self-Employed Health Insurance:</label>
+          <input type="number" id="SEHealthInsurance" name="SEHealthInsurance" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="alimonyPaid">Alimony Paid:</label>
+          <input type="number" id="alimonyPaid" name="alimonyPaid" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="otherAdjustments">Other Adjustments:</label>
+          <input type="number" id="otherAdjustments" name="otherAdjustments" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="totalAdjustedGrossIncome">Total Adjusted Gross Income:</label>
+          <input type="number" id="totalAdjustedGrossIncome" name="totalAdjustedGrossIncome" step="0.01">
+        </div>
+
+      </section>
+
+      <!-- Deductions Section -->
+      <section id="Deductions">
+        <h2>Deductions</h2>
+
+        <div class="form-group">
+          <label for="medical">Medical:</label>
+          <input type="number" id="medical" name="medical" step="0.01">
+        </div>
+
+        <div class="form-group">
+        <label for="stateAndLocalTaxes">State and Local taxes:</label>
+          <input type="number" id="stateAndLocalTaxes" name="stateAndLocalTaxes" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="otherTaxesFromSchK-1">Other Taxes from Schedule K-1:</label>
+            <input type="number" id="otherTaxesFromSchK-1" name="otherTaxesFromSchK-1" step="0.01">
+          </div>
+        
+        <div class="form-group">
+          <label for="interest">Interest:</label>
+            <input type="number" id="interest" name="interest" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="contributions">Contributions:</label>
+            <input type="number" id="contributions" name="contributions" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="otherDeductions">Other Deductions:</label>
+            <input type="number" id="o" name="otherDeductions" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="carryoverLoss">Carryover Loss:</label>
+            <input type="number" id="carryoverLoss" name="carryoverLoss" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="casualtyAndTheftLosses">Casualty and Theft Losses:</label>
+            <input type="number" id="casualtyAndTheftLosses" name="casualtyAndTheftLosses" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="miscellaneousDeductions">Miscellaneous Deductions:</label>
+            <input type="number" id="miscellaneousDeductions" name="miscellaneousDeductions" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="standardOrItemizedDeduction">Standard or Itemized Deduction:</label>
+            <input type="number" id="standardOrItemizedDeduction" name="standardOrItemizedDeduction" step="0.01">
+        </div>
+
+      </section>
+
+      <!-- Tax and Credits Section -->
+      <section id="taxAndCredits">
+        <h2>Tax and Credits</h2>
+        
+        <div class="form-group">
+          <label for="taxableIncome">Taxable Income:</label>
+          <input type="number" id="taxableIncome" name="taxableIncome" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="tax">Tax:</label>
+          <input type="number" id="tax" name="tax" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="additionalMedicareTax">Additional Medicare Tax:</label>
+          <input type="number" id="additionalMedicareTax" name="additionalMedicareTax" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="netInvestmentTax">Net Investment Tax:</label>
+          <input type="number" id="netInvestmentTax" name="netInvestmentTax" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="selfEmploymentTax">Self-Employment Tax:</label>
+          <input type="number" id="selfEmploymentTax" name="selfEmploymentTax" step="0.01">
+        </div>
+      
+        <div class="form-group">
+          <label for="otherTaxes">Other Taxes:</label>
+          <input type="number" id="otherTaxes" name="otherTaxes" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="foreignTaxCredit">Foreign Tax Credit:</label>
+          <input type="number" id="foreignTaxCredit" name="foreignTaxCredit" step="0.01">
+        </div>
+      
+        <div class="form-group">
+          <label for="priorYearMinimumTaxCredit">Credit for Prior Year Minimum Tax:</label>
+          <input type="number" id="priorYearMinimumTaxCredit" name="priorYearMinimumTaxCredit" step="0.01">
+        </div>
+    
+        <div class="form-group">
+          <label for="nonrefundablePersonalCredits">Nonrefundable Personal Credits:</label>
+          <input type="number" id="nonrefundablePersonalCredits" name="nonrefundablePersonalCredits" step="0.01">
+        </div>
+      
+        <div class="form-group">
+          <label for="generalBusinessCredit">General Business Credit:</label>
+          <input type="number" id="generalBusinessCredit" name="generalBusinessCredit" step="0.01">
+        </div>
+
         <div class="form-group">
           <label for="childTaxCredit">Child Tax Credit:</label>
           <input type="number" id="childTaxCredit" name="childTaxCredit" step="0.01">
         </div>
+      
         <div class="form-group">
-          <label for="earnedIncomeCredit">Earned Income Tax Credit (EITC):</label>
-          <input type="number" id="earnedIncomeCredit" name="earnedIncomeCredit" step="0.01">
+          <label for="otherCredits">Other Credits:</label>
+          <input type="number" id="otherCredits" name="otherCredits" step="0.01">
         </div>
+      
         <div class="form-group">
-          <label for="educationCredits">Education Credits:</label>
-          <input type="number" id="educationCredits" name="educationCredits" step="0.01">
+          <label for="totalFederalTax">Total Federal Tax:</label>
+          <input type="number" id="totalFederalTax" name="totalFederalTax" step="0.01">
         </div>
+
       </section>
 
       <!-- Payments Section -->
       <section id="payments">
         <h2>Payments</h2>
+
         <div class="form-group">
-          <label for="withheldTax">Federal Tax Withheld (W-2/1099):</label>
-          <input type="number" id="withheldTax" name="withheldTax" step="0.01">
+          <label for="withholdings">Withholdings:</label>
+          <input type="number" id="withholdings" name="withholdings" step="0.01">
         </div>
+
         <div class="form-group">
-          <label for="estimatedPayments">Estimated Tax Payments:</label>
-          <input type="number" id="estimatedPayments" name="estimatedPayments" step="0.01">
+          <label for="withholdingsOnMedicareWages">Withholdings on Medicare Wages:</label>
+          <input type="number" id="withholdingsOnMedicareWages" name="withholdingsOnMedicareWages" step="0.01">
         </div>
+
+        <div class="form-group">
+          <label for="estimatedTaxPayments">Estimated Tax Payments:</label>
+          <input type="number" id="estimatedTaxPayments" name="estimatedTaxPayments" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="otherPaymentsAndCredits">Other Payments and Credits:</label>
+          <input type="number" id="otherPaymentsAndCredits" name="otherPaymentsAndCredits" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="penalty">Penalty:</label>
+          <input type="number" id="penalty" name="penalty" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="estimatedRefundOverpayment">Estimated Refund (Overpayment):</label>
+          <input type="number" id="estimatedRefundOverpayment" name="estimatedRefundOverpayment" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="estimatedBalanceDue">Estimated Balance Due:</label>
+          <input type="number" id="estimatedBalanceDue" name="estimatedBalanceDue" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="employeeTaxes">Employee Taxes:</label>
+          <input type="number" id="employeeTaxes" name="employeeTaxes" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="employerTaxes">Employer Taxes:</label>
+          <input type="number" id="employerTaxes" name="employerTaxes" step="0.01">
+        </div>
+
+      </section>
+
+      <section>
+        <h2>State Taxable Income</h2>
+
+        <div class="form-group">
+          <label for="selectState">[ Select State ]</label>
+          <input type="number" id="selectState" name="selectState" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="localTaxAfterCredits">Local Tax after Credits:</label>
+          <input type="number" id="localTaxAfterCredits" name="localTaxAfterCredits" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="stateTotalTax">Total Tax:</label>
+          <input type="number" id="stateTotalTax" name="stateTotalTax" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="stateWithholdings">Withholdings:</label>
+          <input type="number" id="stateWithholdings" name="stateWithholdings" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="statePaymentsAndCredits">Payments and Credits:</label>
+          <input type="number" id="statePaymentsAndCredits" name="statePaymentsAndCredits" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="stateInterest">Interest:</label>
+          <input type="number" id="stateInterest" name="stateInterest" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="statePenalty">Penalty:</label>
+          <input type="number" id="statePenalty" name="statePenalty" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="stateEstimatedRefundOverpayment">Estimated Refund (Overpayment):</label>
+          <input type="number" id="stateEstimatedRefundOverpayment" name="stateEstimatedRefundOverpayment" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="stateEstimatedBalanceDue">Estimated Balance Due:</label>
+          <input type="number" id="stateEstimatedBalanceDue" name="stateEstimatedBalanceDue" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="totalTax">Total Tax:</label>
+          <input type="number" id="totalTax" name="totalTax" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label for="totalEstimatedDifferenceInFederalAndStateTaxesSaved:">Total Estimated Difference in Federal & State Taxes Saved:</label>
+          <input type="number" id="totalEstimatedDifferenceInFederalAndStateTaxesSaved" name="totalEstimatedDifferenceInFederalAndStateTaxesSaved" step="0.01">
+        </div>
+
       </section>
 
       <!-- Submit Button -->
@@ -289,7 +590,7 @@
     <p>“If you want to keep most of your paycheck, start by thinking beyond it.”</p>
     <p>— Shawn L. Davenport</p>
   </div>
-  
+
   <!-- Back to Top Button -->
   <button id="backToTopBtn" title="Go to top">Top</button>
   <script src="script.js"></script>
