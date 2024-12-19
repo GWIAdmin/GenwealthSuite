@@ -1,3 +1,4 @@
+// Load the tax form data from the server
 document.getElementById('taxForm').addEventListener('submit', async function (e) {
     e.preventDefault(); // Prevent default form submission
   
@@ -43,6 +44,7 @@ window.onscroll = function() {
     scrollFunction();
 };
 
+// Display the "Back to Top" button when you scroll down 20px from the top of the document
 function scrollFunction() {
     const backToTopBtn = document.getElementById("backToTopBtn");
     if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
@@ -198,6 +200,7 @@ document.getElementById('children17AndUnder').addEventListener('input', function
   }
 });
 
+// Calculate age based on birthdate
 document.getElementById('birthdate').addEventListener('change', function() {
   const birthdate = new Date(this.value);
   const today = new Date();
