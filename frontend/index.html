@@ -16,7 +16,7 @@
         <a href="#income">Income</a>
         <a href="#adjustedGrossIncome">Adjusted Gross Income</a>
         <a href="#Deductions">Deductions</a>
-        <a href="#taxCredits">Tax and Credits</a>
+        <a href="#taxAndCredits">Tax and Credits</a>
         <a href="#payments">Payments</a>
         <a href="#stateTaxableIncome">State Taxable Income</a>
         <a href="#submitButton">Submit</a>
@@ -28,6 +28,7 @@
     <h1>GenwealthSuite Tax Input Form</h1>
 
     <form id="taxForm">
+
       <!-- Personal Information Section -->
         <section id="personalInformation">
         <h2>Personal Information</h2>
@@ -63,6 +64,39 @@
             <option value="Head of Household">Head of Household</option>
             <option value="Qualifying Widow(er)">Qualifying Widow(er)</option>
           </select>
+        </div>
+        <section id="spouseSectionID">
+        <div class="form-group spouseSection" id="spouseSection" style="display:none;">
+          <h3>Spouse Information</h3>
+          <div class="form-group">
+            <label for="spouseFirstName">Spouse First Name:</label>
+            <input type="text" id="spouseFirstName" name="spouseFirstName">
+          </div>
+        
+          <div class="form-group">
+            <label for="spouseLastName">Spouse Last Name:</label>
+            <input type="text" id="spouseLastName" name="spouseLastName">
+          </div>
+        
+          <div class="form-group">
+            <label for="spouseOlderThan65">Is Spouse 65 or Older?:</label>
+            <input type="number" id="spouseOlderThan65" name="spouseOlderThan65">
+          </div>
+        
+          <div class="form-group">
+            <label for="spouseBlind">Is Spouse Blind?:</label>
+            <input type="number" id="spouseBlind" name="spouseBlind">
+          </div>
+        </div>
+        </section>
+        <div class="form-group">
+          <label for="birthdate">Birthdate:</label>
+          <input type="date" id="birthdate" name="birthdate" required>
+        </div>
+
+        <div class="form-group">
+          <label for="currentAge">Current Age:</label>
+          <input type="number" id="currentAge" name="currentAge">
         </div>
 
         <div class="form-group">
@@ -141,10 +175,17 @@
             <input type="number" id="blind" name="blind" min="0">
         </div>
 
+        <!-- Modify the childrenUnder18 field to trigger dynamic fields -->
+         
         <div class="form-group">
-          <label for="childrenUnder18">Children Age Under 18:</label>
-          <input type="number" id="childrenUnder18" name="childrenUnder18" min="0">
+          <label for="children17AndUnder">Children Age 17 and Under:</label>
+          <input type="number" id="children17AndUnder" name="children17AndUnder" min="0">
         </div>
+
+         <!-- Container for children details (Dynamic fields) -->
+        <section id="children">
+        <div id="children17AndUnderDetails"></div>
+         </section>
 
         <div class="form-group">
           <label for="childrenOver18">Children Age 18 or Over:</label>
