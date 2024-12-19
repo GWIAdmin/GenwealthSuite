@@ -76,7 +76,6 @@ document.getElementById('filingStatus').addEventListener('change', function() {
       }, 500); // Match the duration of the transition
   }
 });
-
 // Dynamic generation of children details fields
 document.getElementById('children17AndUnder').addEventListener('input', function() {
   const numChildren = parseInt(this.value, 10);
@@ -109,6 +108,7 @@ document.getElementById('children17AndUnder').addEventListener('input', function
           const birthdateLabel = document.createElement('label');
           birthdateLabel.setAttribute('for', `child${i}Birthdate`);
           birthdateLabel.textContent = `Child ${i} Birthdate:`;
+          birthdateLabel.style.marginTop = '12px'; // Add vertical spacing
           childGroup.appendChild(birthdateLabel);
 
           const birthdateInput = document.createElement('input');
@@ -122,6 +122,7 @@ document.getElementById('children17AndUnder').addEventListener('input', function
           const ageLabel = document.createElement('label');
           ageLabel.setAttribute('for', `child${i}Age`);
           ageLabel.textContent = `Child ${i} Current Age:`;
+          ageLabel.style.marginTop = '12px'; // Add vertical spacing
           childGroup.appendChild(ageLabel);
 
           const ageInput = document.createElement('input');
@@ -130,6 +131,35 @@ document.getElementById('children17AndUnder').addEventListener('input', function
           ageInput.name = `child${i}Age`;
           ageInput.required = true;
           childGroup.appendChild(ageInput);
+
+          // Add employment status field
+          const employmentLabel = document.createElement('label');
+          employmentLabel.setAttribute('for', `child${i}Employed`);
+          employmentLabel.textContent = `Is Child ${i} Currently Employed:`;
+          employmentLabel.style.marginTop = '12px'; // Add vertical spacing
+          childGroup.appendChild(employmentLabel);
+
+          const employmentSelect = document.createElement('select');
+          employmentSelect.id = `child${i}Employed`;
+          employmentSelect.name = `child${i}Employed`;
+          employmentSelect.required = true;
+
+          const optionPleaseSelect = document.createElement('option');
+          optionPleaseSelect.value = '';
+          optionPleaseSelect.textContent = 'Please Select';
+          employmentSelect.appendChild(optionPleaseSelect);
+          
+          const optionNo = document.createElement('option');
+          optionNo.value = 'no';
+          optionNo.textContent = 'No';
+          employmentSelect.appendChild(optionNo);
+
+          const optionYes = document.createElement('option');
+          optionYes.value = 'yes';
+          optionYes.textContent = 'Yes';
+          employmentSelect.appendChild(optionYes);
+
+          childGroup.appendChild(employmentSelect);
 
           // Add event listener to calculate age based on birthdate
           birthdateInput.addEventListener('change', function() {
@@ -141,6 +171,26 @@ document.getElementById('children17AndUnder').addEventListener('input', function
                   age--;
               }
               ageInput.value = age;
+          });
+
+          // Allow manual input for current age with validation
+          ageInput.addEventListener('input', function() {
+              const age = parseInt(this.value, 10);
+              const errorMessage = document.getElementById(`ageErrorMessage${i}`);
+              if (!isNaN(age) && age >= 0 && age < 18) {
+                  this.value = age;
+                  if (errorMessage) errorMessage.textContent = ''; // Clear error message
+              } else {
+                  if (!errorMessage) {
+                      const error = document.createElement('p');
+                      error.id = `ageErrorMessage${i}`;
+                      error.style.color = 'red';
+                      error.textContent = 'Sorry, age must be between 0 and 17';
+                      this.parentNode.appendChild(error);
+                  } else {
+                      errorMessage.textContent = 'Sorry, age must be between 0 and 17';
+                  }
+              }
           });
 
           childrenContainer.appendChild(childGroup);
@@ -164,7 +214,5 @@ document.getElementById('currentAge').addEventListener('input', function() {
   const age = parseInt(this.value, 10);
   if (!isNaN(age) && age >= 0) {
     this.value = age;
-  } else {
-    this.value = '';
   }
 });
