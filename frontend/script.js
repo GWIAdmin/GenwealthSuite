@@ -260,5 +260,32 @@ document.getElementById('spouseCurrentAge').addEventListener('input', function()
 
 // Automatically copy last name to spouse's last name
 document.getElementById('lastName').addEventListener('input', function() {
-  document.getElementById('spouseLastName').value = this.value;
+    document.getElementById('spouseLastName').value = this.value;
+});
+
+
+document.querySelectorAll('input[type="number"]').forEach(input => {
+    input.addEventListener('input', function () {
+        // Get the current cursor position
+        const cursorPosition = this.selectionStart;
+
+        // Remove commas and format the number
+        let num = this.value.replace(/,/g, ''); // Remove existing commas
+        if (!isNaN(num) && num !== '') {
+            const num2 = num.split(/(?=(?:\d{3})+$)/).join(","); // Add commas
+            this.value = num2; // Update the field with formatted number
+
+            // Restore the cursor position
+            const diff = num2.length - num.length;
+            this.setSelectionRange(cursorPosition + diff, cursorPosition + diff);
+        }
+    });
+
+    // Ensure correct formatting when the input loses focus (optional, add decimals)
+    input.addEventListener('blur', function () {
+        let num = this.value.replace(/,/g, ''); // Remove commas
+        if (!isNaN(num) && num !== '') {
+            this.value = num.split(/(?=(?:\d{3})+$)/).join(","); // Add commas
+        }
+    });
 });
