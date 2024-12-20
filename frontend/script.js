@@ -263,29 +263,181 @@ document.getElementById('lastName').addEventListener('input', function() {
     document.getElementById('spouseLastName').value = this.value;
 });
 
+// A helper function to safely parse field values as numbers
+function getFieldValue(id) {
+    const val = parseFloat(document.getElementById(id).value);
+    return isNaN(val) ? 0 : val;
+}
 
-document.querySelectorAll('input[type="number"]').forEach(input => {
-    input.addEventListener('input', function () {
-        // Get the current cursor position
-        const cursorPosition = this.selectionStart;
+// Recalculate totals for Total Income and AGI
+function recalculateTotals() {
+    // Income fields
+    const wages = getFieldValue('wages');
+    const reasonableCompensation = getFieldValue('reasonableCompensation');
+    const taxExemptInterest = getFieldValue('taxExemptInterest');
+    const taxableInterest = getFieldValue('taxableInterest');
+    const taxableIRA = getFieldValue('taxableIRA');
+    const taxableDividends = getFieldValue('taxableDividends');
+    const qualifiedDividends = getFieldValue('qualifiedDividends');
+    const iraDistributions = getFieldValue('iraDistributions');
+    const pensions = getFieldValue('pensions');
+    const longTermCapitalGains = getFieldValue('longTermCapitalGains');
+    const shortTermCapitalGains = getFieldValue('shortTermCapitalGains');
+    const business1Income = getFieldValue('business1Income');
+    const business1Expenses = getFieldValue('business1Expenses');
+    const business2Income = getFieldValue('business2Income');
+    const business2Expenses = getFieldValue('business2Expenses');
+    const scheduleC1Income = getFieldValue('scheduleC1Income');
+    const scheduleC1Expenses = getFieldValue('scheduleC1Expenses');
+    const scheduleC2Income = getFieldValue('scheduleC2Income');
+    const scheduleC2Expenses = getFieldValue('scheduleC2Expenses');
+    const scheduleE1Income = getFieldValue('scheduleE1Income');
+    const scheduleE1Expenses = getFieldValue('scheduleE1Expenses');
+    const scheduleE2Income = getFieldValue('scheduleE2Income');
+    const scheduleE2Expenses = getFieldValue('scheduleE2Expenses');
+    const otherIncome = getFieldValue('otherIncome');
 
-        // Remove commas and format the number
-        let num = this.value.replace(/,/g, ''); // Remove existing commas
-        if (!isNaN(num) && num !== '') {
-            const num2 = num.split(/(?=(?:\d{3})+$)/).join(","); // Add commas
-            this.value = num2; // Update the field with formatted number
+    // Calculate Total Income
+    const totalIncomeVal = 
+        wages +
+        reasonableCompensation +
+        taxExemptInterest +
+        taxableInterest +
+        taxableIRA +
+        taxableDividends +
+        qualifiedDividends +
+        iraDistributions +
+        pensions +
+        longTermCapitalGains +
+        shortTermCapitalGains +
+        (business1Income - business1Expenses) +
+        (business2Income - business2Expenses) +
+        (scheduleC1Income - scheduleC1Expenses) +
+        (scheduleC2Income - scheduleC2Expenses) +
+        (scheduleE1Income - scheduleE1Expenses) +
+        (scheduleE2Income - scheduleE2Expenses) +
+        otherIncome;
 
-            // Restore the cursor position
-            const diff = num2.length - num.length;
-            this.setSelectionRange(cursorPosition + diff, cursorPosition + diff);
-        }
-    });
+    // Adjustment fields
+    const halfSETax = getFieldValue('halfSETax');
+    const retirementDeduction = getFieldValue('retirementDeduction');
+    const medicalReimbursementPlan = getFieldValue('medicalReimbursementPlan');
+    const SEHealthInsurance = getFieldValue('SEHealthInsurance');
+    const alimonyPaid = getFieldValue('alimonyPaid');
+    const otherAdjustments = getFieldValue('otherAdjustments');
 
-    // Ensure correct formatting when the input loses focus (optional, add decimals)
-    input.addEventListener('blur', function () {
-        let num = this.value.replace(/,/g, ''); // Remove commas
-        if (!isNaN(num) && num !== '') {
-            this.value = num.split(/(?=(?:\d{3})+$)/).join(","); // Add commas
-        }
-    });
+    // Calculate Adjusted Gross Income
+    const totalAdjustedGrossIncomeVal = 
+        totalIncomeVal -
+        halfSETax -
+        retirementDeduction -
+        medicalReimbursementPlan -
+        SEHealthInsurance -
+        alimonyPaid -
+        otherAdjustments;
+
+    // Update fields
+    document.getElementById('totalIncome').value = totalIncomeVal.toFixed(2);
+    document.getElementById('totalAdjustedGrossIncome').value = totalAdjustedGrossIncomeVal.toFixed(2);
+}
+
+// Add event listeners to all relevant fields
+// You can list all fields that affect income and AGI here:
+const fieldsToWatch = [
+    'wages',
+    'reasonableCompensation',
+    'taxExemptInterest',
+    'taxableInterest',
+    'taxableIRA',
+    'taxableDividends',
+    'qualifiedDividends',
+    'iraDistributions',
+    'pensions',
+    'longTermCapitalGains',
+    'shortTermCapitalGains',
+    'business1Income',
+    'business1Expenses',
+    'business2Income',
+    'business2Expenses',
+    'scheduleC1Income',
+    'scheduleC1Expenses',
+    'scheduleC2Income',
+    'scheduleC2Expenses',
+    'scheduleE1Income',
+    'scheduleE1Expenses',
+    'scheduleE2Income',
+    'scheduleE2Expenses',
+    'otherIncome',
+    'halfSETax',
+    'retirementDeduction',
+    'medicalReimbursementPlan',
+    'SEHealthInsurance',
+    'alimonyPaid',
+    'otherAdjustments'
+];
+
+fieldsToWatch.forEach(fieldId => {
+    const field = document.getElementById(fieldId);
+    if (field) {
+        field.addEventListener('input', recalculateTotals);
+        field.addEventListener('change', recalculateTotals);
+    }
+});
+
+// Helper function to safely parse deduction fields
+function getDeductionValue(id) {
+    const val = parseFloat(document.getElementById(id).value);
+    return isNaN(val) ? 0 : val;
+}
+
+function recalculateDeductions() {
+    const medical = getDeductionValue('medical');
+    const stateAndLocalTaxes = getDeductionValue('stateAndLocalTaxes');
+    const otherTaxesFromSchK1 = getDeductionValue('otherTaxesFromSchK-1'); // ID includes a hyphen and 'K-1'
+    const interest = getDeductionValue('interest');
+    const contributions = getDeductionValue('contributions');
+    const otherDeductions = getDeductionValue('otherDeductions');
+    const carryoverLoss = getDeductionValue('carryoverLoss');
+    const casualtyAndTheftLosses = getDeductionValue('casualtyAndTheftLosses');
+    const miscellaneousDeductions = getDeductionValue('miscellaneousDeductions');
+    const standardOrItemizedDeduction = getDeductionValue('standardOrItemizedDeduction');
+
+    // Sum all deductions
+    const totalDeductionsVal = 
+        medical +
+        stateAndLocalTaxes +
+        otherTaxesFromSchK1 +
+        interest +
+        contributions +
+        otherDeductions +
+        carryoverLoss +
+        casualtyAndTheftLosses +
+        miscellaneousDeductions +
+        standardOrItemizedDeduction;
+
+    // Update the totalDeductions field
+    document.getElementById('totalDeductions').value = totalDeductionsVal.toFixed(2);
+}
+
+// List all deduction fields that affect the total deductions calculation
+const deductionFields = [
+    'medical',
+    'stateAndLocalTaxes',
+    'otherTaxesFromSchK-1',
+    'interest',
+    'contributions',
+    'otherDeductions',
+    'carryoverLoss',
+    'casualtyAndTheftLosses',
+    'miscellaneousDeductions',
+    'standardOrItemizedDeduction'
+];
+
+// Attach event listeners to trigger recalculation
+deductionFields.forEach(fieldId => {
+    const field = document.getElementById(fieldId);
+    if (field) {
+        field.addEventListener('input', recalculateDeductions);
+        field.addEventListener('change', recalculateDeductions);
+    }
 });
