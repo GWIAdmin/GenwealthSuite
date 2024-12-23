@@ -50,6 +50,7 @@ window.onscroll = function() {
     scrollFunction();
 };
 
+// Show the "Back to Top" button when the user scrolls down 20px from the top of the document
 function scrollFunction() {
     const backToTopBtn = document.getElementById("backToTopBtn");
     if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
@@ -77,12 +78,14 @@ document.getElementById('filingStatus').addEventListener('change', function() {
     }
 });
 
+// Helper functions to show elements with animation
 function showElement(element) {
     element.style.display = 'block';
     element.style.maxHeight = element.scrollHeight + 'px';
     element.style.transition = 'max-height 1s ease-in-out';
 }
 
+// Helper functions to hide elements with animation
 function hideElement(element) {
     element.style.maxHeight = '0';
     element.style.transition = 'max-height 1s ease-in-out';
@@ -110,6 +113,7 @@ document.getElementById('children17AndUnder').addEventListener('input', function
     }
 });
 
+// Helper function to create child fields
 function createChildFields(container, index) {
     const childGroup = document.createElement('div');
     childGroup.classList.add('form-group');
@@ -139,6 +143,7 @@ function createChildFields(container, index) {
     });
 }
 
+// Helper function to create a label and input field
 function createLabelAndInput(container, id, labelText, type) {
     const label = document.createElement('label');
     label.setAttribute('for', id);
@@ -154,6 +159,7 @@ function createLabelAndInput(container, id, labelText, type) {
     container.appendChild(input);
 }
 
+// Helper function to create employment status field
 function createEmploymentStatusField(container, index) {
     const employmentLabel = document.createElement('label');
     employmentLabel.setAttribute('for', `child${index}Employed`);
@@ -184,6 +190,7 @@ function createEmploymentStatusField(container, index) {
     container.appendChild(employmentSelect);
 }
 
+// Helper function to calculate age based on birthdate
 function calculateAge(birthdateValue, ageInputId, isChild = false) {
     const birthdate = new Date(birthdateValue);
     const today = new Date();
@@ -200,6 +207,7 @@ function calculateAge(birthdateValue, ageInputId, isChild = false) {
     }
 }
 
+// Helper function to validate age input
 function validateAgeInput(input, index, isChild = false) {
     const age = parseInt(input.value, 10);
     const errorMessageId = `ageErrorMessage${index}`;
@@ -376,6 +384,7 @@ const fieldsToWatch = [
     'otherAdjustments'
 ];
 
+// Attach event listeners to trigger recalculation
 fieldsToWatch.forEach(fieldId => {
     const field = document.getElementById(fieldId);
     if (field) {
@@ -390,6 +399,7 @@ function getDeductionValue(id) {
     return isNaN(val) ? 0 : val;
 }
 
+// Recalculate total deductions
 function recalculateDeductions() {
     const medical = getDeductionValue('medical');
     const stateAndLocalTaxes = getDeductionValue('stateAndLocalTaxes');
