@@ -494,12 +494,24 @@ function recalculateDeductions() {
     updateTaxableIncome();
 }
 
-// Add event listeners to relevant fields
-document.getElementById('wages').addEventListener('input', recalculateTotals);
-document.getElementById('wages').addEventListener('change', recalculateTotals);
-document.getElementById('standardOrItemizedDeduction').addEventListener('input', recalculateDeductions);
-document.getElementById('standardOrItemizedDeduction').addEventListener('change', recalculateDeductions);
-document.getElementById('totalAdjustedGrossIncome').addEventListener('input', updateTaxableIncome);
-document.getElementById('totalAdjustedGrossIncome').addEventListener('change', updateTaxableIncome);
-document.getElementById('totalDeductions').addEventListener('input', updateTaxableIncome);
-document.getElementById('totalDeductions').addEventListener('change', updateTaxableIncome);
+// Ensure the DOM is fully loaded before attaching event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Automatically copy the value from the 'state' field to the 'selectState' field
+    const stateField = document.getElementById('state');
+    const selectStateField = document.getElementById('selectState');
+    if (stateField && selectStateField) {
+        stateField.addEventListener('input', function() {
+            selectStateField.value = this.value;
+        });
+    }
+
+    // Add event listeners to relevant fields
+    document.getElementById('wages').addEventListener('input', recalculateTotals);
+    document.getElementById('wages').addEventListener('change', recalculateTotals);
+    document.getElementById('standardOrItemizedDeduction').addEventListener('input', recalculateDeductions);
+    document.getElementById('standardOrItemizedDeduction').addEventListener('change', recalculateDeductions);
+    document.getElementById('totalAdjustedGrossIncome').addEventListener('input', updateTaxableIncome);
+    document.getElementById('totalAdjustedGrossIncome').addEventListener('change', updateTaxableIncome);
+    document.getElementById('totalDeductions').addEventListener('input', updateTaxableIncome);
+    document.getElementById('totalDeductions').addEventListener('change', updateTaxableIncome);
+});
