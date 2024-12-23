@@ -75,12 +75,12 @@
 
           <div class="form-group">
             <label for="spouseFirstName">Spouse First Name:</label>
-            <input type="text" id="spouseFirstName" name="spouseFirstName">
+            <input type="text" id="spouseFirstName" name="spouseFirstName" required>
           </div>
           
           <div class="form-group">
             <label for="spouseLastName">Spouse Last Name:</label>
-            <input type="text" id="spouseLastName" name="spouseLastName">
+            <input type="text" id="spouseLastName" name="spouseLastName" required>
           </div>
           
           <div class="form-group">
@@ -90,29 +90,33 @@
           
           <div class="form-group">
             <label for="spouseCurrentAge">Spouse Current Age:</label>
-            <input type="number" id="spouseCurrentAge" name="spouseCurrentAge">
+            <input type="number" id="spouseCurrentAge" name="spouseCurrentAge" required>
           </div>
           
           <div class="form-group">
             <label for="spouseOlderThan65">Is Spouse 65 or Older?:</label>
-            <input type="number" id="spouseOlderThan65" name="spouseOlderThan65">
+            <input type="number" id="spouseOlderThan65" name="spouseOlderThan65" required>
           </div>
           
            <div class="form-group">
-             <label for="spouseBlind">Is Spouse Blind?:</label>
-             <input type="number" id="spouseBlind" name="spouseBlind">
+            <label for="spouseBlind">Is Spouse Blind?:</label>
+            <select id="spouseBlind" name="spouseBlind" required>
+              <option value="please select">Please Select</option>
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+            </select>
            </div>
           
         </div>
         </section>
           <div class="form-group">
             <label for="birthdate">Birthdate:</label>
-            <input type="date" id="birthdate" name="birthdate" required>
+            <input type="date" id="birthdate" name="birthdate">
           </div>
 
           <div class="form-group">
             <label for="currentAge">Current Age:</label>
-            <input type="number" id="currentAge" name="currentAge">
+            <input type="number" id="currentAge" name="currentAge" required>
           </div>
 
           <div class="form-group">
@@ -184,19 +188,17 @@
 
           <div class="form-group">
             <label for="olderthan65">How many 65 or older:</label>
-            <input type="number" id="olderthan65" name="olderthan65" min="0">
+            <input type="number" id="olderthan65" name="olderthan65" min="0" required>
           </div>
 
           <div class="form-group">
             <label for="blind">How many blind:</label>
-            <input type="number" id="blind" name="blind" min="0">
+            <input type="number" id="blind" name="blind" min="0" required>
           </div>
-
-        <!-- Modify the childrenUnder18 field to trigger dynamic fields -->
          
           <div class="form-group">
             <label for="children17AndUnder">Children Age 17 and Under:</label>
-            <input type="number" id="children17AndUnder" name="children17AndUnder" min="0">
+            <input type="number" id="children17AndUnder" name="children17AndUnder" min="0" required>
           </div>
 
           <!-- Container for children details (Dynamic fields) -->
@@ -217,7 +219,7 @@
 
         <div class="form-group">
           <label for="wages">Wages, Salaries, Tips:</label>
-          <input type="number" id="wages" name="wages" min="0">
+          <input type="number" id="wages" name="wages" min="0" required>
         </div>
 
         <div class="form-group">
@@ -486,7 +488,7 @@
 
         <div class="form-group">
           <label for="selfEmploymentTax">Self-Employment Tax:</label>
-          <input type="number" id="selfEmploymentTax" name="selfEmploymentTax" >
+          <input type="number" id="selfEmploymentTax" name="selfEmploymentTax" required>
         </div>
       
         <div class="form-group">
@@ -526,7 +528,7 @@
       
         <div class="form-group">
           <label for="totalFederalTax">Total Federal Tax:</label>
-          <input type="number" id="totalFederalTax" name="totalFederalTax" readonly>
+          <input type="number" id="totalFederalTax" name="totalFederalTax" readonly required>
         </div>
 
       </section>
@@ -547,7 +549,7 @@
 
         <div class="form-group">
           <label for="estimatedTaxPayments">Estimated Tax Payments:</label>
-          <input type="number" id="estimatedTaxPayments" name="estimatedTaxPayments" >
+          <input type="number" id="estimatedTaxPayments" name="estimatedTaxPayments" required>
         </div>
 
         <div class="form-group">
@@ -562,22 +564,22 @@
 
         <div class="form-group">
           <label for="estimatedRefundOverpayment">Estimated Refund (Overpayment):</label>
-          <input type="number" id="estimatedRefundOverpayment" name="estimatedRefundOverpayment" readonly>
+          <input type="number" id="estimatedRefundOverpayment" name="estimatedRefundOverpayment" readonly required>
         </div>
 
         <div class="form-group">
           <label for="estimatedBalanceDue">Estimated Balance Due:</label>
-          <input type="number" id="estimatedBalanceDue" name="estimatedBalanceDue" readonly>
+          <input type="number" id="estimatedBalanceDue" name="estimatedBalanceDue" readonly required>
         </div>
 
         <div class="form-group">
           <label for="employeeTaxes">Employee Taxes:</label>
-          <input type="number" id="employeeTaxes" name="employeeTaxes" readonly>
+          <input type="number" id="employeeTaxes" name="employeeTaxes" readonly required>
         </div>
 
         <div class="form-group">
           <label for="employerTaxes">Employer Taxes:</label>
-          <input type="number" id="employerTaxes" name="employerTaxes" readonly>
+          <input type="number" id="employerTaxes" name="employerTaxes" readonly required>
         </div>
 
       </section>
@@ -588,7 +590,7 @@
 
         <div class="form-group">
           <label for="selectState">[ Select State ]</label>
-          <input type="number" id="selectState" name="selectState" readonly>
+          <input type="number" id="selectState" name="selectState" readonly required>
         </div>
 
         <div class="form-group">
@@ -598,7 +600,7 @@
 
         <div class="form-group">
           <label for="stateTotalTax">Total Tax:</label>
-          <input type="number" id="stateTotalTax" name="stateTotalTax" readonly>
+          <input type="number" id="stateTotalTax" name="stateTotalTax" readonly required>
         </div>
 
         <div class="form-group">
@@ -623,22 +625,22 @@
 
         <div class="form-group">
           <label for="stateEstimatedRefundOverpayment">Estimated Refund (Overpayment):</label>
-          <input type="number" id="stateEstimatedRefundOverpayment" name="stateEstimatedRefundOverpayment" readonly>
+          <input type="number" id="stateEstimatedRefundOverpayment" name="stateEstimatedRefundOverpayment" readonly required>
         </div>
 
         <div class="form-group">
           <label for="stateEstimatedBalanceDue">Estimated Balance Due:</label>
-          <input type="number" id="stateEstimatedBalanceDue" name="stateEstimatedBalanceDue" readonly>
+          <input type="number" id="stateEstimatedBalanceDue" name="stateEstimatedBalanceDue" readonly required>
         </div>
 
         <div class="form-group">
           <label for="totalTax">Total Tax:</label>
-          <input type="number" id="totalTax" name="totalTax" readonly>
+          <input type="number" id="totalTax" name="totalTax" readonly required>
         </div>
 
         <div class="form-group">
           <label for="totalEstimatedDifferenceInFederalAndStateTaxesSaved:">Total Estimated Difference in Federal & State Taxes Saved:</label>
-          <input type="number" id="totalEstimatedDifferenceInFederalAndStateTaxesSaved" name="totalEstimatedDifferenceInFederalAndStateTaxesSaved" readonly>
+          <input type="number" id="totalEstimatedDifferenceInFederalAndStateTaxesSaved" name="totalEstimatedDifferenceInFederalAndStateTaxesSaved" readonly required>
         </div>
 
       </section>
