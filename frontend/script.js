@@ -461,7 +461,6 @@ function updateTaxableIncome() {
     document.getElementById('taxableIncome').value = taxableIncome.toFixed(2);
 }
 
-
 // Function to recalculate totals for Total Income and AGI
 function recalculateTotals() {
     const wages = getFieldValue('wages');
@@ -482,7 +481,6 @@ function recalculateTotals() {
     updateTaxableIncome();
 }
 
-
 // Function to recalculate total deductions
 function recalculateDeductions() {
     const standardOrItemizedDeduction = getDeductionValue('standardOrItemizedDeduction');
@@ -495,7 +493,6 @@ function recalculateDeductions() {
 
     updateTaxableIncome();
 }
-
 
 // Add event listeners to relevant fields
 document.getElementById('wages').addEventListener('input', recalculateTotals);
