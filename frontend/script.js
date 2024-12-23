@@ -451,3 +451,58 @@ deductionFields.forEach(fieldId => {
         field.addEventListener('change', recalculateDeductions);
     }
 });
+
+// Function to calculate and update Taxable Income
+function updateTaxableIncome() {
+    const totalAdjustedGrossIncome = getFieldValue('totalAdjustedGrossIncome');
+    const totalDeductions = getFieldValue('totalDeductions');
+    const taxableIncome = totalAdjustedGrossIncome - totalDeductions;
+
+    document.getElementById('taxableIncome').value = taxableIncome.toFixed(2);
+}
+
+
+// Function to recalculate totals for Total Income and AGI
+function recalculateTotals() {
+    const wages = getFieldValue('wages');
+    const taxableIRA = getFieldValue('taxableIRA');
+    const longTermCapitalGains = getFieldValue('longTermCapitalGains');
+
+    // Adjustments
+    const halfSETax = getFieldValue('halfSETax');
+    const otherAdjustments = getFieldValue('otherAdjustments');
+
+    // Calculate Total Adjusted Gross Income
+    const totalIncomeVal = wages + taxableIRA + longTermCapitalGains;
+    const totalAdjustedGrossIncomeVal = totalIncomeVal - halfSETax - otherAdjustments;
+
+    document.getElementById('totalIncome').value = totalIncomeVal.toFixed(2);
+    document.getElementById('totalAdjustedGrossIncome').value = totalAdjustedGrossIncomeVal.toFixed(2);
+
+    updateTaxableIncome();
+}
+
+
+// Function to recalculate total deductions
+function recalculateDeductions() {
+    const standardOrItemizedDeduction = getDeductionValue('standardOrItemizedDeduction');
+    const miscellaneousDeductions = getDeductionValue('miscellaneousDeductions');
+
+    // Calculate Total Deductions
+    const totalDeductionsVal = standardOrItemizedDeduction + miscellaneousDeductions;
+
+    document.getElementById('totalDeductions').value = totalDeductionsVal.toFixed(2);
+
+    updateTaxableIncome();
+}
+
+
+// Add event listeners to relevant fields
+document.getElementById('wages').addEventListener('input', recalculateTotals);
+document.getElementById('wages').addEventListener('change', recalculateTotals);
+document.getElementById('standardOrItemizedDeduction').addEventListener('input', recalculateDeductions);
+document.getElementById('standardOrItemizedDeduction').addEventListener('change', recalculateDeductions);
+document.getElementById('totalAdjustedGrossIncome').addEventListener('input', updateTaxableIncome);
+document.getElementById('totalAdjustedGrossIncome').addEventListener('change', updateTaxableIncome);
+document.getElementById('totalDeductions').addEventListener('input', updateTaxableIncome);
+document.getElementById('totalDeductions').addEventListener('change', updateTaxableIncome);
