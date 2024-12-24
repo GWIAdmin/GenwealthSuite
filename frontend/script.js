@@ -515,3 +515,32 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('totalDeductions').addEventListener('input', updateTaxableIncome);
     document.getElementById('totalDeductions').addEventListener('change', updateTaxableIncome);
 });
+
+// Utility function to format number as $X,XXX.XX
+function formatCurrency(value) {
+    // First, remove any existing commas or dollar signs
+    let numericValue = value.replace(/[^0-9.-]/g, '');
+    if (numericValue === '') return '';
+    
+    let floatValue = parseFloat(numericValue);
+    if (isNaN(floatValue)) return '';
+
+    // Format using the Intl.NumberFormat API
+    let formatter = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD'
+    });
+    return formatter.format(floatValue);
+}
+
+// Attach 'blur' event to all currency fields
+document.querySelectorAll('.currency-field').forEach((elem) => {
+    elem.addEventListener('blur', function() {
+        this.value = formatCurrency(this.value);
+    });
+});
+
+// If you need to convert back to a pure number for calculations, define a helper:
+function unformatCurrency(value) {
+    return parseFloat(value.replace(/[^0-9.-]/g, '')) || 0;
+}

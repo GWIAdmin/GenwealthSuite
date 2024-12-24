@@ -93,6 +93,22 @@ h2 {
   box-shadow: 0 6px 10px rgba(0, 0, 0, 0.3);
 }
 
+/* Spouse Section Background */
+#spouseSection {
+  background-color: #374e8d; /* pick any distinct color */
+  padding: 15px;
+  border-radius: 5px;
+  margin-top: 20px;
+}
+
+/* Dynamic Child Section Background */
+#children17AndUnderDetails > div {
+  background-color: #374e8d; /* or a different color from the spouse section */
+  padding: 15px;
+  border-radius: 5px;
+  margin-bottom: 15px;
+}
+
 /* Section Styling */
 section {
   margin-bottom: 30px;
