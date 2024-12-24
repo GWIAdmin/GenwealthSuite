@@ -120,6 +120,14 @@ section {
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
 }
 
+.business-entry {
+  background-color: #374e8d;
+  padding: 15px;
+  margin-bottom: 15px;
+  border-radius: 5px;
+  border: 1px solid #fdb927;
+}
+
 /* Form Group */
 .form-group {
   margin-bottom: 15px;

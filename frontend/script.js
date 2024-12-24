@@ -544,3 +544,138 @@ document.querySelectorAll('.currency-field').forEach((elem) => {
 function unformatCurrency(value) {
     return parseFloat(value.replace(/[^0-9.-]/g, '')) || 0;
 }
+
+// Dynamic generation of business fields
+document.getElementById('numBusinesses').addEventListener('input', function() {
+    const businessCount = parseInt(this.value, 10);
+    const container = document.getElementById('businessContainer');
+    container.innerHTML = ''; // Clear existing business fields
+
+    if (!isNaN(businessCount) && businessCount > 0) {
+        for (let i = 1; i <= businessCount; i++) {
+            createBusinessFields(container, i);
+        }
+    }
+});
+
+// Helper: create business fields
+function createBusinessFields(container, index) {
+    const businessDiv = document.createElement('div');
+    businessDiv.classList.add('business-entry');
+    
+    // Business Type
+    const typeLabel = document.createElement('label');
+    typeLabel.textContent = `Business ${index} Type:`;
+    businessDiv.appendChild(typeLabel);
+
+    const typeSelect = document.createElement('select');
+    typeSelect.name = `business${index}Type`;
+    typeSelect.id = `business${index}Type`;
+    
+    // Options
+    const types = ["Please Select", "S-Corp", "Partnership", "C-Corp", "Schedule-C"];
+    types.forEach(t => {
+        let opt = document.createElement('option');
+        opt.value = t;
+        opt.textContent = t;
+        typeSelect.appendChild(opt);
+    });
+    businessDiv.appendChild(typeSelect);
+
+    // Business Name
+    createLabelAndTextField(businessDiv, `business${index}Name`, `Business ${index} Name:`);
+
+    // Ownership Percentage
+    createLabelAndNumberField(businessDiv, `business${index}Ownership`, `Ownership %:`, 0);
+
+    // Income
+    createLabelAndCurrencyField(businessDiv, `business${index}Income`, `Income:`);
+
+    // Expenses
+    createLabelAndCurrencyField(businessDiv, `business${index}Expenses`, `Expenses:`);
+
+    // Net
+    createLabelAndTextField(businessDiv, `business${index}Net`, `Net (Income - Expenses):`);
+    // Make it read-only or computed in real-time
+
+    // Append to container
+    container.appendChild(businessDiv);
+
+    // Add event listeners for Income & Expenses to compute Net
+    document.getElementById(`business${index}Income`).addEventListener('blur', function() {
+        updateBusinessNet(index);
+    });
+    document.getElementById(`business${index}Expenses`).addEventListener('blur', function() {
+        updateBusinessNet(index);
+    });
+
+    // Add event listener to Ownership to see if < 100% => prompt spouse or other
+    document.getElementById(`business${index}Ownership`).addEventListener('change', function() {
+        checkOwnership(index, this.value);
+    });
+}
+
+// Helper: create label + text input
+function createLabelAndTextField(parent, id, labelText) {
+    const label = document.createElement('label');
+    label.htmlFor = id;
+    label.textContent = labelText;
+    parent.appendChild(label);
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.id = id;
+    input.name = id;
+    parent.appendChild(input);
+}
+
+// Helper: create label + number input
+function createLabelAndNumberField(parent, id, labelText, minValue) {
+    const label = document.createElement('label');
+    label.htmlFor = id;
+    label.textContent = labelText;
+    parent.appendChild(label);
+
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.id = id;
+    input.name = id;
+    input.min = minValue;
+    parent.appendChild(input);
+}
+
+// Helper: create label + text (for currency). You can also attach the same blur formatting logic:
+function createLabelAndCurrencyField(parent, id, labelText) {
+    const label = document.createElement('label');
+    label.htmlFor = id;
+    label.textContent = labelText;
+    parent.appendChild(label);
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.id = id;
+    input.name = id;
+    input.classList.add('currency-field');
+    parent.appendChild(input);
+}
+
+// Calculate and update Net
+function updateBusinessNet(index) {
+    const incomeVal = unformatCurrency(document.getElementById(`business${index}Income`).value);
+    const expensesVal = unformatCurrency(document.getElementById(`business${index}Expenses`).value);
+    const netVal = incomeVal - expensesVal;
+
+    // Format the net value
+    document.getElementById(`business${index}Net`).value = formatCurrency(netVal.toString());
+}
+
+// Check ownership; if < 100%, prompt spouse or other
+function checkOwnership(index, ownershipValue) {
+    const ownership = parseFloat(ownershipValue);
+    if (ownership < 100) {
+        // You could show a small prompt or create a new field
+        const additionalOwnerPrompt = prompt(`Who owns the remaining ${100 - ownership}%? Enter "Spouse" or "Other".`);
+        // You can then store it in a hidden field or show a new set of fields, etc.
+        console.log(`Additional owner selected: ${additionalOwnerPrompt}`);
+    }
+}
