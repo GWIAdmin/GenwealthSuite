@@ -149,6 +149,21 @@ input:focus, select:focus {
   outline: none;
 }
 
+.prelim-btn {
+  background-color: #6e54b5;
+  color: #E5E5E5;
+  border: none;
+  padding: 6px 12px;
+  margin-left: -1px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.prelim-btn:hover {
+  background-color: #ffe08a;
+}
+
 /* Button Styling */
 button {
   display: block;
