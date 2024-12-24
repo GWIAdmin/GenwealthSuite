@@ -2,21 +2,33 @@
 
 ## Overview
 
-GenwealthSuite is a Python-based system that combines Excel-based tax calculations with a straightforward web interface. The system enables a user to input client data through a webpage and pass these inputs to a server-side Python script, which integrates with an Excel file to process tax calculations and returns the results back to the user. After performing the computations, GenwealthSuite can use GPT-4 to provide AI-generated tax optimization insights.
+GenwealthSuite is a Python-based web application that streamlines data entry and leverages an Excel spreadsheet for tax calculations. Advisors enter client information into a web form; the server then updates a master Excel workbook, triggers recalculations (using Excel’s formulas), and returns the results. Finally, GenwealthSuite can use GPT-4 to provide AI-generated insights for strategic tax planning.
 
 ## Key Features
 
 - **Excel-Based Calculations:**  
-  The system leverages existing Excel templates to perform tax-related calculations, minimizing the need to rewrite logic.
+   - A Python backend (Flask or FastAPI) updates the Excel file based on user input and retrieves updated results.  
+   - Open to multiple Python libraries (`openpyxl`, `xlwings`, `win32com`) for reading/writing Excel cells and forcing recalculations.
   
 - **Server-Side Processing:**  
-  A Python server (using frameworks such as Flask or FastAPI) handles incoming data, updates the Excel file, triggers recalculations, and extracts results programmatically.
+  - A Python server (using frameworks such as Flask or FastAPI) handles incoming data, updates the Excel file, triggers recalculations, and extracts results programmatically.
   
 - **Web Interface for Input:**  
-  The interface is a static webpage where users enter client information. Input is sent to the server via a POST request, and the server returns calculated results as JSON.
-  
+  - A static webpage allows advisors to enter Form 1040 data.  
+  - Data is sent to the backend via `fetch()`, and results are displayed without exposing users to the complexity of Excel.  
 - **AI-Generated Insights:**  
-  Once calculations are complete, GPT-4 can be used to provide tax strategy suggestions based on the computed values.
+   - Once calculations are complete, the system can send relevant data to GPT-4 (or another large language model) to generate strategic tax optimization ideas.
+
+- `frontend/` – Contains the UI:
+  - **index.html** – A static form for user data input (e.g., personal info, wages, deductions).
+  - **script.js** – Frontend logic for dynamic fields, client-side calculations, and the POST request to the server.
+  - **style.css** – Basic styling.
+
+- `server/` – Contains the backend:
+  - **app.py** – The Flask or FastAPI application, which defines endpoints for processing tax data.
+  - **excel_processor.py** – Logic to read/write Excel cells and retrieve calculated tax results.
+
+- `requirements.txt` – Lists Python dependencies.
 
 ## Requirements
 
@@ -32,20 +44,20 @@ GenwealthSuite is a Python-based system that combines Excel-based tax calculatio
 
 ## Workflow
 
-1. **Data Input via Webpage:**  
-   A user enters client data into a static webpage form.
+1. Fill Out the Tax Form:
+  Enter personal info, wages, deductions, etc.
+  Click Submit to send data to the Python server.
 
-2. **Server Request:**  
-   On submission, the frontend sends the input data to the Python server.
+2. Server Processes Data:
+  The server writes the form data into the Excel workbook, triggers a recalculation, and extracts results.
 
-3. **Excel Processing:**  
-   The server updates the Excel file with the provided inputs and triggers recalculations using the existing formulas within the spreadsheet.
+3. Results Displayed:
+   The server returns a JSON response with the updated tax values.
+   The client (in script.js) displays these calculations to the advisor.
 
-4. **Returning Results:**  
-   The server returns the computed results as JSON, and the webpage displays the updated values.
-
-5. **AI Insights (Optional):**  
-   If enabled, the system uses GPT-4 to generate tax optimization insights based on the computed results.
+4. (Optional) GPT-4 Insights:
+   If GPT-4 integration is enabled, the server uses final tax data to generate strategic insights.
+   Advisors see suggestions for tax optimizations or alternative planning approaches.
 
 > [!CAUTION]
 > ## Common Issues
@@ -55,3 +67,7 @@ GenwealthSuite is a Python-based system that combines Excel-based tax calculatio
 >
 > ### Data Formatting
 > Ensure that the Excel spreadsheet follows consistent naming conventions and structures so that data extraction and calculation run smoothly.
+
+## License
+This software is proprietary to Genwealth 360 &copy;. All rights reserved.
+
