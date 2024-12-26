@@ -68,6 +68,12 @@ document.getElementById('backToTopBtn').addEventListener('click', function() {
     });
 });
 
+document.querySelectorAll('input, select').forEach((element) => {
+  element.addEventListener('blur', function() {
+    this.classList.add('input-completed');
+  });
+});
+
 // Dynamic display of spouse section based on Filing Status
 document.getElementById('filingStatus').addEventListener('change', function() {
     const spouseSection = document.getElementById('spouseSection');
