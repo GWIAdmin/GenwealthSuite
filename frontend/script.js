@@ -620,6 +620,7 @@ function createLabelAndTextField(parent, id, labelText) {
     const label = document.createElement('label');
     label.htmlFor = id;
     label.textContent = labelText;
+    label.style.marginTop = '12px'; // Add vertical spacing
     parent.appendChild(label);
 
     const input = document.createElement('input');
@@ -634,6 +635,7 @@ function createLabelAndNumberField(parent, id, labelText, minValue) {
     const label = document.createElement('label');
     label.htmlFor = id;
     label.textContent = labelText;
+    label.style.marginTop = '12px'; // Add vertical spacing
     parent.appendChild(label);
 
     const input = document.createElement('input');
@@ -649,6 +651,7 @@ function createLabelAndCurrencyField(parent, id, labelText) {
     const label = document.createElement('label');
     label.htmlFor = id;
     label.textContent = labelText;
+    label.style.marginTop = '12px'; // Add vertical spacing
     parent.appendChild(label);
 
     const input = document.createElement('input');
