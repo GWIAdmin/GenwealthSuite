@@ -68,6 +68,7 @@ document.getElementById('backToTopBtn').addEventListener('click', function() {
     });
 });
 
+// Add a "completed" class to form inputs when they lose focus
 document.querySelectorAll('input, select').forEach((element) => {
   element.addEventListener('blur', function() {
     this.classList.add('input-completed');
@@ -682,9 +683,39 @@ function updateBusinessNet(index) {
 function checkOwnership(index, ownershipValue) {
     const ownership = parseFloat(ownershipValue);
     if (ownership < 100) {
-        // You could show a small prompt or create a new field
-        const additionalOwnerPrompt = prompt(`Who owns the remaining ${100 - ownership}%? Enter "Spouse" or "Other".`);
-        // You can then store it in a hidden field or show a new set of fields, etc.
-        console.log(`Additional owner selected: ${additionalOwnerPrompt}`);
+        // Create a new field for additional owner details
+        const additionalOwnerDiv = document.createElement('div');
+        additionalOwnerDiv.classList.add('form-group');
+        additionalOwnerDiv.id = `additionalOwner${index}`;
+
+        additionalOwnerDiv.style.marginTop = '12px';
+
+        const additionalOwnerLabel = document.createElement('label');
+        additionalOwnerLabel.textContent = `Who owns the remaining ${100 - ownership}% of this business?`;
+        additionalOwnerDiv.appendChild(additionalOwnerLabel);
+
+        const additionalOwnerSelect = document.createElement('select');
+        additionalOwnerSelect.name = `additionalOwner${index}`;
+        additionalOwnerSelect.id = `additionalOwner${index}`;
+
+        const optionPleaseSelect = document.createElement('option');
+        optionPleaseSelect.value = '';
+        optionPleaseSelect.textContent = 'Please Select';
+        additionalOwnerSelect.appendChild(optionPleaseSelect);
+
+        const optionSpouse = document.createElement('option');
+        optionSpouse.value = 'Spouse';
+        optionSpouse.textContent = 'Spouse';
+        additionalOwnerSelect.appendChild(optionSpouse);
+
+        const optionOther = document.createElement('option');
+        optionOther.value = 'Other';
+        optionOther.textContent = 'Other';
+        additionalOwnerSelect.appendChild(optionOther);
+
+        additionalOwnerDiv.appendChild(additionalOwnerSelect);
+
+        // Append the new field to the business entry
+        document.getElementById(`business${index}Type`).parentNode.appendChild(additionalOwnerDiv);
     }
 }
