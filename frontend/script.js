@@ -9,11 +9,10 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
     const formData = new FormData(e.target);
     const data = Object.fromEntries(formData.entries());
 
-    // Convert numeric fields to numbers
+    // Convert numeric fields to numbers (strip currency formatting if present)
     for (let key in data) {
         if (!isNaN(data[key]) && data[key].trim() !== '') {
-            data[key] = parseFloat(data[key].replace(/[^0-9.-]/g, '')); 
-            // remove commas/dollar signs first if needed
+            data[key] = parseFloat(data[key].replace(/[^0-9.-]/g, ''));
         }
     }
 
@@ -23,7 +22,7 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
     resultsDiv.classList.remove('hidden');
 
     try {
-        // Make a POST request to your server endpoint
+        // Example: POST to local Flask server. Adjust if needed:
         const response = await fetch('http://127.0.0.1:5000/process-tax-data', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -100,7 +99,7 @@ function hideElement(element) {
     element.style.transition = 'max-height 1s ease-in-out';
     setTimeout(() => {
         element.style.display = 'none';
-        element.style.backgroundColor = ''; // Reset
+        element.style.backgroundColor = ''; // Reset styling
     }, 500);
 }
 
@@ -144,7 +143,7 @@ function createChildFields(container, index) {
 
     container.appendChild(childGroup);
 
-    // Add event listener to calculate age from birthdate
+    // Age from birthdate
     document.getElementById(`child${index}Birthdate`).addEventListener('change', function() {
         calculateAge(this.value, `child${index}Age`, true);
     });
@@ -232,6 +231,7 @@ function calculateAge(birthdateValue, ageInputId, isChild = false) {
     }
     document.getElementById(ageInputId).value = age;
 
+    // Validate if it is a child's age
     if (isChild) {
         validateAgeInput(document.getElementById(ageInputId), ageInputId.replace('child', '').replace('Age', ''), true);
     }
@@ -243,6 +243,7 @@ function validateAgeInput(input, index, isChild = false) {
     let errorMessage = document.getElementById(errorMessageId);
 
     if (isChild) {
+        // child must be 0..17
         if (!isNaN(age) && age >= 0 && age < 18) {
             if (errorMessage) errorMessage.textContent = '';
         } else {
@@ -257,6 +258,7 @@ function validateAgeInput(input, index, isChild = false) {
             }
         }
     } else {
+        // adult can be any age >= 0
         if (!isNaN(age) && age >= 0) {
             if (errorMessage) errorMessage.textContent = '';
         } else {
@@ -290,13 +292,13 @@ document.getElementById('lastName').addEventListener('input', function() {
 function getFieldValue(id) {
     const el = document.getElementById(id);
     if (!el) return 0;
-    // remove any currency formatting:
+    // strip currency formatting:
     let val = parseFloat(el.value.replace(/[^0-9.-]/g, ''));
     return isNaN(val) ? 0 : val;
 }
 
 function formatCurrency(value) {
-    // remove any existing commas or dollar signs:
+    // remove any existing commas or dollar signs
     let numericValue = value.replace(/[^0-9.-]/g, '');
     if (numericValue === '') return '';
     let floatValue = parseFloat(numericValue);
@@ -309,8 +311,7 @@ function unformatCurrency(value) {
     return parseFloat(value.replace(/[^0-9.-]/g, '')) || 0;
 }
 
-
-// Attach 'blur' event to all currency fields for formatting
+// Automatically format any .currency-field on blur
 document.querySelectorAll('.currency-field').forEach((elem) => {
     elem.addEventListener('blur', function() {
         this.value = formatCurrency(this.value);
@@ -334,7 +335,6 @@ document.getElementById('numBusinesses').addEventListener('input', function() {
     }
 });
 
-// Create business fields (type, name, ownership, income, expenses, net)
 function createBusinessFields(container, index) {
     const businessDiv = document.createElement('div');
     businessDiv.classList.add('business-entry');
@@ -369,24 +369,30 @@ function createBusinessFields(container, index) {
     // Expenses
     createLabelAndCurrencyField(businessDiv, `business${index}Expenses`, `Expenses:`);
 
-    // Net (read-only or computed automatically)
+    // Net (Income - Expenses)
     createLabelAndTextField(businessDiv, `business${index}Net`, `Net (Income - Expenses):`);
-    document.getElementById(`business${index}Net`).readOnly = true;
-
     container.appendChild(businessDiv);
 
-    // On blur, recalc net
-    document.getElementById(`business${index}Income`).addEventListener('blur', function() {
+    // The newly created 'Net' field
+    const netField = document.getElementById(`business${index}Net`);
+    netField.readOnly = true;
+
+    // Income + Expenses listeners
+    const incomeField = document.getElementById(`business${index}Income`);
+    const expensesField = document.getElementById(`business${index}Expenses`);
+
+    incomeField.addEventListener('blur', function() {
         updateBusinessNet(index);
-        recalculateTotals(); // re-run totals
+        recalculateTotals();
     });
-    document.getElementById(`business${index}Expenses`).addEventListener('blur', function() {
+    expensesField.addEventListener('blur', function() {
         updateBusinessNet(index);
-        recalculateTotals(); // re-run totals
+        recalculateTotals();
     });
 
-    // On ownership < 100, prompt spouse or other
-    document.getElementById(`business${index}Ownership`).addEventListener('change', function() {
+    // If Ownership < 100, show spouse/other
+    const ownershipField = document.getElementById(`business${index}Ownership`);
+    ownershipField.addEventListener('change', function() {
         checkOwnership(index, this.value);
     });
 }
@@ -434,7 +440,7 @@ function createLabelAndCurrencyField(parent, id, labelText) {
     input.classList.add('currency-field');
     parent.appendChild(input);
 
-    // Attach blur to format currency
+    // On blur, format as currency
     input.addEventListener('blur', function() {
         input.value = formatCurrency(input.value);
     });
@@ -448,7 +454,7 @@ function updateBusinessNet(index) {
 }
 
 function checkOwnership(index, ownershipValue) {
-    const ownership = parseFloat(ownershipValue);
+    const ownership = parseFloat(ownershipValue) || 0;
     const existingAdditionalOwnerDiv = document.getElementById(`additionalOwner${index}`);
     if (existingAdditionalOwnerDiv) {
         existingAdditionalOwnerDiv.remove();
@@ -483,6 +489,8 @@ function checkOwnership(index, ownershipValue) {
         additionalOwnerSelect.appendChild(optionOther);
 
         additionalOwnerDiv.appendChild(additionalOwnerSelect);
+
+        // Insert under the same business block
         document.getElementById(`business${index}Type`).parentNode.appendChild(additionalOwnerDiv);
     }
 }
@@ -492,7 +500,6 @@ function checkOwnership(index, ownershipValue) {
 // 9. REAL-TIME CALCULATIONS FOR INCOME/ADJUSTMENTS     //
 //-----------------------------------------------------//
 
-// We will unify our recalculateTotals() to handle business net as well
 function recalculateTotals() {
     // Income fields
     const wages = getFieldValue('wages');
@@ -512,8 +519,7 @@ function recalculateTotals() {
     const scheduleE2Expenses = getFieldValue('scheduleE2Expenses');
     const otherIncome = getFieldValue('otherIncome');
 
-    // Combine net for the dynamic businesses:
-    // We'll sum all businessXNet fields that exist
+    // Combine net from dynamic businesses
     let businessesNetTotal = 0;
     const numBusinessesVal = parseInt(document.getElementById('numBusinesses').value || '0', 10);
     for (let i = 1; i <= numBusinessesVal; i++) {
@@ -522,13 +528,13 @@ function recalculateTotals() {
         businessesNetTotal += netVal;
     }
 
-    // Also handle possible scheduleC1, scheduleC2 if you have them
+    // Schedule C incomes/expenses (if any)
     const scheduleC1Income = getFieldValue('scheduleC1Income');
     const scheduleC1Expenses = getFieldValue('scheduleC1Expenses');
     const scheduleC2Income = getFieldValue('scheduleC2Income');
     const scheduleC2Expenses = getFieldValue('scheduleC2Expenses');
 
-    // Calculate totalIncomeVal
+    // Sum everything
     const totalIncomeVal =
         wages +
         reasonableCompensation +
@@ -541,15 +547,11 @@ function recalculateTotals() {
         pensions +
         longTermCapitalGains +
         shortTermCapitalGains +
-        // schedule E
         (scheduleE1Income - scheduleE1Expenses) +
         (scheduleE2Income - scheduleE2Expenses) +
-        // schedule C
         (scheduleC1Income - scheduleC1Expenses) +
         (scheduleC2Income - scheduleC2Expenses) +
-        // dynamic business total:
         businessesNetTotal +
-        // other
         otherIncome;
 
     // Adjustments
@@ -574,7 +576,7 @@ function recalculateTotals() {
     document.getElementById('totalIncome').value = totalIncomeVal.toFixed(2);
     document.getElementById('totalAdjustedGrossIncome').value = totalAdjustedGrossIncomeVal.toFixed(2);
 
-    // Also recalc taxable income after we recalc totals
+    // Also recalc taxable income
     updateTaxableIncome();
 }
 
@@ -691,7 +693,7 @@ deductionFields.forEach(fieldId => {
 //------------------------------------------//
 
 document.addEventListener('DOMContentLoaded', function() {
-    // If you want default calculations to show up immediately (e.g. if some fields have defaults), you can do:
+    // Trigger initial calculations if default values exist:
     recalculateTotals();
     recalculateDeductions();
 });
