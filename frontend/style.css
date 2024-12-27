@@ -1,6 +1,6 @@
 body {
   font-family: 'Roboto', sans-serif;
-  background-color: #F9F8FD;
+  background-color: #eeeaff;
   margin: 0;
   padding: 0;
   color: #E5E5E5;
@@ -35,7 +35,7 @@ h3{
   top: 0;
   left: 0;
   width: 100%;
-  background-color: #EFEAF8;
+  background-color: #eeeaff;
   z-index: 1000;
   display: flex;
   justify-content: flex-end;
