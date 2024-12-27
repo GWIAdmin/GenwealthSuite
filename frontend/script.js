@@ -682,6 +682,10 @@ function updateBusinessNet(index) {
 // Check ownership; if < 100%, prompt spouse or other
 function checkOwnership(index, ownershipValue) {
     const ownership = parseFloat(ownershipValue);
+    const existingAdditionalOwnerDiv = document.getElementById(`additionalOwner${index}`);
+    if (existingAdditionalOwnerDiv) {
+        existingAdditionalOwnerDiv.remove();
+    }
     if (ownership < 100) {
         // Create a new field for additional owner details
         const additionalOwnerDiv = document.createElement('div');
