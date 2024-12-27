@@ -706,3 +706,29 @@ document.addEventListener('DOMContentLoaded', function() {
     recalculateTotals();
     recalculateDeductions();
 });
+
+//--------------------------//
+// HANDLE "ENTER" AS "TAB"  //
+//--------------------------//
+
+document.getElementById('taxForm').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+        e.preventDefault(); // Prevent form submission on Enter key
+
+        // Collect all focusable elements (inputs and selects)
+        const focusable = Array.from(this.elements).filter(
+            el => el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA'
+        );
+
+        // Find the index of the currently focused element
+        const index = focusable.indexOf(document.activeElement);
+
+        if (index > -1 && index < focusable.length - 1) {
+            // Move to the next element
+            focusable[index + 1].focus();
+        } else if (index === focusable.length - 1) {
+            // Loop back to the first element if on the last input
+            focusable[0].focus();
+        }
+    }
+});
