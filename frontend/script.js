@@ -488,9 +488,65 @@ function checkOwnership(index, ownershipValue) {
     }
 }
 
-//-----------------------------------------------------//
-// 9. REAL-TIME CALCULATIONS FOR INCOME/ADJUSTMENTS     //
-//-----------------------------------------------------//
+//--------------------------------------------------//
+// 9. DYNAMIC GENERATION OF SCHEDULE E FIELDS + NET //
+//--------------------------------------------------//
+
+document.getElementById('numScheduleEs').addEventListener('input', function() {
+    const eCount = parseInt(this.value, 10);
+    const container = document.getElementById('scheduleEsContainer');
+    container.innerHTML = ''; // Clear existing fields
+
+    if (!isNaN(eCount) && eCount > 0) {
+        for (let i = 1; i <= eCount; i++) {
+            createScheduleEFields(container, i);
+        }
+    }
+});
+
+function createScheduleEFields(container, index) {
+    const scheduleEDiv = document.createElement('div');
+    scheduleEDiv.classList.add('schedule-e-entry');
+
+    // Schedule E Income
+    createLabelAndCurrencyField(scheduleEDiv, `scheduleE${index}Income`, `Schedule E-${index} Income:`);
+
+    // Schedule E Expenses
+    createLabelAndCurrencyField(scheduleEDiv, `scheduleE${index}Expenses`, `Schedule E-${index} Expenses:`);
+
+    // Net (Income - Expenses)
+    createLabelAndTextField(scheduleEDiv, `scheduleE${index}Net`, `Schedule E-${index} Net (Income - Expenses):`);
+    container.appendChild(scheduleEDiv);
+
+    // The newly created Net field should be read-only:
+    const netField = document.getElementById(`scheduleE${index}Net`);
+    netField.readOnly = true;
+
+    // Income + Expenses listeners
+    const incomeField = document.getElementById(`scheduleE${index}Income`);
+    const expensesField = document.getElementById(`scheduleE${index}Expenses`);
+
+    incomeField.addEventListener('blur', function() {
+        updateScheduleENet(index);
+        recalculateTotals();
+    });
+    expensesField.addEventListener('blur', function() {
+        updateScheduleENet(index);
+        recalculateTotals();
+    });
+}
+
+// Calculate net for each Schedule E
+function updateScheduleENet(index) {
+    const incomeVal = unformatCurrency(document.getElementById(`scheduleE${index}Income`).value);
+    const expensesVal = unformatCurrency(document.getElementById(`scheduleE${index}Expenses`).value);
+    const netVal = incomeVal - expensesVal;
+    document.getElementById(`scheduleE${index}Net`).value = formatCurrency(netVal.toString());
+}
+
+//-------------------------------------------------------//
+// 10. REAL-TIME CALCULATIONS FOR INCOME/ADJUSTMENTS     //
+//-------------------------------------------------------//
 
 function recalculateTotals() {
     // Income fields
@@ -505,19 +561,24 @@ function recalculateTotals() {
     const pensions = getFieldValue('pensions');
     const longTermCapitalGains = getFieldValue('longTermCapitalGains');
     const shortTermCapitalGains = getFieldValue('shortTermCapitalGains');
-    const scheduleE1Income = getFieldValue('scheduleE1Income');
-    const scheduleE1Expenses = getFieldValue('scheduleE1Expenses');
-    const scheduleE2Income = getFieldValue('scheduleE2Income');
-    const scheduleE2Expenses = getFieldValue('scheduleE2Expenses');
     const otherIncome = getFieldValue('otherIncome');
 
-    // Combine net from dynamic businesses
+    // Combines net from dynamic businesses
     let businessesNetTotal = 0;
     const numBusinessesVal = parseInt(document.getElementById('numBusinesses').value || '0', 10);
     for (let i = 1; i <= numBusinessesVal; i++) {
         const netValStr = document.getElementById(`business${i}Net`)?.value || '0';
         const netVal = unformatCurrency(netValStr);
         businessesNetTotal += netVal;
+    }
+
+    // Combines net from dynamic Schedule E
+    let scheduleEsNetTotal = 0;
+    const numScheduleEsVal = parseInt(document.getElementById('numScheduleEs')?.value || '0', 10);
+    for (let i = 1; i <= numScheduleEsVal; i++) {
+        const netValStr = document.getElementById(`scheduleE${i}Net`)?.value || '0';
+        const netVal = unformatCurrency(netValStr);
+        scheduleEsNetTotal += netVal;
     }
 
     // Schedule C incomes/expenses (if any)
@@ -539,11 +600,10 @@ function recalculateTotals() {
         pensions +
         longTermCapitalGains +
         shortTermCapitalGains +
-        (scheduleE1Income - scheduleE1Expenses) +
-        (scheduleE2Income - scheduleE2Expenses) +
         (scheduleC1Income - scheduleC1Expenses) +
         (scheduleC2Income - scheduleC2Expenses) +
         businessesNetTotal +
+        scheduleEsNetTotal +
         otherIncome;
 
     // Adjustments
@@ -573,7 +633,7 @@ function recalculateTotals() {
 }
 
 //--------------------------------------------------------//
-// 10. REAL-TIME CALCULATIONS FOR DEDUCTIONS + TAXABLE    //
+// 11. REAL-TIME CALCULATIONS FOR DEDUCTIONS + TAXABLE    //
 //--------------------------------------------------------//
 
 function recalculateDeductions() {
@@ -614,7 +674,7 @@ function updateTaxableIncome() {
 }
 
 //-----------------------------------------------------------//
-// 11. ATTACHING EVENT LISTENERS FOR REAL-TIME CALCULATIONS  //
+// 12. ATTACHING EVENT LISTENERS FOR REAL-TIME CALCULATIONS  //
 //-----------------------------------------------------------//
 
 // Fields that affect totalIncome and AGI:
@@ -678,7 +738,7 @@ deductionFields.forEach(fieldId => {
 });
 
 //-----------------------------------------------------------//
-// 12. TURNS INPUT FIELD BORDER COLOR GREEN TO COMFIRM INPUT //
+// 13. TURNS INPUT FIELD BORDER COLOR GREEN TO COMFIRM INPUT //
 //-----------------------------------------------------------//
 
 document.querySelectorAll('input, select').forEach((element) => {
@@ -688,7 +748,7 @@ document.querySelectorAll('input, select').forEach((element) => {
   });
 
 //------------------------------------------//
-// 13. INITIALIZE CALCULATIONS ON PAGE LOAD //
+// 14. INITIALIZE CALCULATIONS ON PAGE LOAD //
 //------------------------------------------//
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -698,7 +758,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 //--------------------------------------//
-// 14. AUTO-COPY STATE TO "SELECTSTATE" //
+// 15. AUTO-COPY STATE TO "SELECTSTATE" //
 //--------------------------------------//
 
 document.getElementById('state').addEventListener('input', function() {
@@ -706,7 +766,7 @@ document.getElementById('state').addEventListener('input', function() {
 });
 
 //-----------------------------//
-// 15. HANDLE "ENTER" AS "TAB" //
+// 16. HANDLE "ENTER" AS "TAB" //
 //-----------------------------//
 
 document.getElementById('taxForm').addEventListener('keydown', function (e) {
