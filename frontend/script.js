@@ -697,8 +697,16 @@ document.addEventListener('DOMContentLoaded', function() {
     recalculateDeductions();
 });
 
+//--------------------------------------//
+// 14. AUTO-COPY STATE TO "SELECTSTATE" //
+//--------------------------------------//
+
+document.getElementById('state').addEventListener('input', function() {
+    document.getElementById('selectState').value = this.value;
+});
+
 //-----------------------------//
-// 14. HANDLE "ENTER" AS "TAB" //
+// 15. HANDLE "ENTER" AS "TAB" //
 //-----------------------------//
 
 document.getElementById('taxForm').addEventListener('keydown', function (e) {
