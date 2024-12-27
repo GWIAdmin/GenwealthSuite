@@ -687,9 +687,18 @@ deductionFields.forEach(fieldId => {
     }
 });
 
+//-----------------------------------------------------------//
+// 12. TURNS INPUT FIELD BORDER COLOR GREEN TO COMFIRM INPUT //
+//-----------------------------------------------------------//
+
+document.querySelectorAll('input, select').forEach((element) => {
+    element.addEventListener('blur', function() {
+      this.classList.add('input-completed');
+    });
+  });
 
 //------------------------------------------//
-// 12. INITIALIZE CALCULATIONS ON PAGE LOAD //
+// 13. INITIALIZE CALCULATIONS ON PAGE LOAD //
 //------------------------------------------//
 
 document.addEventListener('DOMContentLoaded', function() {
