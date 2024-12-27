@@ -240,3 +240,11 @@ button:hover {
 .quote-section p {
   margin: 5px 0;
 }
+
+.schedule-e-entry {
+  background-color: #FFFFFF;
+  padding: 15px;
+  margin-bottom: 15px;
+  border-radius: 20px;
+  border: 2px solid #552583;
+}

@@ -508,6 +508,11 @@ function createScheduleEFields(container, index) {
     const scheduleEDiv = document.createElement('div');
     scheduleEDiv.classList.add('schedule-e-entry');
 
+    // Add a heading for visual clarity
+    const heading = document.createElement('h3');
+    heading.textContent = `Schedule E ${index}`;
+    scheduleEDiv.appendChild(heading);
+
     // Schedule E Income
     createLabelAndCurrencyField(scheduleEDiv, `scheduleE${index}Income`, `Schedule E-${index} Income:`);
 
@@ -738,15 +743,15 @@ deductionFields.forEach(fieldId => {
 });
 
 //-----------------------------------------------------------//
-// 13. TURNS INPUT FIELD BORDER COLOR GREEN TO COMFIRM INPUT //
+// 13. TURNS INPUT FIELD BORDER COLOR GREEN TO CONFIRM INPUT //
 //-----------------------------------------------------------//
 
-document.querySelectorAll('input, select').forEach((element) => {
-    element.addEventListener('blur', function() {
-      this.classList.add('input-completed');
-    });
-  });
-
+document.addEventListener('blur', function(event) {
+    if (event.target.matches('input, select')) {
+      event.target.classList.add('input-completed');
+    }
+  }, true);
+  
 //------------------------------------------//
 // 14. INITIALIZE CALCULATIONS ON PAGE LOAD //
 //------------------------------------------//
