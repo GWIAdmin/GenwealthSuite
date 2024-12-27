@@ -49,7 +49,6 @@ function displayResults(resultData) {
     `;
 }
 
-
 //-------------------------------------------//
 // 2. "BACK TO TOP" BUTTON AND WINDOW SCROLL //
 //-------------------------------------------//
@@ -73,7 +72,6 @@ document.getElementById('backToTopBtn').addEventListener('click', function() {
         behavior: 'smooth'
     });
 });
-
 
 //-----------------------------//
 // 3. SPOUSE SECTION ANIMATION //
@@ -102,7 +100,6 @@ function hideElement(element) {
         element.style.backgroundColor = ''; // Reset styling
     }, 500);
 }
-
 
 //-------------------------------------//
 // 4. CHILDREN DETAILS (DYNAMIC FIELDS) //
@@ -199,7 +196,6 @@ function createEmploymentStatusField(container, index) {
     container.appendChild(employmentSelect);
 }
 
-
 //----------------------//
 // 5. AGE CALCULATIONS  //
 //----------------------//
@@ -275,7 +271,6 @@ function validateAgeInput(input, index, isChild = false) {
     }
 }
 
-
 //-----------------------------------------------------//
 // 6. AUTO-COPY LAST NAME TO SPOUSE'S LAST NAME        //
 //-----------------------------------------------------//
@@ -283,7 +278,6 @@ function validateAgeInput(input, index, isChild = false) {
 document.getElementById('lastName').addEventListener('input', function() {
     document.getElementById('spouseLastName').value = this.value;
 });
-
 
 //-----------------------------------------------------//
 // 7. HELPER FUNCTIONS FOR NUMBER FIELDS AND CURRENCY  //
@@ -317,7 +311,6 @@ document.querySelectorAll('.currency-field').forEach((elem) => {
         this.value = formatCurrency(this.value);
     });
 });
-
 
 //-----------------------------------------------------------//
 // 8. DYNAMIC GENERATION OF BUSINESS FIELDS + NET CALC       //
@@ -495,7 +488,6 @@ function checkOwnership(index, ownershipValue) {
     }
 }
 
-
 //-----------------------------------------------------//
 // 9. REAL-TIME CALCULATIONS FOR INCOME/ADJUSTMENTS     //
 //-----------------------------------------------------//
@@ -580,7 +572,6 @@ function recalculateTotals() {
     updateTaxableIncome();
 }
 
-
 //--------------------------------------------------------//
 // 10. REAL-TIME CALCULATIONS FOR DEDUCTIONS + TAXABLE    //
 //--------------------------------------------------------//
@@ -621,7 +612,6 @@ function updateTaxableIncome() {
     const taxableIncome = totalAdjustedGrossIncome - totalDeductions;
     document.getElementById('taxableIncome').value = taxableIncome.toFixed(2);
 }
-
 
 //-----------------------------------------------------------//
 // 11. ATTACHING EVENT LISTENERS FOR REAL-TIME CALCULATIONS  //
@@ -708,7 +698,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 //--------------------------//
-// HANDLE "ENTER" AS "TAB"  //
+// 14. HANDLE "ENTER" AS "TAB"  //
 //--------------------------//
 
 document.getElementById('taxForm').addEventListener('keydown', function (e) {
