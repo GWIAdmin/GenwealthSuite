@@ -697,9 +697,9 @@ document.addEventListener('DOMContentLoaded', function() {
     recalculateDeductions();
 });
 
-//--------------------------//
-// 14. HANDLE "ENTER" AS "TAB"  //
-//--------------------------//
+//-----------------------------//
+// 14. HANDLE "ENTER" AS "TAB" //
+//-----------------------------//
 
 document.getElementById('taxForm').addEventListener('keydown', function (e) {
     if (e.key === 'Enter') {
