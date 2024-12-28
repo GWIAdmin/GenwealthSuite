@@ -689,6 +689,16 @@
   </div>
 
   <script src="script.js"></script>
+
+  <!-- Prevents the user from accidentally refreshing/leaving the webpage -->
+  <script>
+    window.addEventListener('beforeunload', function (e) {
+      // Cancel the event
+      e.preventDefault();
+      // Chrome requires returnValue to be set
+      e.returnValue = '';
+    });
+  </script>
   
   <h3 style="text-align: center;">&#169; 2024 Genwealth 360 Inc.</h3>
 </body>
