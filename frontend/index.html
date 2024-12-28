@@ -29,14 +29,20 @@
   <div class="container">
     <h1>GenwealthSuite 1040 Input Form</h1>
 
-    <!-- Prelim Button -->
-    <button type="button" class="prelim-btn" id="prelimIncomeBtn">Prelim</button>
-
     <form id="taxForm">
 
       <!-- Personal Information Section -->
       <section id="personalInformation">
         <h2>Personal Information</h2>
+
+        <div class="form-group">
+          <label for="prelim">Preliminary Analysis?:</label>
+          <select id="prelim" name="prelim" required>
+            <option value="please select">Please Select</option>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        </div>
 
         <div class="form-group">
           <label for="firstName">First Name:</label>
