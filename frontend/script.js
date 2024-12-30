@@ -79,7 +79,7 @@ document.getElementById('backToTopBtn').addEventListener('click', function() {
 
 document.getElementById('filingStatus').addEventListener('change', function() {
     const spouseSection = document.getElementById('spouseSection');
-    if (this.value === 'Married Filing Jointly') {
+    if (this.value === 'Married Filing Jointly' || this.value === 'Married Filing Separately') {
         showElement(spouseSection);
     } else {
         hideElement(spouseSection);
@@ -555,7 +555,8 @@ function updateScheduleENet(index) {
 
 function recalculateTotals() {
     // Income fields
-    const wages = getFieldValue('wages');
+    const wages1 = getFieldValue('wages1');
+    const wages2 = getFieldValue('wages2');
     const reasonableCompensation = getFieldValue('reasonableCompensation');
     const taxExemptInterest = getFieldValue('taxExemptInterest');
     const taxableInterest = getFieldValue('taxableInterest');
@@ -594,7 +595,8 @@ function recalculateTotals() {
 
     // Sum everything
     const totalIncomeVal =
-        wages +
+        wages1 +
+        wages2 +
         reasonableCompensation +
         taxExemptInterest +
         taxableInterest +
@@ -684,7 +686,8 @@ function updateTaxableIncome() {
 
 // Fields that affect totalIncome and AGI:
 const fieldsToWatch = [
-    'wages',
+    'wages1',
+    'wages2',
     'reasonableCompensation',
     'taxExemptInterest',
     'taxableInterest',

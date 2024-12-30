@@ -104,24 +104,6 @@
             <input type="text" id="spouseCurrentAge" name="spouseCurrentAge" required>
           </div>
           
-          <div class="form-group">
-            <label for="spouseOlderThan65">Is Spouse 65 or Older?:</label>
-            <select id="spouseBlind" name="spouseBlind" required>
-              <option value="please select">Please Select</option>
-              <option value="Yes">Yes</option>
-              <option value="No">No</option>
-            </select>
-          </div>
-          
-           <div class="form-group">
-            <label for="spouseBlind">Is Spouse Blind?:</label>
-            <select id="spouseBlind" name="spouseBlind" required>
-              <option value="please select">Please Select</option>
-              <option value="Yes">Yes</option>
-              <option value="No">No</option>
-            </select>
-           </div>
-          
         </div>
         </section>
           <div class="form-group">
@@ -233,8 +215,13 @@
         <h2>Income</h2>
 
         <div class="form-group">
-          <label for="wages">Wages, Salaries, Tips:</label>
-          <input type="text" id="wages" name="wages" min="0" class="currency-field" required>
+          <label for="wages1">Wages, Salaries, Tips 1:</label>
+          <input type="text" id="wages1" name="wages1" min="0" class="currency-field" required>
+        </div>
+
+        <div class="form-group">
+          <label for="wages2">Wages, Salaries, Tips 2:</label>
+          <input type="text" id="wages2" name="wages2" min="0" class="currency-field" required>
         </div>
 
         <div class="form-group">
@@ -338,7 +325,7 @@
 
         <div class="form-group">
           <label for="halfSETax">Half of Self-Employemnt Tax:</label>
-          <input type="text" id="halfSETax" name="halfSETax" class="currency-field">
+          <input type="text" id="halfSETax" name="halfSETax" class="currency-field" readonly>
         </div>
 
         <div class="form-group">
@@ -461,7 +448,7 @@
 
         <div class="form-group">
           <label for="selfEmploymentTax">Self-Employment Tax:</label>
-          <input type="text" id="selfEmploymentTax" name="selfEmploymentTax" class="currency-field" required>
+          <input type="text" id="selfEmploymentTax" name="selfEmploymentTax" class="currency-field" required readonly>
         </div>
       
         <div class="form-group">
