@@ -751,9 +751,14 @@ deductionFields.forEach(fieldId => {
 
 document.addEventListener('blur', function(event) {
     if (event.target.matches('input, select')) {
-      event.target.classList.add('input-completed');
+        // Check if the input or select has a value
+        if (event.target.value.trim() !== '') {
+            event.target.classList.add('input-completed');
+        } else {
+            event.target.classList.remove('input-completed'); // Remove if no value
+        }
     }
-  }, true);
+}, true);
   
 //------------------------------------------//
 // 14. INITIALIZE CALCULATIONS ON PAGE LOAD //
