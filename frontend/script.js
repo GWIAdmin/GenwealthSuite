@@ -555,8 +555,7 @@ function updateScheduleENet(index) {
 
 function recalculateTotals() {
     // Income fields
-    const wages1 = getFieldValue('wages1');
-    const wages2 = getFieldValue('wages2');
+    const wages = getFieldValue('wages');
     const reasonableCompensation = getFieldValue('reasonableCompensation');
     const taxExemptInterest = getFieldValue('taxExemptInterest');
     const taxableInterest = getFieldValue('taxableInterest');
@@ -595,8 +594,7 @@ function recalculateTotals() {
 
     // Sum everything
     const totalIncomeVal =
-        wages1 +
-        wages2 +
+        wages +
         reasonableCompensation +
         taxExemptInterest +
         taxableInterest +
@@ -686,8 +684,7 @@ function updateTaxableIncome() {
 
 // Fields that affect totalIncome and AGI:
 const fieldsToWatch = [
-    'wages1',
-    'wages2',
+    'wages',
     'reasonableCompensation',
     'taxExemptInterest',
     'taxableInterest',
