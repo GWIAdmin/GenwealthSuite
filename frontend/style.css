@@ -107,12 +107,12 @@ h3{
   margin-top: 20px;
 }
 
-/* Dynamic Child Section Background */
-#children17AndUnderDetails > div {
+.dependent-entry {
   background-color: #FFFFFF;
   padding: 15px;
-  border-radius: 5px;
   margin-bottom: 15px;
+  border-radius: 20px;
+  border: 2px solid #552583;
 }
 
 /* Section Styling */

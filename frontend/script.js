@@ -101,53 +101,48 @@ function hideElement(element) {
     }, 500);
 }
 
-//-------------------------------------//
-// 4. CHILDREN DETAILS (DYNAMIC FIELDS) //
-//-------------------------------------//
+//--------------------------------//
+// 4. DYNAMIC DEPENDENTS CREATION //
+//--------------------------------//
 
-document.getElementById('children17AndUnder').addEventListener('input', function() {
-    const numChildren = parseInt(this.value, 10);
-    const childrenContainer = document.getElementById('children17AndUnderDetails');
-    childrenContainer.innerHTML = ''; // Clear old fields
+document.getElementById('numberOfDependents').addEventListener('input', function() {
+    const numDependents = parseInt(this.value, 10);
+    const dependentsContainer = document.getElementById('dependentsSection');
+    dependentsContainer.innerHTML = ''; // Clear old fields
 
-    if (!isNaN(numChildren) && numChildren > 0) {
+    if (!isNaN(numDependents) && numDependents > 0) {
         const heading = document.createElement('h2');
-        heading.textContent = 'Children Details';
-        childrenContainer.appendChild(heading);
+        heading.textContent = 'Children / Dependents Details';
+        dependentsContainer.appendChild(heading);
 
-        // Create input fields for each child
-        for (let i = 1; i <= numChildren; i++) {
-            createChildFields(childrenContainer, i);
+        // Create input fields for each dependent
+        for (let i = 1; i <= numDependents; i++) {
+            createDependentFields(dependentsContainer, i);
         }
     }
 });
 
-function createChildFields(container, index) {
-    const childGroup = document.createElement('div');
-    childGroup.classList.add('form-group');
+function createDependentFields(container, index) {
+    const dependentGroup = document.createElement('div');
+    dependentGroup.classList.add('dependent-entry');
 
-    // Child Name
-    createLabelAndInput(childGroup, `child${index}Name`, `Child ${index} Name:`, 'text');
+    // 1. Dependent Name
+    createLabelAndInput(dependentGroup, `dependent${index}Name`, `Dependent ${index} Name:`, 'text');
 
-    // Child Birthdate
-    createLabelAndInput(childGroup, `child${index}Birthdate`, `Child ${index} Birthdate:`, 'date');
+    // 2. Dependent Birthdate
+    createLabelAndInput(dependentGroup, `dependent${index}Birthdate`, `Dependent ${index} Birthdate:`, 'date');
 
-    // Child Current Age
-    createLabelAndInput(childGroup, `child${index}Age`, `Child ${index} Current Age:`, 'number');
+    // 3. Dependent Current Age
+    createLabelAndInput(dependentGroup, `dependent${index}Age`, `Dependent ${index} Current Age:`, 'number');
 
-    // Employment Status
-    createEmploymentStatusField(childGroup, index);
+    // 4. Dropdown for Child/Dependent Credit
+    createCreditDropdown(dependentGroup, index);
 
-    container.appendChild(childGroup);
+    container.appendChild(dependentGroup);
 
     // Age from birthdate
-    document.getElementById(`child${index}Birthdate`).addEventListener('change', function() {
-        calculateAge(this.value, `child${index}Age`, true);
-    });
-
-    // Validate age
-    document.getElementById(`child${index}Age`).addEventListener('input', function() {
-        validateAgeInput(this, index, true);
+    document.getElementById(`dependent${index}Birthdate`).addEventListener('change', function() {
+        calculateAge(this.value, `dependent${index}Age`);
     });
 }
 
@@ -166,39 +161,55 @@ function createLabelAndInput(container, id, labelText, type) {
     container.appendChild(input);
 }
 
-function createEmploymentStatusField(container, index) {
-    const employmentLabel = document.createElement('label');
-    employmentLabel.setAttribute('for', `child${index}Employed`);
-    employmentLabel.textContent = `Is Child ${index} Currently Employed:`;
-    employmentLabel.style.marginTop = '12px';
-    container.appendChild(employmentLabel);
+function createCreditDropdown(container, index) {
+    const creditLabel = document.createElement('label');
+    creditLabel.setAttribute('for', `dependent${index}Credit`);
+    creditLabel.textContent = 'Qualifies for Child/Dependent Credit?';
+    creditLabel.style.marginTop = '12px'; // Add vertical spacing
+    container.appendChild(creditLabel);
 
-    const employmentSelect = document.createElement('select');
-    employmentSelect.id = `child${index}Employed`;
-    employmentSelect.name = `child${index}Employed`;
-    employmentSelect.required = true;
+    const select = document.createElement('select');
+    select.id = `dependent${index}Credit`;
+    select.name = `dependent${index}Credit`;
+    select.required = true;
 
-    const optionPleaseSelect = document.createElement('option');
-    optionPleaseSelect.value = '';
-    optionPleaseSelect.textContent = 'Please Select';
-    employmentSelect.appendChild(optionPleaseSelect);
+    const option1 = document.createElement('option');
+    option1.value = '';
+    option1.textContent = 'Please Select';
+    select.appendChild(option1);
 
-    const optionNo = document.createElement('option');
-    optionNo.value = 'no';
-    optionNo.textContent = 'No';
-    employmentSelect.appendChild(optionNo);
+    const option2 = document.createElement('option');
+    option2.value = 'yes';
+    option2.textContent = 'Yes';
+    select.appendChild(option2);
 
-    const optionYes = document.createElement('option');
-    optionYes.value = 'yes';
-    optionYes.textContent = 'Yes';
-    employmentSelect.appendChild(optionYes);
+    const option3 = document.createElement('option');
+    option3.value = 'no';
+    option3.textContent = 'No';
+    select.appendChild(option3);
 
-    container.appendChild(employmentSelect);
+    container.appendChild(select);
 }
 
 //----------------------//
 // 5. AGE CALCULATIONS  //
 //----------------------//
+
+function calculateAge(birthdateValue, ageInputId) {
+    const birthdate = new Date(birthdateValue);
+    if (isNaN(birthdate.getTime())) {
+        // If invalid date, just return
+        return;
+    }
+    const today = new Date();
+    let age = today.getFullYear() - birthdate.getFullYear();
+    const monthDifference = today.getMonth() - birthdate.getMonth();
+
+    if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthdate.getDate())) {
+        age--;
+    }
+    document.getElementById(ageInputId).value = age;
+}
 
 document.getElementById('birthdate').addEventListener('change', function() {
     calculateAge(this.value, 'currentAge');
@@ -216,57 +227,23 @@ document.getElementById('spouseCurrentAge').addEventListener('input', function()
     validateAgeInput(this, 'spouse', false);
 });
 
-function calculateAge(birthdateValue, ageInputId, isChild = false) {
-    const birthdate = new Date(birthdateValue);
-    const today = new Date();
-    let age = today.getFullYear() - birthdate.getFullYear();
-    const monthDifference = today.getMonth() - birthdate.getMonth();
-
-    if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthdate.getDate())) {
-        age--;
-    }
-    document.getElementById(ageInputId).value = age;
-
-    // Validate if it is a child's age
-    if (isChild) {
-        validateAgeInput(document.getElementById(ageInputId), ageInputId.replace('child', '').replace('Age', ''), true);
-    }
-}
-
 function validateAgeInput(input, index, isChild = false) {
     const age = parseInt(input.value, 10);
     const errorMessageId = `ageErrorMessage${index}`;
     let errorMessage = document.getElementById(errorMessageId);
 
-    if (isChild) {
-        // child must be 0..17
-        if (!isNaN(age) && age >= 0 && age < 18) {
-            if (errorMessage) errorMessage.textContent = '';
-        } else {
-            if (!errorMessage) {
-                errorMessage = document.createElement('p');
-                errorMessage.id = errorMessageId;
-                errorMessage.style.color = 'red';
-                errorMessage.textContent = 'Sorry, age must be between 0 and 17';
-                input.parentNode.appendChild(errorMessage);
-            } else {
-                errorMessage.textContent = 'Sorry, age must be between 0 and 17';
-            }
-        }
+    if (!isNaN(age) && age >= 0) {
+        // Clear any error messages
+        if (errorMessage) errorMessage.textContent = '';
     } else {
-        // adult can be any age >= 0
-        if (!isNaN(age) && age >= 0) {
-            if (errorMessage) errorMessage.textContent = '';
+        if (!errorMessage) {
+            errorMessage = document.createElement('p');
+            errorMessage.id = errorMessageId;
+            errorMessage.style.color = 'red';
+            errorMessage.textContent = 'Please enter a valid age';
+            input.parentNode.appendChild(errorMessage);
         } else {
-            if (!errorMessage) {
-                errorMessage = document.createElement('p');
-                errorMessage.id = errorMessageId;
-                errorMessage.style.color = 'red';
-                errorMessage.textContent = 'Please enter a valid age';
-                input.parentNode.appendChild(errorMessage);
-            } else {
-                errorMessage.textContent = 'Please enter a valid age';
-            }
+            errorMessage.textContent = 'Please enter a valid age';
         }
     }
 }

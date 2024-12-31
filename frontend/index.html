@@ -193,20 +193,16 @@
             <input type="text" id="blind" name="blind" min="0" required>
           </div>
          
-          <div class="form-group">
-            <label for="children17AndUnder">Children Age 17 and Under:</label>
-            <input type="text" id="children17AndUnder" name="children17AndUnder" min="0" required>
-          </div>
+          <!-- Combined Children/Dependents -->
+        <div class="form-group">
+          <label for="numberOfDependents">Number of Children/Dependents:</label>
+          <input type="text" id="numberOfDependents" name="numberOfDependents" min="0" required>
+        </div>
 
-          <!-- Container for children details (Dynamic fields) -->
-          <section id="children">
-            <div id="children17AndUnderDetails"></div>
-          </section>
-
-          <div class="form-group">
-            <label for="children/DependentOver18">Children/Dependent Age 18 or Over:</label>
-            <input type="text" id="children/DependentOver18" name="children/DependentOver18" min="0">
-          </div>
+        <!-- Container for dependents (Dynamic fields) -->
+        <section id="dependentsSection">
+          <div id="dependentsContainer"></div>
+        </section>
 
       </section>
 
