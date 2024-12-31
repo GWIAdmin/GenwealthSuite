@@ -823,3 +823,12 @@ document.getElementById('taxForm').addEventListener('keydown', function (e) {
         }
     }
 });
+
+//--------------------------------//
+// 17. COLLAPSIBLE SECTIONS        //
+//--------------------------------//
+
+function toggleCollapsible(sectionId) {
+    const section = document.getElementById(sectionId);
+    section.classList.toggle('active');
+}
