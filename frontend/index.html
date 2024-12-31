@@ -33,9 +33,10 @@
 
       <!-- Personal Information Section -->
       <section id="personalInformation">
-        <h2>Personal Information</h2>
-
-        <div class="form-group">
+        <h2 onclick="toggleCollapsible('personalInformationContent')">Personal Information</h2>
+        <div id="personalInformationContent" class="collapsible">
+        
+          <div class="form-group">
           <label for="prelim">Preliminary Analysis?:</label>
           <select id="prelim" name="prelim" required>
             <option value="please select">Please Select</option>
@@ -194,21 +195,23 @@
           </div>
          
           <!-- Combined Children/Dependents -->
-        <div class="form-group">
-          <label for="numberOfDependents">Number of Children/Dependents:</label>
-          <input type="text" id="numberOfDependents" name="numberOfDependents" min="0" required>
-        </div>
+          <div class="form-group">
+            <label for="numberOfDependents">Number of Children/Dependents:</label>
+            <input type="text" id="numberOfDependents" name="numberOfDependents" min="0" required>
+          </div>
 
-        <!-- Container for dependents (Dynamic fields) -->
-        <section id="dependentsSection">
-          <div id="dependentsContainer"></div>
-        </section>
+          <!-- Container for dependents (Dynamic fields) -->
+          <section id="dependentsSection">
+            <div id="dependentsContainer"></div>
+          </section>
 
+      </div>
       </section>
 
       <!-- Income Section -->
       <section id="income">
-        <h2>Income</h2>
+        <h2 onclick="toggleCollapsible('incomeContent')">Income</h2>
+        <div id="incomeContent" class="collapsible">
 
         <div class="form-group">
           <label for="wages">Wages, Salaries, Tips:</label>
@@ -308,11 +311,13 @@
           <input type="text" id="totalIncome" name="totalIncome" class="currency-field" readonly>
         </div>
 
+      </div>
       </section>
 
       <!-- Adjusted Gross Income -->
       <section id="adjustedGrossIncome">
-        <h2>Adjusted Gross Income</h2>
+        <h2 onclick="toggleCollapsible('adjustedGrossIncomeContent')">Adjusted Gross Income</h2>
+        <div id="adjustedGrossIncomeContent" class="collapsible">
 
         <div class="form-group">
           <label for="halfSETax">Half of Self-Employemnt Tax:</label>
@@ -349,11 +354,13 @@
           <input type="text" id="totalAdjustedGrossIncome" name="totalAdjustedGrossIncome" class="currency-field" readonly >
         </div>
 
+        </div>
       </section>
 
       <!-- Deductions Section -->
       <section id="Deductions">
-        <h2>Deductions</h2>
+        <h2 onclick="toggleCollapsible('deductionsContent')">Deductions</h2>
+        <div id="deductionsContent" class="collapsible">
 
         <div class="form-group">
           <label for="medical">Medical:</label>
@@ -410,12 +417,13 @@
           <input type="text" id="totalDeductions" name="totalDeductions" class="currency-field" readonly>
         </div>
         
-
+        </div>
       </section>
 
       <!-- Tax and Credits Section -->
       <section id="taxAndCredits">
-        <h2>Tax and Credits</h2>
+        <h2 onclick="toggleCollapsible('taxAndCreditsContent')">Tax and Credits</h2>
+        <div id="taxAndCreditsContent" class="collapsible">        
         
         <div class="form-group">
           <label for="taxableIncome">Taxable Income:</label>
@@ -482,11 +490,13 @@
           <input type="text" id="totalFederalTax" name="totalFederalTax" class="currency-field" readonly required>
         </div>
 
+        </div>
       </section>
 
       <!-- Payments Section -->
       <section id="payments">
-        <h2>Payments</h2>
+        <h2 onclick="toggleCollapsible('paymentsContent')">Payments</h2>
+        <div id="paymentsContent" class="collapsible">        
 
         <div class="form-group">
           <label for="withholdings">Withholdings:</label>
@@ -533,11 +543,13 @@
           <input type="text" id="employerTaxes" name="employerTaxes" class="currency-field" readonly required>
         </div>
 
+        </div> 
       </section>
 
       <!-- State Taxable Income Section -->
       <section id="stateTaxableIncome">
-        <h2>State Taxable Income</h2>
+        <h2 onclick="toggleCollapsible('stateTaxableIncomeContent')">State Taxable Income</h2>
+        <div id="stateTaxableIncomeContent" class="collapsible">         
 
         <div class="form-group">
           <label for="selectState">[ State ]</label>
@@ -647,6 +659,7 @@
           <input type="text" id="totalEstimatedDifferenceInFederalAndStateTaxesSaved" name="totalEstimatedDifferenceInFederalAndStateTaxesSaved" class="currency-field" readonly required>
         </div>
 
+      </div>
       </section>
 
       <!-- Submit Button -->
