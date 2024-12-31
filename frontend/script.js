@@ -111,7 +111,7 @@ document.getElementById('numberOfDependents').addEventListener('input', function
     dependentsContainer.innerHTML = ''; // Clear old fields
 
     if (!isNaN(numDependents) && numDependents > 0) {
-        const heading = document.createElement('h2');
+        const heading = document.createElement('h1');
         heading.textContent = 'Children / Dependents Details';
         dependentsContainer.appendChild(heading);
 
@@ -273,7 +273,7 @@ document.getElementById('spouseCurrentAge').addEventListener('input', function()
     validateAgeInput(this, 'spouse', false);
 });
 
-function validateAgeInput(input, index, isChild = false) {
+function validateAgeInput(input, index) {
     const age = parseInt(input.value, 10);
     const errorMessageId = `ageErrorMessage${index}`;
     let errorMessage = document.getElementById(errorMessageId);
@@ -354,6 +354,10 @@ document.getElementById('numBusinesses').addEventListener('input', function() {
 function createBusinessFields(container, index) {
     const businessDiv = document.createElement('div');
     businessDiv.classList.add('business-entry');
+
+    const heading = document.createElement('h3');
+    heading.textContent = `Business ${index}`;
+    businessDiv.appendChild(heading);
 
     // Business Type
     const typeLabel = document.createElement('label');
@@ -533,7 +537,7 @@ function createScheduleEFields(container, index) {
 
     // Add a heading for visual clarity
     const heading = document.createElement('h3');
-    heading.textContent = `Schedule E ${index}`;
+    heading.textContent = `Schedule-E ${index}`;
     scheduleEDiv.appendChild(heading);
 
     // Schedule E Income
