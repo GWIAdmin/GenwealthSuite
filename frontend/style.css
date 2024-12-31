@@ -23,6 +23,13 @@ h2 {
   border-bottom: 4px solid #552583;
   padding-bottom: 10px;
   color: #4E4C5E; 
+  text-align: center;
+}
+
+h2:hover {
+  background-color: #FDB927;
+  cursor: pointer;
+  border-radius: 40px;
 }
 
 h3{
@@ -221,7 +228,7 @@ button:hover {
   color: white;
   border: none;
   padding: 15px;
-  border-radius: 40px;
+  border-radius: 20px;
   font-size: 18px;
   cursor: pointer;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
