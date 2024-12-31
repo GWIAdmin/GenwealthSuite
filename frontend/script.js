@@ -129,21 +129,67 @@ function createDependentFields(container, index) {
     // 1. Dependent Name
     createLabelAndInput(dependentGroup, `dependent${index}Name`, `Dependent ${index} Name:`, 'text');
 
-    // 2. Dependent Birthdate
-    createLabelAndInput(dependentGroup, `dependent${index}Birthdate`, `Dependent ${index} Birthdate:`, 'date');
+    // 2. Dropdown for DOB or Age
+    createLabelAndDropdown(dependentGroup, `dependent${index}DOBOrAge`, `Do You Know the Dependent's DOB or Current Age?`, ['Please Select', 'Yes', 'No']);
 
-    // 3. Dependent Current Age
-    createLabelAndInput(dependentGroup, `dependent${index}Age`, `Dependent ${index} Current Age:`, 'number');
+    // Container for conditional fields
+    const conditionalContainer = document.createElement('div');
+    conditionalContainer.id = `conditionalContainer${index}`;
+    dependentGroup.appendChild(conditionalContainer);
 
-    // 4. Dropdown for Child/Dependent Credit
-    createCreditDropdown(dependentGroup, index);
-
+    // Add "Qualifies for Child/Dependent Credit?" field
+    createLabelAndDropdown(dependentGroup, `dependent${index}Credit`, 'Qualifies for Child/Dependent Credit?', ['Please Select', 'Yes', 'No']);
+    
     container.appendChild(dependentGroup);
 
-    // Age from birthdate
-    document.getElementById(`dependent${index}Birthdate`).addEventListener('change', function() {
-        calculateAge(this.value, `dependent${index}Age`);
+    // Event listener for DOB or Age dropdown
+    document.getElementById(`dependent${index}DOBOrAge`).addEventListener('change', function() {
+        handleDOBOrAgeChange(index, this.value);
     });
+}
+
+function handleDOBOrAgeChange(index, value) {
+    const container = document.getElementById(`conditionalContainer${index}`);
+    container.innerHTML = ''; // Clear existing fields
+
+    if (value === 'Yes') {
+        // 1. Dependent Birthdate
+        createLabelAndInput(container, `dependent${index}Birthdate`, `Dependent ${index} Birthdate:`, 'date');
+
+        // 2. Dependent Current Age
+        createLabelAndInput(container, `dependent${index}Age`, `Dependent ${index} Current Age:`, 'number');
+
+        // Age from birthdate
+        document.getElementById(`dependent${index}Birthdate`).addEventListener('change', function() {
+            calculateAge(this.value, `dependent${index}Age`);
+        });
+    } else if (value === 'No') {
+        // Dropdown for age range
+        createLabelAndDropdown(container, `dependent${index}AgeRange`, `Is Child/Dependent ${index} Aged 17 or younger Or 18 or older?`, ['Please Select','17 or younger', '18 or older']);
+    }
+
+}
+
+function createLabelAndDropdown(container, id, labelText, options) {
+    const label = document.createElement('label');
+    label.setAttribute('for', id);
+    label.textContent = labelText;
+    label.style.marginTop = '12px';
+    container.appendChild(label);
+
+    const select = document.createElement('select');
+    select.id = id;
+    select.name = id;
+    select.required = true;
+
+    options.forEach(optionText => {
+        const option = document.createElement('option');
+        option.value = optionText;
+        option.textContent = optionText;
+        select.appendChild(option);
+    });
+
+    container.appendChild(select);
 }
 
 function createLabelAndInput(container, id, labelText, type) {
