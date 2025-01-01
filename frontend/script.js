@@ -594,6 +594,9 @@ function recalculateTotals() {
     const longTermCapitalGains = getFieldValue('longTermCapitalGains');
     const shortTermCapitalGains = getFieldValue('shortTermCapitalGains');
     const otherIncome = getFieldValue('otherIncome');
+    const interestPrivateBonds = getFieldValue('interestPrivateBonds');
+    const passiveActivityLossAdjustments = getFieldValue('passiveActivityLossAdjustments');
+    const qualifiedBusinessDeduction = getFieldValue('qualifiedBusinessDeduction');
 
     // Combines net from dynamic businesses
     let businessesNetTotal = 0;
@@ -613,12 +616,6 @@ function recalculateTotals() {
         scheduleEsNetTotal += netVal;
     }
 
-    // Schedule C incomes/expenses (if any)
-    const scheduleC1Income = getFieldValue('scheduleC1Income');
-    const scheduleC1Expenses = getFieldValue('scheduleC1Expenses');
-    const scheduleC2Income = getFieldValue('scheduleC2Income');
-    const scheduleC2Expenses = getFieldValue('scheduleC2Expenses');
-
     // Sum everything
     const totalIncomeVal =
         wages +
@@ -632,11 +629,12 @@ function recalculateTotals() {
         pensions +
         longTermCapitalGains +
         shortTermCapitalGains +
-        (scheduleC1Income - scheduleC1Expenses) +
-        (scheduleC2Income - scheduleC2Expenses) +
         businessesNetTotal +
         scheduleEsNetTotal +
-        otherIncome;
+        otherIncome +
+        interestPrivateBonds +
+        passiveActivityLossAdjustments +
+        qualifiedBusinessDeduction;
 
     // Adjustments
     const halfSETax = getFieldValue('halfSETax');
@@ -722,15 +720,10 @@ const fieldsToWatch = [
     'pensions',
     'longTermCapitalGains',
     'shortTermCapitalGains',
-    'scheduleE1Income',
-    'scheduleE1Expenses',
-    'scheduleE2Income',
-    'scheduleE2Expenses',
     'otherIncome',
-    'scheduleC1Income',
-    'scheduleC1Expenses',
-    'scheduleC2Income',
-    'scheduleC2Expenses',
+    'interestPrivateBonds',
+    'passiveActivityLossAdjustments',
+    'qualifiedBusinessDeduction',
     'halfSETax',
     'retirementDeduction',
     'medicalReimbursementPlan',
