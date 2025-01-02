@@ -165,7 +165,7 @@ function handleDOBOrAgeChange(index, value) {
         });
     } else if (value === 'No') {
         // Dropdown for age range
-        createLabelAndDropdown(container, `dependent${index}AgeRange`, `Is Child/Dependent ${index} Aged 17 or younger Or 18 or older?`, ['Please Select','17 or younger', '18 or older']);
+        createLabelAndDropdown(container, `dependent${index}AgeRange`, `What is the Age Category of Child/Dependent ${index}?`, ['Please Select','17 or younger', '18 or older']);
     }
 
 }
