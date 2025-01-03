@@ -449,6 +449,14 @@ function createLabelAndNumberField(parent, id, labelText, minValue) {
     input.name = id;
     input.min = minValue;
     parent.appendChild(input);
+
+    // Adds event listener to round to two decimal places on blur
+    input.addEventListener('blur', function() {
+        let value = parseFloat(input.value);
+        if (!isNaN(value)) {
+            input.value = value.toFixed(2);
+        }
+    });
 }
 
 function createLabelAndCurrencyField(parent, id, labelText) {
@@ -490,8 +498,10 @@ function checkOwnership(index, ownershipValue) {
         additionalOwnerDiv.id = `additionalOwner${index}`;
         additionalOwnerDiv.style.marginTop = '12px';
 
+        const remainingOwnership = (100 - ownership).toFixed(2);
+
         const additionalOwnerLabel = document.createElement('label');
-        additionalOwnerLabel.textContent = `Who owns the remaining ${100 - ownership}% of this business?`;
+        additionalOwnerLabel.textContent = `Who owns the remaining ${remainingOwnership}% of this business?`;
         additionalOwnerDiv.appendChild(additionalOwnerLabel);
 
         const additionalOwnerSelect = document.createElement('select');
