@@ -454,7 +454,7 @@ function createLabelAndNumberField(parent, id, labelText, minValue) {
     input.addEventListener('blur', function() {
         let value = parseFloat(input.value);
         if (!isNaN(value)) {
-            input.value = value.toFixed(2);
+            input.value = value.toFixed(4);
         }
     });
 }
@@ -498,7 +498,7 @@ function checkOwnership(index, ownershipValue) {
         additionalOwnerDiv.id = `additionalOwner${index}`;
         additionalOwnerDiv.style.marginTop = '12px';
 
-        const remainingOwnership = (100 - ownership).toFixed(2);
+        const remainingOwnership = (100 - ownership).toFixed(4);
 
         const additionalOwnerLabel = document.createElement('label');
         additionalOwnerLabel.textContent = `Who owns the remaining ${remainingOwnership}% of this business?`;
