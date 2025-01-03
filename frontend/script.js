@@ -320,12 +320,17 @@ function formatCurrency(value) {
     if (numericValue === '') return '';
     let floatValue = parseFloat(numericValue);
     if (isNaN(floatValue)) return '';
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
-        .format(floatValue);
+
+    // Format the value with parentheses for negative numbers
+    let formattedValue = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
+        .format(Math.abs(floatValue));
+    return floatValue < 0 ? `(${formattedValue})` : formattedValue;
 }
 
 function unformatCurrency(value) {
-    return parseFloat(value.replace(/[^0-9.-]/g, '')) || 0;
+    // Remove parentheses and any other non-numeric characters
+    let numericValue = value.replace(/[^\d.-]/g, '');
+    return parseFloat(numericValue) || 0;
 }
 
 // Automatically format any .currency-field on blur
