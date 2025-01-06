@@ -167,7 +167,6 @@ function handleDOBOrAgeChange(index, value) {
         // Dropdown for age range
         createLabelAndDropdown(container, `dependent${index}AgeRange`, `What is the Age Category of Child/Dependent ${index}?`, ['Please Select','17 or younger', '18 or older']);
     }
-
 }
 
 function createLabelAndDropdown(container, id, labelText, options) {
@@ -264,9 +263,9 @@ function validateAgeInput(input, index) {
     }
 }
 
-//-----------------------------------------------------//
-// 6. AUTO-COPY LAST NAME TO SPOUSE'S LAST NAME        //
-//-----------------------------------------------------//
+//----------------------------------------------//
+// 6. AUTO-COPY LAST NAME TO SPOUSE'S LAST NAME //
+//----------------------------------------------//
 
 document.getElementById('lastName').addEventListener('input', function() {
     document.getElementById('spouseLastName').value = this.value;
@@ -303,16 +302,48 @@ function unformatCurrency(value) {
     return parseFloat(numericValue) || 0;
 }
 
-// Automatically format any .currency-field on blur
-document.querySelectorAll('.currency-field').forEach((elem) => {
-    elem.addEventListener('blur', function() {
-        this.value = formatCurrency(this.value);
-    });
-});
+//----------------------------------//
+// 7.1 ADD MISSING HELPER FUNCTIONS //
+//----------------------------------//
 
-//-----------------------------------------------------------//
-// 8. DYNAMIC GENERATION OF BUSINESS FIELDS + NET CALC       //
-//-----------------------------------------------------------//
+function createLabelAndTextField(parent, id, labelText) {
+    const label = document.createElement('label');
+    label.htmlFor = id;
+    label.textContent = labelText;
+    label.style.marginTop = '12px';
+
+    parent.appendChild(label);
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.id = id;
+    input.name = id;
+    parent.appendChild(input);
+}
+
+function createLabelAndCurrencyField(parent, id, labelText) {
+    const label = document.createElement('label');
+    label.htmlFor = id;
+    label.textContent = labelText;
+    label.style.marginTop = '12px';
+    parent.appendChild(label);
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.id = id;
+    input.name = id;
+    input.classList.add('currency-field');
+    parent.appendChild(input);
+
+    // On blur, format as currency
+    input.addEventListener('blur', function() {
+        input.value = formatCurrency(input.value);
+    });
+}
+
+//-----------------------------------------------------//
+// 8. DYNAMIC GENERATION OF BUSINESS FIELDS + NET CALC //
+//-----------------------------------------------------//
 
 document.getElementById('numBusinesses').addEventListener('input', function() {
     const businessCount = parseInt(this.value, 10);
@@ -345,7 +376,7 @@ function createBusinessFields(container, index) {
 
     const types = ["Please Select", "S-Corp", "Partnership", "C-Corp", "Schedule-C"];
     types.forEach(t => {
-        let opt = document.createElement('option');
+        const opt = document.createElement('option');
         opt.value = t;
         opt.textContent = t;
         typeSelect.appendChild(opt);
@@ -354,9 +385,41 @@ function createBusinessFields(container, index) {
 
     // Business Name
     createLabelAndTextField(businessDiv, `business${index}Name`, `Business ${index} Name:`);
+    // businessDiv.lastChild.style.marginBottom = '12px';
 
-    // Ownership %
-    createLabelAndNumberField(businessDiv, `business${index}Ownership`, `Ownership %:`, 0);
+    // Owners Container
+    const ownersContainer = document.createElement('div');
+    ownersContainer.id = `ownersContainer${index}`;
+    businessDiv.appendChild(ownersContainer);
+
+    // Ask: "How many owners does this business have?"
+    const numOwnersLabel = document.createElement('label');
+    numOwnersLabel.textContent = `How many owners does Business ${index} have?`;
+    ownersContainer.appendChild(numOwnersLabel);
+    numOwnersLabel.style.marginTop = '12px';
+
+    const numOwnersInput = document.createElement('input');
+    numOwnersInput.type = 'number';
+    numOwnersInput.id = `numOwners${index}`;
+    numOwnersInput.name = `numOwners${index}`;
+    numOwnersInput.min = '1';
+    ownersContainer.appendChild(numOwnersInput);
+
+    // Container for the dynamic owner fields
+    const dynamicOwnerFieldsDiv = document.createElement('div');
+    dynamicOwnerFieldsDiv.id = `dynamicOwnerFields${index}`;
+    ownersContainer.appendChild(dynamicOwnerFieldsDiv);
+    dynamicOwnerFieldsDiv.style.marginTop = '12px';
+
+    // Listen for changes on business type (so we can do something special for Schedule-C)
+    typeSelect.addEventListener('change', function () {
+        handleBusinessTypeChange(index, typeSelect.value);
+    });
+
+    // Listen for changes on "How many owners?"
+    numOwnersInput.addEventListener('input', function () {
+        createOwnerFields(index, parseInt(numOwnersInput.value, 10));
+    });
 
     // Income
     createLabelAndCurrencyField(businessDiv, `business${index}Income`, `Income:`);
@@ -368,14 +431,13 @@ function createBusinessFields(container, index) {
     createLabelAndTextField(businessDiv, `business${index}Net`, `Net (Income - Expenses):`);
     container.appendChild(businessDiv);
 
-    // The newly created 'Net' field
+    // Make the Net field read-only
     const netField = document.getElementById(`business${index}Net`);
     netField.readOnly = true;
 
-    // Income + Expenses listeners
+    // Listen for Income & Expenses changes
     const incomeField = document.getElementById(`business${index}Income`);
     const expensesField = document.getElementById(`business${index}Expenses`);
-
     incomeField.addEventListener('blur', function() {
         updateBusinessNet(index);
         recalculateTotals();
@@ -384,69 +446,98 @@ function createBusinessFields(container, index) {
         updateBusinessNet(index);
         recalculateTotals();
     });
-
-    // If Ownership < 100, show spouse/other
-    const ownershipField = document.getElementById(`business${index}Ownership`);
-    ownershipField.addEventListener('change', function() {
-        checkOwnership(index, this.value);
-    });
 }
 
-function createLabelAndTextField(parent, id, labelText) {
-    const label = document.createElement('label');
-    label.htmlFor = id;
-    label.textContent = labelText;
-    label.style.marginTop = '12px';
-    parent.appendChild(label);
+function handleBusinessTypeChange(businessIndex, businessType) {
+    const ownersContainer = document.getElementById(`ownersContainer${businessIndex}`);
+    const numOwnersInput = document.getElementById(`numOwners${businessIndex}`);
+    const dynamicOwnerFieldsDiv = document.getElementById(`dynamicOwnerFields${businessIndex}`);
 
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.id = id;
-    input.name = id;
-    parent.appendChild(input);
+    // Clear any existing owner fields
+    dynamicOwnerFieldsDiv.innerHTML = '';
+
+    if (businessType === "Schedule-C") {
+        // Hide the "How many owners?" field and assume 1 owner
+        ownersContainer.style.display = 'none';
+        numOwnersInput.value = 1;
+        // You could optionally create one owner field with 100% set automatically
+    } else if (businessType === "Please Select") {
+        // If not selected, hide or reset
+        ownersContainer.style.display = 'none';
+        numOwnersInput.value = '';
+    } else {
+        // Display multi-owner fields for S-Corp, Partnership, or C-Corp
+        ownersContainer.style.display = 'block';
+    }
 }
 
-function createLabelAndNumberField(parent, id, labelText, minValue) {
-    const label = document.createElement('label');
-    label.htmlFor = id;
-    label.textContent = labelText;
-    label.style.marginTop = '12px';
-    parent.appendChild(label);
+function createOwnerFields(businessIndex, numOwners) {
+    const dynamicOwnerFieldsDiv = document.getElementById(`dynamicOwnerFields${businessIndex}`);
+    dynamicOwnerFieldsDiv.innerHTML = ''; // Clear old fields
 
-    const input = document.createElement('input');
-    input.type = 'number';
-    input.id = id;
-    input.name = id;
-    input.min = minValue;
-    parent.appendChild(input);
+    if (!isNaN(numOwners) && numOwners > 0) {
+        for (let i = 1; i <= numOwners; i++) {
+            const ownerSection = document.createElement('section');
+            const ownerDiv = document.createElement('div');
+            ownerDiv.classList.add('owner-entry');
 
-    // Adds event listener to round to two decimal places on blur
-    input.addEventListener('blur', function() {
-        let value = parseFloat(input.value);
-        if (!isNaN(value)) {
-            input.value = value.toFixed(4);
+            // Owner Name
+            const nameLabel = document.createElement('label');
+            nameLabel.style.marginBottom = '12px';
+            nameLabel.textContent = `Owner ${i} Name:`;
+            ownerDiv.appendChild(nameLabel);
+            
+            const nameInput = document.createElement('input');
+            nameInput.type = 'text';
+            nameInput.id = `business${businessIndex}OwnerName${i}`;
+            nameInput.name = `business${businessIndex}OwnerName${i}`;
+            ownerDiv.appendChild(nameInput);
+            nameInput.style.marginBottom = '12px';
+
+            // Ownership %
+            const ownershipLabel = document.createElement('label');
+            ownershipLabel.textContent = `Owner ${i} Ownership %:`;
+            ownerDiv.appendChild(ownershipLabel);
+            ownershipLabel.style.marginBottom = '12px';
+
+
+            const ownershipInput = document.createElement('input');
+            ownershipInput.type = 'number';
+            ownershipInput.step = '0.0001'; // allow decimal places
+            ownershipInput.id = `business${businessIndex}OwnerPercent${i}`;
+            ownershipInput.name = `business${businessIndex}OwnerPercent${i}`;
+            ownershipInput.min = '0';
+            ownershipInput.addEventListener('blur', function() {
+                validateTotalOwnership(businessIndex, numOwners);
+            });
+            ownerDiv.appendChild(ownershipInput);
+
+            // Append the owner fields to the section
+            ownerSection.appendChild(ownerDiv);
+
+            // Add the section to the dynamic owner fields container
+            dynamicOwnerFieldsDiv.appendChild(ownerSection);
+
+            // ownershipInput.style.marginBottom = '12px';
         }
-    });
+    }
 }
 
-function createLabelAndCurrencyField(parent, id, labelText) {
-    const label = document.createElement('label');
-    label.htmlFor = id;
-    label.textContent = labelText;
-    label.style.marginTop = '12px';
-    parent.appendChild(label);
+function validateTotalOwnership(businessIndex, numOwners) {
+    let sum = 0;
+    for (let i = 1; i <= numOwners; i++) {
+        const val = parseFloat(
+            document.getElementById(`business${businessIndex}OwnerPercent${i}`).value
+        ) || 0;
+        sum += val;
+    }
 
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.id = id;
-    input.name = id;
-    input.classList.add('currency-field');
-    parent.appendChild(input);
-
-    // On blur, format as currency
-    input.addEventListener('blur', function() {
-        input.value = formatCurrency(input.value);
-    });
+    // Check if total ownership is exactly 100%
+    if (Math.abs(sum - 100) > 0.0001) {
+        alert(
+          `Total ownership for Business ${businessIndex} must be 100%. Currently it is ${sum.toFixed(4)}%.`
+        );
+    }
 }
 
 function updateBusinessNet(index) {
@@ -454,50 +545,6 @@ function updateBusinessNet(index) {
     const expensesVal = unformatCurrency(document.getElementById(`business${index}Expenses`).value);
     const netVal = incomeVal - expensesVal;
     document.getElementById(`business${index}Net`).value = formatCurrency(netVal.toString());
-}
-
-function checkOwnership(index, ownershipValue) {
-    const ownership = parseFloat(ownershipValue) || 0;
-    const existingAdditionalOwnerDiv = document.getElementById(`additionalOwner${index}`);
-    if (existingAdditionalOwnerDiv) {
-        existingAdditionalOwnerDiv.remove();
-    }
-    if (ownership < 100) {
-        const additionalOwnerDiv = document.createElement('div');
-        additionalOwnerDiv.classList.add('form-group');
-        additionalOwnerDiv.id = `additionalOwner${index}`;
-        additionalOwnerDiv.style.marginTop = '12px';
-
-        const remainingOwnership = (100 - ownership).toFixed(4);
-
-        const additionalOwnerLabel = document.createElement('label');
-        additionalOwnerLabel.textContent = `Who owns the remaining ${remainingOwnership}% of this business?`;
-        additionalOwnerDiv.appendChild(additionalOwnerLabel);
-
-        const additionalOwnerSelect = document.createElement('select');
-        additionalOwnerSelect.name = `additionalOwner${index}`;
-        additionalOwnerSelect.id = `additionalOwner${index}`;
-
-        const optionPleaseSelect = document.createElement('option');
-        optionPleaseSelect.value = '';
-        optionPleaseSelect.textContent = 'Please Select';
-        additionalOwnerSelect.appendChild(optionPleaseSelect);
-
-        const optionSpouse = document.createElement('option');
-        optionSpouse.value = 'Spouse';
-        optionSpouse.textContent = 'Spouse';
-        additionalOwnerSelect.appendChild(optionSpouse);
-
-        const optionOther = document.createElement('option');
-        optionOther.value = 'Other';
-        optionOther.textContent = 'Other';
-        additionalOwnerSelect.appendChild(optionOther);
-
-        additionalOwnerDiv.appendChild(additionalOwnerSelect);
-
-        // Insert under the same business block
-        document.getElementById(`business${index}Type`).parentNode.appendChild(additionalOwnerDiv);
-    }
 }
 
 //--------------------------------------------------//
@@ -561,9 +608,9 @@ function updateScheduleENet(index) {
     document.getElementById(`scheduleE${index}Net`).value = formatCurrency(netVal.toString());
 }
 
-//-------------------------------------------------------//
-// 10. REAL-TIME CALCULATIONS FOR INCOME/ADJUSTMENTS     //
-//-------------------------------------------------------//
+//---------------------------------------------------//
+// 10. REAL-TIME CALCULATIONS FOR INCOME/ADJUSTMENTS //
+//---------------------------------------------------//
 
 function recalculateTotals() {
     // Income fields
@@ -647,9 +694,9 @@ function recalculateTotals() {
     updateTaxableIncome();
 }
 
-//--------------------------------------------------------//
-// 11. REAL-TIME CALCULATIONS FOR DEDUCTIONS + TAXABLE    //
-//--------------------------------------------------------//
+//-----------------------------------------------------//
+// 11. REAL-TIME CALCULATIONS FOR DEDUCTIONS + TAXABLE //
+//-----------------------------------------------------//
 
 function recalculateDeductions() {
     const medical = getFieldValue('medical');
@@ -806,9 +853,9 @@ document.getElementById('taxForm').addEventListener('keydown', function (e) {
     }
 });
 
-//--------------------------------//
-// 17. COLLAPSIBLE SECTIONS        //
-//--------------------------------//
+//--------------------------//
+// 17. COLLAPSIBLE SECTIONS //
+//--------------------------//
 
 function toggleCollapsible(sectionId) {
     const section = document.getElementById(sectionId);
