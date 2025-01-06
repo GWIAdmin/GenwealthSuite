@@ -115,7 +115,7 @@ h3{
 
 /* Spouse Section Background */
 #spouseSection {
-  background-color: #FFFFFF; /* pick any distinct color */
+  background-color: #FFFFFF;
   padding: 15px;
   border-radius: 5px;
   margin-top: 20px;
@@ -137,7 +137,7 @@ h3{
 }
 
 .collapsible.active {
-  max-height: 6120px; /* Adjust this value as needed */
+  max-height: 6120px;
 }
 
 /* Section Styling */

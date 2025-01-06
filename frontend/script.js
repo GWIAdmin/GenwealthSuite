@@ -207,36 +207,6 @@ function createLabelAndInput(container, id, labelText, type) {
     container.appendChild(input);
 }
 
-function createCreditDropdown(container, index) {
-    const creditLabel = document.createElement('label');
-    creditLabel.setAttribute('for', `dependent${index}Credit`);
-    creditLabel.textContent = 'Qualifies for Child/Dependent Credit?';
-    creditLabel.style.marginTop = '12px'; // Add vertical spacing
-    container.appendChild(creditLabel);
-
-    const select = document.createElement('select');
-    select.id = `dependent${index}Credit`;
-    select.name = `dependent${index}Credit`;
-    select.required = true;
-
-    const option1 = document.createElement('option');
-    option1.value = '';
-    option1.textContent = 'Please Select';
-    select.appendChild(option1);
-
-    const option2 = document.createElement('option');
-    option2.value = 'yes';
-    option2.textContent = 'Yes';
-    select.appendChild(option2);
-
-    const option3 = document.createElement('option');
-    option3.value = 'no';
-    option3.textContent = 'No';
-    select.appendChild(option3);
-
-    container.appendChild(select);
-}
-
 //----------------------//
 // 5. AGE CALCULATIONS  //
 //----------------------//
