@@ -402,7 +402,7 @@ function createBusinessFields(container, index) {
     numOwnersInput.type = 'number';
     numOwnersInput.id = `numOwners${index}`;
     numOwnersInput.name = `numOwners${index}`;
-    numOwnersInput.min = '1';
+    numOwnersInput.min = '0';
     ownersContainer.appendChild(numOwnersInput);
 
     // Container for the dynamic owner fields
@@ -500,7 +500,6 @@ function createOwnerFields(businessIndex, numOwners) {
             ownerDiv.appendChild(ownershipLabel);
             ownershipLabel.style.marginBottom = '12px';
 
-
             const ownershipInput = document.createElement('input');
             ownershipInput.type = 'number';
             ownershipInput.step = '0.0001'; // allow decimal places
@@ -518,7 +517,18 @@ function createOwnerFields(businessIndex, numOwners) {
             // Add the section to the dynamic owner fields container
             dynamicOwnerFieldsDiv.appendChild(ownerSection);
 
-            // ownershipInput.style.marginBottom = '12px';
+            if (i === 1) {
+                function updateOwnerName() {
+                    const firstName = document.getElementById('firstName').value;
+                    const lastName = document.getElementById('lastName').value;
+                    document.getElementById(`business${businessIndex}OwnerName${i}`).value = `${firstName} ${lastName}`;
+                }
+
+                document.getElementById('firstName').addEventListener('input', updateOwnerName);
+                document.getElementById('lastName').addEventListener('input', updateOwnerName);   
+                
+                updateOwnerName();
+            }
         }
     }
 }
