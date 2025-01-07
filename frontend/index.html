@@ -194,7 +194,12 @@
             <label for="blind">How many blind:</label>
             <input type="text" id="blind" name="blind" min="0" required>
           </div>
-         
+
+          <div class="form-group">
+            <label for="numOfBusinesses">How many businesses does the taxpayer own?:</label>
+            <input type="number" id="numOfBusinesses" name="numOfBusinesses" min="0" required>
+          </div>
+          
           <!-- Combined Children/Dependents -->
           <div class="form-group">
             <label for="numberOfDependents">Number of Children/Dependents:</label>
@@ -269,11 +274,6 @@
           <input type="text" id="shortTermCapitalGains" name="shortTermCapitalGains" class="currency-field">
         </div>
 
-        <div class="form-group">
-          <label for="numBusinesses">How many businesses?</label>
-          <input type="number" id="numBusinesses" name="numBusinesses" min="0">
-        </div>
-        
         <section id="businesses">
           <div id="businessContainer"></div>
         </section>

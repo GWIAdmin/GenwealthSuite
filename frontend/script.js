@@ -345,7 +345,9 @@ function createLabelAndCurrencyField(parent, id, labelText) {
 // 8. DYNAMIC GENERATION OF BUSINESS FIELDS + NET CALC //
 //-----------------------------------------------------//
 
-document.getElementById('numBusinesses').addEventListener('input', function() {
+// TODO: Add names for businesses 
+
+document.getElementById('numOfBusinesses').addEventListener('input', function() {
     const businessCount = parseInt(this.value, 10);
     const container = document.getElementById('businessContainer');
     container.innerHTML = ''; // Clear existing fields
@@ -642,7 +644,7 @@ function recalculateTotals() {
 
     // Combines net from dynamic businesses
     let businessesNetTotal = 0;
-    const numBusinessesVal = parseInt(document.getElementById('numBusinesses').value || '0', 10);
+    const numBusinessesVal = parseInt(document.getElementById('numOfBusinesses').value || '0', 10);
     for (let i = 1; i <= numBusinessesVal; i++) {
         const netValStr = document.getElementById(`business${i}Net`)?.value || '0';
         const netVal = unformatCurrency(netValStr);
