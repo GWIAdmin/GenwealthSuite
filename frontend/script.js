@@ -126,16 +126,19 @@ function createDependentFields(container, index) {
     const dependentGroup = document.createElement('div');
     dependentGroup.classList.add('dependent-entry');
 
-    // 1. Dependent Name
+    // Dependent Name
     createLabelAndInput(dependentGroup, `dependent${index}Name`, `Dependent ${index} Name:`, 'text');
 
-    // 2. Dropdown for DOB or Age
+    // Dropdown for DOB or Age
     createLabelAndDropdown(dependentGroup, `dependent${index}DOBOrAge`, `Do You Know the Dependent's DOB or Current Age?`, ['Please Select', 'Yes', 'No']);
 
-    // Container for conditional fields
+    // Container for conditional fields related to dependent's DOB or Age
     const conditionalContainer = document.createElement('div');
     conditionalContainer.id = `conditionalContainer${index}`;
     dependentGroup.appendChild(conditionalContainer);
+
+    // Dropdown for Currently Employed
+    createLabelAndDropdown(dependentGroup, `dependent${index}Employed`, `Is Dependent ${index} Currently Employed?`, ['Please Select', 'Yes', 'No']);
 
     // Add "Qualifies for Child/Dependent Credit?" field
     createLabelAndDropdown(dependentGroup, `dependent${index}Credit`, 'Qualifies for Child/Dependent Credit?', ['Please Select', 'Yes', 'No']);
