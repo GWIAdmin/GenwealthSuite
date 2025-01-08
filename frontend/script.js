@@ -271,8 +271,32 @@ document.getElementById('lastName').addEventListener('input', function() {
     document.getElementById('spouseLastName').value = this.value;
 });
 
+//------------------------------------//
+// 7. DYNAMIC BUSINESS NAME CREATION  //
+//------------------------------------//
+
+document.getElementById('numOfBusinesses').addEventListener('input', function() {
+    const businessCount = parseInt(this.value, 10);
+    const container = document.getElementById('numOfBusinessesContainer');
+    container.innerHTML = ''; // Clear existing fields
+
+    if (!isNaN(businessCount) && businessCount > 0) {
+        for (let i = 1; i <= businessCount; i++) {
+            createBusinessNameFields(container, i);
+        }
+    }
+});
+
+function createBusinessNameFields(container, index){
+    const businessNameDiv = document.createElement('div');
+    businessNameDiv.classList.add('business-name-entry');
+
+    createLabelAndInput(businessNameDiv, `business${index}Name`, `Business ${index} Name:`, 'text');
+    container.appendChild(businessNameDiv);
+}
+
 //-----------------------------------------------------//
-// 7. HELPER FUNCTIONS FOR NUMBER FIELDS AND CURRENCY  //
+// 8. HELPER FUNCTIONS FOR NUMBER FIELDS AND CURRENCY  //
 //-----------------------------------------------------//
 
 function getFieldValue(id) {
@@ -303,7 +327,7 @@ function unformatCurrency(value) {
 }
 
 //----------------------------------//
-// 7.1 ADD MISSING HELPER FUNCTIONS //
+// 8.1 ADD MISSING HELPER FUNCTIONS //
 //----------------------------------//
 
 function createLabelAndTextField(parent, id, labelText) {
@@ -341,11 +365,9 @@ function createLabelAndCurrencyField(parent, id, labelText) {
     });
 }
 
-//-----------------------------------------------------//
-// 8. DYNAMIC GENERATION OF BUSINESS FIELDS + NET CALC //
-//-----------------------------------------------------//
-
-// TODO: Add names for businesses 
+//------------------------------------------------------------//
+// 9. DYNAMIC GENERATION OF BUSINESS DETAIL FIELDS + NET CALC //
+//------------------------------------------------------------//
 
 document.getElementById('numOfBusinesses').addEventListener('input', function() {
     const businessCount = parseInt(this.value, 10);
@@ -364,7 +386,11 @@ function createBusinessFields(container, index) {
     businessDiv.classList.add('business-entry');
 
     const heading = document.createElement('h3');
-    heading.textContent = `Business ${index}`;
+    const businessNameInput = document.getElementById(`business${index}Name`);
+    heading.textContent = businessNameInput ? businessNameInput.value : `Business ${index}`;
+    businessNameInput.addEventListener('input', function() {
+        heading.textContent = businessNameInput.value;
+    });
     businessDiv.appendChild(heading);
 
     // Business Type
@@ -385,10 +411,6 @@ function createBusinessFields(container, index) {
     });
     businessDiv.appendChild(typeSelect);
 
-    // Business Name
-    createLabelAndTextField(businessDiv, `business${index}Name`, `Business ${index} Name:`);
-    // businessDiv.lastChild.style.marginBottom = '12px';
-
     // Owners Container
     const ownersContainer = document.createElement('div');
     ownersContainer.id = `ownersContainer${index}`;
@@ -404,7 +426,7 @@ function createBusinessFields(container, index) {
     numOwnersInput.type = 'number';
     numOwnersInput.id = `numOwners${index}`;
     numOwnersInput.name = `numOwners${index}`;
-    numOwnersInput.min = '0';
+    numOwnersInput.min = '1';
     ownersContainer.appendChild(numOwnersInput);
 
     // Container for the dynamic owner fields
@@ -560,7 +582,7 @@ function updateBusinessNet(index) {
 }
 
 //--------------------------------------------------//
-// 9. DYNAMIC GENERATION OF SCHEDULE E FIELDS + NET //
+// 10. DYNAMIC GENERATION OF SCHEDULE E FIELDS + NET //
 //--------------------------------------------------//
 
 document.getElementById('numScheduleEs').addEventListener('input', function() {
@@ -621,7 +643,7 @@ function updateScheduleENet(index) {
 }
 
 //---------------------------------------------------//
-// 10. REAL-TIME CALCULATIONS FOR INCOME/ADJUSTMENTS //
+// 11. REAL-TIME CALCULATIONS FOR INCOME/ADJUSTMENTS //
 //---------------------------------------------------//
 
 function recalculateTotals() {
@@ -707,7 +729,7 @@ function recalculateTotals() {
 }
 
 //-----------------------------------------------------//
-// 11. REAL-TIME CALCULATIONS FOR DEDUCTIONS + TAXABLE //
+// 12. REAL-TIME CALCULATIONS FOR DEDUCTIONS + TAXABLE //
 //-----------------------------------------------------//
 
 function recalculateDeductions() {
@@ -748,7 +770,7 @@ function updateTaxableIncome() {
 }
 
 //-----------------------------------------------------------//
-// 12. ATTACHING EVENT LISTENERS FOR REAL-TIME CALCULATIONS  //
+// 13. ATTACHING EVENT LISTENERS FOR REAL-TIME CALCULATIONS  //
 //-----------------------------------------------------------//
 
 // Fields that affect totalIncome and AGI:
@@ -807,7 +829,7 @@ deductionFields.forEach(fieldId => {
 });
 
 //-----------------------------------------------------------//
-// 13. TURNS INPUT FIELD BORDER COLOR GREEN TO CONFIRM INPUT //
+// 14. TURNS INPUT FIELD BORDER COLOR GREEN TO CONFIRM INPUT //
 //-----------------------------------------------------------//
 
 document.addEventListener('blur', function(event) {
@@ -822,7 +844,7 @@ document.addEventListener('blur', function(event) {
 }, true);
   
 //------------------------------------------//
-// 14. INITIALIZE CALCULATIONS ON PAGE LOAD //
+// 15. INITIALIZE CALCULATIONS ON PAGE LOAD //
 //------------------------------------------//
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -832,7 +854,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 //--------------------------------------//
-// 15. AUTO-COPY STATE TO "SELECTSTATE" //
+// 16. AUTO-COPY STATE TO "SELECTSTATE" //
 //--------------------------------------//
 
 document.getElementById('state').addEventListener('input', function() {
@@ -840,7 +862,7 @@ document.getElementById('state').addEventListener('input', function() {
 });
 
 //-----------------------------//
-// 16. HANDLE "ENTER" AS "TAB" //
+// 17. HANDLE "ENTER" AS "TAB" //
 //-----------------------------//
 
 document.getElementById('taxForm').addEventListener('keydown', function (e) {
@@ -866,7 +888,7 @@ document.getElementById('taxForm').addEventListener('keydown', function (e) {
 });
 
 //--------------------------//
-// 17. COLLAPSIBLE SECTIONS //
+// 18. COLLAPSIBLE SECTIONS //
 //--------------------------//
 
 function toggleCollapsible(sectionId) {
