@@ -140,15 +140,32 @@ function createDependentFields(container, index) {
     // Dropdown for Currently Employed
     createLabelAndDropdown(dependentGroup, `dependent${index}Employed`, `Is Dependent ${index} Currently Employed?`, ['Please Select', 'Yes', 'No']);
 
-    // Add "Qualifies for Child/Dependent Credit?" field
-    createLabelAndDropdown(dependentGroup, `dependent${index}Credit`, 'Qualifies for Child/Dependent Credit?', ['Please Select', 'Yes', 'No']);
-    
+    // Container for conditionally added fields
+    const employmentConditionalContainer = document.createElement('div');
+    employmentConditionalContainer.id = `employmentConditionalContainer${index}`;
+    dependentGroup.appendChild(employmentConditionalContainer);
+
+    // Append the dependent group to the container first
     container.appendChild(dependentGroup);
 
+    // Add event listener for employment status
+    const employedDropdown = document.getElementById(`dependent${index}Employed`);
+    if (employedDropdown) {
+        employedDropdown.addEventListener('change', function () {
+            handleEmploymentStatusChange(index, this.value);
+        });
+    }
+
+    // Add "Qualifies for Child/Dependent Credit?" field
+    createLabelAndDropdown(dependentGroup, `dependent${index}Credit`, 'Qualifies for Child/Dependent Credit?', ['Please Select', 'Yes', 'No']);
+
     // Event listener for DOB or Age dropdown
-    document.getElementById(`dependent${index}DOBOrAge`).addEventListener('change', function() {
-        handleDOBOrAgeChange(index, this.value);
-    });
+    const dobOrAgeDropdown = document.getElementById(`dependent${index}DOBOrAge`);
+    if (dobOrAgeDropdown) {
+        dobOrAgeDropdown.addEventListener('change', function () {
+            handleDOBOrAgeChange(index, this.value);
+        });
+    }
 }
 
 function handleDOBOrAgeChange(index, value) {
@@ -169,6 +186,34 @@ function handleDOBOrAgeChange(index, value) {
     } else if (value === 'No') {
         // Dropdown for age range
         createLabelAndDropdown(container, `dependent${index}AgeRange`, `What is the Age Category of Child/Dependent ${index}?`, ['Please Select','17 or younger', '18 or older']);
+    }
+}
+
+function handleEmploymentStatusChange(index, value) {
+    const container = document.getElementById(`employmentConditionalContainer${index}`);
+    container.innerHTML = ''; // Clear any previous conditional fields
+
+    if (value === 'Yes') {
+        // Dropdown for employed in taxpayer's business
+        createLabelAndDropdown(container, `dependent${index}EmployedInBusiness`, `Is Dependent ${index} Employed in One of the Taxpayer's Businesses?`, ['Please Select', 'Yes', 'No']);
+
+        // Dropdown for selecting business if employed in taxpayer's business
+        document.getElementById(`dependent${index}EmployedInBusiness`).addEventListener('change', function() {
+            if (this.value === 'Yes') {
+                const numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
+                const businessNames = [];
+                for (let i = 1; i <= numBusinesses; i++) {
+                    const businessName = document.getElementById(`business${i}Name`)?.value || `Business ${i}`;
+                    businessNames.push(businessName);
+                }
+                createLabelAndDropdown(container, `dependent${index}BusinessName`, `Which Business?`, ['Please Select', ...businessNames.length > 0 ? businessNames : ['No businesses available']]);
+            } else {
+                return;
+            }
+        });
+    } else if (value === 'No') {
+        // Dropdown for willingness to hire dependent
+        createLabelAndDropdown(container, `dependent${index}WillingToHire`, `Is the Taxpayer Willing to Hire Dependent ${index}?`, ['Please Select', 'Yes', 'No']);
     }
 }
 
