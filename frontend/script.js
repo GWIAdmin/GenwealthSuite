@@ -155,7 +155,6 @@ function createDependentFields(container, index) {
             handleEmploymentStatusChange(index, this.value);
         });
     }
-
     // Add "Qualifies for Child/Dependent Credit?" field
     createLabelAndDropdown(dependentGroup, `dependent${index}Credit`, 'Qualifies for Child/Dependent Credit?', ['Please Select', 'Yes', 'No']);
 
@@ -194,9 +193,10 @@ function handleEmploymentStatusChange(index, value) {
     container.innerHTML = ''; // Clear any previous conditional fields
 
     if (value === 'Yes') {
+        createLabelAndCurrencyField(container, `dependent${index}Income`, `Dependent ${index} Income:`);
+
         // Dropdown for employed in taxpayer's business
         createLabelAndDropdown(container, `dependent${index}EmployedInBusiness`, `Is Dependent ${index} Employed in One of the Taxpayer's Businesses?`, ['Please Select', 'Yes', 'No']);
-
         // Dropdown for selecting business if employed in taxpayer's business
         document.getElementById(`dependent${index}EmployedInBusiness`).addEventListener('change', function() {
             if (this.value === 'Yes') {
@@ -207,6 +207,10 @@ function handleEmploymentStatusChange(index, value) {
                     businessNames.push(businessName);
                 }
                 createLabelAndDropdown(container, `dependent${index}BusinessName`, `Which Business?`, ['Please Select', ...businessNames.length > 0 ? businessNames : ['No businesses available']]);
+                
+                // Dropdown for willingness to hire dependent
+                createLabelAndDropdown(container, `dependent${index}WillingToHire`, `Is the Taxpayer Willing to Hire Dependent ${index}?`, ['Please Select', 'Yes', 'No']);
+
             } else {
                 return;
             }
