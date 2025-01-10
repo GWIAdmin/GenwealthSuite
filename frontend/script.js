@@ -195,9 +195,9 @@ function handleEmploymentStatusChange(index, value) {
     if (value === 'Yes') {
         createLabelAndCurrencyField(container, `dependent${index}Income`, `Dependent ${index} Income:`);
 
-        // Dropdown for employed in taxpayer's business
-        createLabelAndDropdown(container, `dependent${index}EmployedInBusiness`, `Is Dependent ${index} Employed in One of the Taxpayer's Businesses?`, ['Please Select', 'Yes', 'No']);
-        // Dropdown for selecting business if employed in taxpayer's business
+        // Dropdown for employed in Client's business
+        createLabelAndDropdown(container, `dependent${index}EmployedInBusiness`, `Is Dependent ${index} Employed in One of the Client's Businesses?`, ['Please Select', 'Yes', 'No']);
+        // Dropdown for selecting business if employed in Client's business
         document.getElementById(`dependent${index}EmployedInBusiness`).addEventListener('change', function() {
             if (this.value === 'Yes') {
                 const numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
@@ -209,7 +209,7 @@ function handleEmploymentStatusChange(index, value) {
                 createLabelAndDropdown(container, `dependent${index}BusinessName`, `Which Business?`, ['Please Select', ...businessNames.length > 0 ? businessNames : ['No businesses available']]);
                 
                 // Dropdown for willingness to hire dependent
-                createLabelAndDropdown(container, `dependent${index}WillingToHire`, `Is the Taxpayer Willing to Hire Dependent ${index}?`, ['Please Select', 'Yes', 'No']);
+                createLabelAndDropdown(container, `dependent${index}WillingToHire`, `Is the Client Willing to Hire Dependent ${index}?`, ['Please Select', 'Yes', 'No']);
 
             } else {
                 return;
@@ -217,7 +217,7 @@ function handleEmploymentStatusChange(index, value) {
         });
     } else if (value === 'No') {
         // Dropdown for willingness to hire dependent
-        createLabelAndDropdown(container, `dependent${index}WillingToHire`, `Is the Taxpayer Willing to Hire Dependent ${index}?`, ['Please Select', 'Yes', 'No']);
+        createLabelAndDropdown(container, `dependent${index}WillingToHire`, `Is the Client Willing to Hire Dependent ${index}?`, ['Please Select', 'Yes', 'No']);
     }
 }
 
