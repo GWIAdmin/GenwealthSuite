@@ -541,7 +541,8 @@ function createBusinessFields(container, index) {
     numOwnersInput.type = 'number';
     numOwnersInput.id = `numOwners${index}`;
     numOwnersInput.name = `numOwners${index}`;
-    numOwnersInput.min = '1';
+    numOwnersInput.min = '0';
+    numOwnersInput.max = '3'; 
     ownersContainer.appendChild(numOwnersInput);
 
     // Container for the dynamic owner fields
@@ -619,7 +620,7 @@ function handleBusinessTypeChange(businessIndex, businessType) {
         scheduleCDropdown.id = `scheduleCOwner${businessIndex}`;
         scheduleCDropdown.name = `scheduleCOwner${businessIndex}`;
 
-        ['Please Select', 'Client 1', 'Client 2'].forEach(clientOpt => {
+        ['Please Select', 'Client 1', 'Client 2', 'Both Clients'].forEach(clientOpt => {
             const opt = document.createElement('option');
             opt.value = clientOpt;
             opt.textContent = clientOpt;
@@ -645,98 +646,133 @@ function createOwnerFields(businessIndex, numOwners) {
     const dynamicOwnerFieldsDiv = document.getElementById(`dynamicOwnerFields${businessIndex}`);
     dynamicOwnerFieldsDiv.innerHTML = ''; // Clear old fields
 
-    if (!isNaN(numOwners) && numOwners > 0) {
-        for (let i = 1; i <= numOwners; i++) {
-            const ownerSection = document.createElement('section');
-            const ownerDiv = document.createElement('div');
-            ownerDiv.classList.add('owner-entry');
+    if (isNaN(numOwners) || numOwners < 1) return; // No owners or invalid input
+    if (numOwners > 3) numOwners = 3; // Limit to a maximum of 3 owners
 
-            // Owner Name or Dropdown
+    for (let i = 1; i <= numOwners; i++) {
+        const ownerSection = document.createElement('section');
+        ownerSection.classList.add('owner-entry');
+
+        // Owner Name Field
         const nameLabel = document.createElement('label');
-        nameLabel.style.marginBottom = '12px';
-        nameLabel.textContent = `Owner ${i} Name:`;
-        ownerDiv.appendChild(nameLabel);
+        nameLabel.textContent = `Owner ${i} (Select Who?):`;
+        ownerSection.appendChild(nameLabel);
 
-        if (businessIndex === 1 && i === 1) {
-            // Replace the text input with a dropdown
-            const nameSelect = document.createElement('select');
-            nameSelect.id = `business${businessIndex}OwnerName${i}`;
-            nameSelect.name = `business${businessIndex}OwnerName${i}`;
-            nameSelect.style.marginBottom = '12px';
-        
-            const opts = ['Please Select', 'Client 1', 'Client 2', 'Other'];
-            opts.forEach(optVal => {
-                const opt = document.createElement('option');
-                opt.value = optVal;
-                opt.textContent = optVal;
-                nameSelect.appendChild(opt);
-            });
-        
-            ownerDiv.appendChild(nameSelect);
-        } else {
-            // For all other owners, keep a text input
-            const nameInput = document.createElement('input');
-            nameInput.type = 'text';
-            nameInput.id = `business${businessIndex}OwnerName${i}`;
-            nameInput.name = `business${businessIndex}OwnerName${i}`;
-            nameInput.style.marginBottom = '12px';
-            ownerDiv.appendChild(nameInput);
-        }
+        const nameSelect = document.createElement('select');
+        nameSelect.id = `business${businessIndex}OwnerName${i}`;
+        nameSelect.name = `business${businessIndex}OwnerName${i}`;
+        ['Please Select', 'Client 1', 'Client 2', 'Other'].forEach(option => {
+            const opt = document.createElement('option');
+            opt.value = option;
+            opt.textContent = option;
+            nameSelect.appendChild(opt);
+        });
+        ownerSection.appendChild(nameSelect);
 
+        // Ownership Percentage Field
+        const percentLabel = document.createElement('label');
+        percentLabel.textContent = `Owner ${i} Ownership %:`;
+        ownerSection.appendChild(percentLabel);
 
-            // Ownership %
-            const ownershipLabel = document.createElement('label');
-            ownershipLabel.textContent = `Owner ${i} Ownership %:`;
-            ownerDiv.appendChild(ownershipLabel);
-            ownershipLabel.style.marginBottom = '12px';
+        const percentInput = document.createElement('input');
+        percentInput.type = 'number';
+        percentInput.step = '0.01';
+        percentInput.min = '0';
+        percentInput.id = `business${businessIndex}OwnerPercent${i}`;
+        percentInput.name = `business${businessIndex}OwnerPercent${i}`;
 
-            const ownershipInput = document.createElement('input');
-            ownershipInput.type = 'number';
-            ownershipInput.step = '0.0001'; // allow decimal places
-            ownershipInput.id = `business${businessIndex}OwnerPercent${i}`;
-            ownershipInput.name = `business${businessIndex}OwnerPercent${i}`;
-            ownershipInput.min = '0';
-            ownershipInput.addEventListener('blur', function() {
+        // Handle each scenario:
+        if (numOwners === 1) {
+            // 1 Owner => 100% read-only
+            percentInput.value = '100';
+            percentInput.readOnly = true;
+            percentInput.style.backgroundColor = '#f0f0f0';
+
+        } else if (numOwners === 2) {
+            // 2 Owners => both freely input
+            // We still want disclaimers if sum != ~100
+            percentInput.addEventListener('input', () => {
                 validateTotalOwnership(businessIndex, numOwners);
             });
-            ownerDiv.appendChild(ownershipInput);
 
-            // Append the owner fields to the section
-            ownerSection.appendChild(ownerDiv);
-
-            // Add the section to the dynamic owner fields container
-            dynamicOwnerFieldsDiv.appendChild(ownerSection);
-
-            if (i === 1) {
-                function updateOwnerName() {
-                    const firstName = document.getElementById('firstName').value;
-                    const lastName = document.getElementById('lastName').value;
-                    document.getElementById(`business${businessIndex}OwnerName${i}`).value = `${firstName} ${lastName}`;
-                }
-
-                document.getElementById('firstName').addEventListener('input', updateOwnerName);
-                document.getElementById('lastName').addEventListener('input', updateOwnerName);   
-                
-                updateOwnerName();
+        } else if (numOwners === 3) {
+            // 3 Owners => last owner is read-only remainder
+            if (i === 3) {
+                // The third input is read-only, auto-calculated
+                percentInput.readOnly = true;
+                percentInput.style.backgroundColor = '#f0f0f0';
+            } else {
+                // Owner 1 and Owner 2 free input => triggers autoCalculateLastOwner
+                percentInput.addEventListener('input', () => {
+                    autoCalculateLastOwner(businessIndex, numOwners);
+                });
             }
         }
+
+        ownerSection.appendChild(percentInput);
+        dynamicOwnerFieldsDiv.appendChild(ownerSection);
+    }
+
+    // Validate once initially
+    validateTotalOwnership(businessIndex, numOwners);
+    // If 3 owners, auto-calculate Owner 3 once initially
+    if (numOwners === 3) {
+        autoCalculateLastOwner(businessIndex, numOwners);
     }
 }
 
-function validateTotalOwnership(businessIndex, numOwners) {
-    let sum = 0;
-    for (let i = 1; i <= numOwners; i++) {
-        const val = parseFloat(
-            document.getElementById(`business${businessIndex}OwnerPercent${i}`).value
-        ) || 0;
-        sum += val;
+function autoCalculateLastOwner(businessIndex, numOwners) {
+    if (numOwners !== 3) return; // Only apply if exactly 3 owners
+
+    let sumOfFirstTwo = 0;
+    for (let i = 1; i <= 2; i++) {
+        const val = parseFloat(document.getElementById(`business${businessIndex}OwnerPercent${i}`).value) || 0;
+        sumOfFirstTwo += val;
     }
 
-    // Check if total ownership is exactly 100%
-    if (Math.abs(sum - 100) > 0.0001) {
-        alert(
-          `Total ownership for Business ${businessIndex} must be 100%. Currently it is ${sum.toFixed(4)}%.`
+    const lastOwnerInput = document.getElementById(`business${businessIndex}OwnerPercent3`);
+    const remaining = 100 - sumOfFirstTwo;
+    lastOwnerInput.value = Math.max(0, Math.min(100, remaining)).toFixed(2);
+
+    validateTotalOwnership(businessIndex, numOwners);
+}
+
+function validateTotalOwnership(businessIndex, numOwners) {
+    let totalOwnership = 0;
+    let anyValueEntered = false;
+
+    for (let i = 1; i <= numOwners; i++) {
+        const valStr = document.getElementById(`business${businessIndex}OwnerPercent${i}`)?.value || '';
+        const val = parseFloat(valStr);
+        if (!isNaN(val) && val !== 0) {
+            anyValueEntered = true;
+        }
+        totalOwnership += (isNaN(val) ? 0 : val);
+    }
+
+    const containerId = `dynamicOwnerFields${businessIndex}`;
+
+    // 1) If user hasn't typed any ownership at all, remove disclaimers and exit.
+    if (!anyValueEntered) {
+        const existingDisclaimer = document.getElementById(`disclaimer-${containerId}`);
+        if (existingDisclaimer) {
+            existingDisclaimer.remove();
+        }
+        return;
+    }
+
+    // 2) Otherwise, if total is not close to 100, show the disclaimer.
+    if (Math.abs(totalOwnership - 100) > 0.01) {
+        showRedDisclaimer(
+            `Total ownership must equal 100%. Currently, it is ${totalOwnership.toFixed(2)}%.`, 
+            containerId
         );
+    } else {
+        // 3) If total == ~100, remove disclaimers if any
+        const existingDisclaimer = document.getElementById(`disclaimer-${containerId}`);
+        if (existingDisclaimer) {
+            existingDisclaimer.remove();
+        }
     }
 }
 
@@ -1062,27 +1098,28 @@ function toggleCollapsible(sectionId) {
     section.classList.toggle('active');
 }
 
-//-----------------------------//
-// X. SHOW RED DISCLAIMER
-//-----------------------------//
+//-------------------------//
+// 19. SHOW RED DISCLAIMER //
+//-------------------------//
 
 function showRedDisclaimer(message, containerId) {
-    // Remove existing disclaimer if any
-    const existingDisclaimer = document.getElementById(`disclaimer-${containerId}`);
-    if (existingDisclaimer) {
-        existingDisclaimer.remove();
-    }
-
-    // Create a new disclaimer
-    const disclaimer = document.createElement('div');
-    disclaimer.id = `disclaimer-${containerId}`;
-    disclaimer.textContent = message;
-    disclaimer.style.color = 'red';
-    disclaimer.style.fontWeight = 'bold';
-    disclaimer.style.marginTop = '12px';
-
+    // Reference the container
     const container = document.getElementById(containerId);
-    if (container) {
+    if (!container) return; // Exit if container doesn't exist
+
+    // Check for an existing disclaimer
+    let disclaimer = document.getElementById(`disclaimer-${containerId}`);
+    if (!disclaimer) {
+        // Create a new disclaimer if it doesn't exist
+        disclaimer = document.createElement('div');
+        disclaimer.id = `disclaimer-${containerId}`;
+        disclaimer.style.color = 'red';
+        disclaimer.style.fontWeight = 'bold';
+        disclaimer.style.marginTop = '12px';
         container.appendChild(disclaimer);
     }
+
+    // Update the disclaimer message
+    disclaimer.textContent = message;
+
 }
