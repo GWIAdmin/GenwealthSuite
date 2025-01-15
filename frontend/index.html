@@ -633,12 +633,9 @@
 
   <script src="script.js"></script>
 
-  <!-- Prevents the user from accidentally refreshing/leaving the webpage -->
   <script>
     window.addEventListener('beforeunload', function (e) {
-      // Cancel the event
       e.preventDefault();
-      // Chrome requires returnValue to be set
       e.returnValue = '';
     });
   </script>
