@@ -189,35 +189,85 @@ function handleDOBOrAgeChange(index, value) {
 }
 
 function handleEmploymentStatusChange(index, value) {
+    // "index" = which dependent number (1,2,3,...)
+    // "value" = "Yes" or "No" to "Is Dependent Currently Employed?"
     const container = document.getElementById(`employmentConditionalContainer${index}`);
     container.innerHTML = ''; // Clear any previous conditional fields
 
     if (value === 'Yes') {
+        // 1) Create Income field
         createLabelAndCurrencyField(container, `dependent${index}Income`, `Dependent ${index} Income:`);
 
-        // Dropdown for employed in Client's business
-        createLabelAndDropdown(container, `dependent${index}EmployedInBusiness`, `Is Dependent ${index} Employed in One of the Client's Businesses?`, ['Please Select', 'Yes', 'No']);
-        // Dropdown for selecting business if employed in Client's business
+        // 2) Create "Is Dependent Employed in a Client's Business?" dropdown
+        createLabelAndDropdown(container, `dependent${index}EmployedInBusiness`,
+            `Is Dependent ${index} Employed in One of the Client's Businesses?`,
+            ['Please Select', 'Yes', 'No']
+        );
+
+        // If user selects "Yes" to 'EmployedInBusiness', we do NOT show "WillingToHire"
+        // because they're already employed. 
+        // If "No", still do not show "WillingToHire" here — that question is only in the else-block below.
+
         document.getElementById(`dependent${index}EmployedInBusiness`).addEventListener('change', function() {
             if (this.value === 'Yes') {
+                // (They’re already employed in a client business, so do nothing else.)
+                // But do ask: "Which Business?"
                 const numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
                 const businessNames = [];
                 for (let i = 1; i <= numBusinesses; i++) {
-                    const businessName = document.getElementById(`business${i}Name`)?.value || `Business ${i}`;
-                    businessNames.push(businessName);
+                    const bName = document.getElementById(`business${i}Name`)?.value || `Business ${i}`;
+                    businessNames.push(bName);
                 }
-                createLabelAndDropdown(container, `dependent${index}BusinessName`, `Which Business?`, ['Please Select', ...businessNames.length > 0 ? businessNames : ['No businesses available']]);
-                
-                // Dropdown for willingness to hire dependent
-                createLabelAndDropdown(container, `dependent${index}WillingToHire`, `Is the Client Willing to Hire Dependent ${index}?`, ['Please Select', 'Yes', 'No']);
-
-            } else {
-                return;
+                createLabelAndDropdown(container, `dependent${index}BusinessName`,
+                    `Which Business?`,
+                    ['Please Select', ...(businessNames.length > 0 ? businessNames : ['No businesses available'])]
+                );
+            } else if (this.value === 'No') {
+                // Not employed in one of the client's businesses
+                // Still do NOT show "WillingToHire" here, because user already answered "Yes" overall to 'Currently Employed?'
+                // The "WillingToHire" question only appears when "Currently Employed?" is No.
             }
         });
+
     } else if (value === 'No') {
-        // Dropdown for willingness to hire dependent
-        createLabelAndDropdown(container, `dependent${index}WillingToHire`, `Is the Client Willing to Hire Dependent ${index}?`, ['Please Select', 'Yes', 'No']);
+        // Dependent is NOT currently employed, so we ask: "Is the Client Willing to Hire Dependent?"
+        createLabelAndDropdown(container, `dependent${index}WillingToHire`,
+            `Is the Client Willing to Hire Dependent ${index}?`,
+            ['Please Select', 'Yes', 'No']
+        );
+
+        // Attach an event listener to "WillingToHire"
+        const willingDropdown = document.getElementById(`dependent${index}WillingToHire`);
+        if (willingDropdown) {
+            willingDropdown.addEventListener('change', function() {
+                // 1) Check if user selected "Yes"
+                if (this.value === 'Yes') {
+                    // 2) Determine the dependent’s age:
+                    let dependentAge = 0;
+                    const ageField = document.getElementById(`dependent${index}Age`);
+                    if (ageField) {
+                        dependentAge = parseInt(ageField.value, 10) || 0;
+                    } else {
+                        // Possibly user selected an age range
+                        const ageRangeField = document.getElementById(`dependent${index}AgeRange`);
+                        if (ageRangeField && ageRangeField.value === '18 or older') {
+                            dependentAge = 18;
+                        }
+                    }
+                    // 3) If 18 or older, show the red disclaimer
+                    if (dependentAge >= 18) {
+                        showRedDisclaimer(
+                            'Hiring 18 or older will trigger FICA Taxes',
+                            `employmentConditionalContainer${index}`
+                        );
+                    }
+                } else {
+                    // If user changes from "Yes" to something else, remove any existing disclaimer
+                    const existingDisclaimer = document.getElementById(`disclaimer-employmentConditionalContainer${index}`);
+                    if (existingDisclaimer) existingDisclaimer.remove();
+                }
+            });
+        }
     }
 }
 
@@ -344,6 +394,19 @@ function createBusinessNameFields(container, index){
     businessNameDiv.classList.add('business-name-entry');
 
     createLabelAndInput(businessNameDiv, `business${index}Name`, `Business ${index} Name:`, 'text');
+    // ADD CHECKBOX "Is this a Medical/Professional Business?"
+    const checkboxLabel = document.createElement('label');
+    checkboxLabel.setAttribute('for', `business${index}Medical`);
+    checkboxLabel.textContent = 'Is this a Medical/Professional Business?';
+    checkboxLabel.style.marginTop = '12px';
+    businessNameDiv.appendChild(checkboxLabel);
+    
+    const checkboxInput = document.createElement('input');
+    checkboxInput.type = 'checkbox';
+    checkboxInput.id = `business${index}Medical`;
+    checkboxInput.name = `business${index}Medical`;
+    businessNameDiv.appendChild(checkboxInput);
+
     container.appendChild(businessNameDiv);
 }
 
@@ -529,13 +592,44 @@ function handleBusinessTypeChange(businessIndex, businessType) {
     const numOwnersInput = document.getElementById(`numOwners${businessIndex}`);
     const dynamicOwnerFieldsDiv = document.getElementById(`dynamicOwnerFields${businessIndex}`);
 
-    // Clear any existing owner fields
-    dynamicOwnerFieldsDiv.innerHTML = '';
+        // 1) Clear existing owner fields
+        dynamicOwnerFieldsDiv.innerHTML = '';
+
+        // 2) Find the outer .business-entry so we can attach/detach the Schedule-C question
+        const businessDiv = document.querySelectorAll('.business-entry')[businessIndex - 1];
+
+        // 3) First, REMOVE any previously-created Schedule-C elements, if they exist
+        const oldLabel = businessDiv.querySelector(`#scheduleCLabel${businessIndex}`);
+        if (oldLabel) oldLabel.remove();
+        const oldDropdown = businessDiv.querySelector(`#scheduleCOwner${businessIndex}`);
+        if (oldDropdown) oldDropdown.remove();
 
     if (businessType === "Schedule-C") {
         // Hide the "How many owners?" field and assume 1 owner
         ownersContainer.style.display = 'none';
         numOwnersInput.value = 1;
+
+        // Create dropdown for "Which client is the Schedule C under?"
+        const scheduleCDropdownLabel = document.createElement('label');
+        scheduleCDropdownLabel.id = `scheduleCLabel${businessIndex}`;
+        scheduleCDropdownLabel.textContent = 'Which client owns this Schedule C?';
+        scheduleCDropdownLabel.style.marginTop = '12px';
+
+        const scheduleCDropdown = document.createElement('select');
+        scheduleCDropdown.id = `scheduleCOwner${businessIndex}`;
+        scheduleCDropdown.name = `scheduleCOwner${businessIndex}`;
+
+        ['Please Select', 'Client 1', 'Client 2'].forEach(clientOpt => {
+            const opt = document.createElement('option');
+            opt.value = clientOpt;
+            opt.textContent = clientOpt;
+            scheduleCDropdown.appendChild(opt);
+        });
+
+        // Append them to the "businessDiv"
+        businessDiv.appendChild(scheduleCDropdownLabel);
+        businessDiv.appendChild(scheduleCDropdown);
+
         // You could optionally create one owner field with 100% set automatically
     } else if (businessType === "Please Select") {
         // If not selected, hide or reset
@@ -557,18 +651,38 @@ function createOwnerFields(businessIndex, numOwners) {
             const ownerDiv = document.createElement('div');
             ownerDiv.classList.add('owner-entry');
 
-            // Owner Name
-            const nameLabel = document.createElement('label');
-            nameLabel.style.marginBottom = '12px';
-            nameLabel.textContent = `Owner ${i} Name:`;
-            ownerDiv.appendChild(nameLabel);
-            
+            // Owner Name or Dropdown
+        const nameLabel = document.createElement('label');
+        nameLabel.style.marginBottom = '12px';
+        nameLabel.textContent = `Owner ${i} Name:`;
+        ownerDiv.appendChild(nameLabel);
+
+        if (businessIndex === 1 && i === 1) {
+            // Replace the text input with a dropdown
+            const nameSelect = document.createElement('select');
+            nameSelect.id = `business${businessIndex}OwnerName${i}`;
+            nameSelect.name = `business${businessIndex}OwnerName${i}`;
+            nameSelect.style.marginBottom = '12px';
+        
+            const opts = ['Please Select', 'Client 1', 'Client 2', 'Other'];
+            opts.forEach(optVal => {
+                const opt = document.createElement('option');
+                opt.value = optVal;
+                opt.textContent = optVal;
+                nameSelect.appendChild(opt);
+            });
+        
+            ownerDiv.appendChild(nameSelect);
+        } else {
+            // For all other owners, keep a text input
             const nameInput = document.createElement('input');
             nameInput.type = 'text';
             nameInput.id = `business${businessIndex}OwnerName${i}`;
             nameInput.name = `business${businessIndex}OwnerName${i}`;
-            ownerDiv.appendChild(nameInput);
             nameInput.style.marginBottom = '12px';
+            ownerDiv.appendChild(nameInput);
+        }
+
 
             // Ownership %
             const ownershipLabel = document.createElement('label');
@@ -946,4 +1060,29 @@ document.getElementById('taxForm').addEventListener('keydown', function (e) {
 function toggleCollapsible(sectionId) {
     const section = document.getElementById(sectionId);
     section.classList.toggle('active');
+}
+
+//-----------------------------//
+// X. SHOW RED DISCLAIMER
+//-----------------------------//
+
+function showRedDisclaimer(message, containerId) {
+    // Remove existing disclaimer if any
+    const existingDisclaimer = document.getElementById(`disclaimer-${containerId}`);
+    if (existingDisclaimer) {
+        existingDisclaimer.remove();
+    }
+
+    // Create a new disclaimer
+    const disclaimer = document.createElement('div');
+    disclaimer.id = `disclaimer-${containerId}`;
+    disclaimer.textContent = message;
+    disclaimer.style.color = 'red';
+    disclaimer.style.fontWeight = 'bold';
+    disclaimer.style.marginTop = '12px';
+
+    const container = document.getElementById(containerId);
+    if (container) {
+        container.appendChild(disclaimer);
+    }
 }
