@@ -389,23 +389,51 @@ document.getElementById('numOfBusinesses').addEventListener('input', function() 
     }
 });
 
-function createBusinessNameFields(container, index){
+function createBusinessNameFields(container, index) {
     const businessNameDiv = document.createElement('div');
     businessNameDiv.classList.add('business-name-entry');
 
     createLabelAndInput(businessNameDiv, `business${index}Name`, `Business ${index} Name:`, 'text');
-    // ADD CHECKBOX "Is this a Medical/Professional Business?"
-    const checkboxLabel = document.createElement('label');
-    checkboxLabel.setAttribute('for', `business${index}Medical`);
-    checkboxLabel.textContent = 'Is this a Medical/Professional Business?';
-    checkboxLabel.style.marginTop = '12px';
-    businessNameDiv.appendChild(checkboxLabel);
-    
-    const checkboxInput = document.createElement('input');
-    checkboxInput.type = 'checkbox';
-    checkboxInput.id = `business${index}Medical`;
-    checkboxInput.name = `business${index}Medical`;
-    businessNameDiv.appendChild(checkboxInput);
+
+    // Add checkbox container for Medical/Professional Business
+    const checkboxContainerMedical = document.createElement('div');
+    checkboxContainerMedical.classList.add('checkbox-container');
+
+    // Add label for Medical/Professional Business
+    const checkboxLabelMedical = document.createElement('label');
+    checkboxLabelMedical.setAttribute('for', `business${index}Medical`);
+    checkboxLabelMedical.textContent = 'Is this a Medical/Professional Business?';
+
+    // Add checkbox input for Medical/Professional Business
+    const checkboxInputMedical = document.createElement('input');
+    checkboxInputMedical.type = 'checkbox';
+    checkboxInputMedical.id = `business${index}Medical`;
+    checkboxInputMedical.name = `business${index}Medical`;
+
+    // Append elements for Medical/Professional Business
+    checkboxContainerMedical.appendChild(checkboxInputMedical);
+    checkboxContainerMedical.appendChild(checkboxLabelMedical);
+    businessNameDiv.appendChild(checkboxContainerMedical);
+
+    // Add checkbox container for Real Estate Business
+    const checkboxContainerRealEstate = document.createElement('div');
+    checkboxContainerRealEstate.classList.add('checkbox-container');
+
+    // Add label for Real Estate Business
+    const checkboxLabelRealEstate = document.createElement('label');
+    checkboxLabelRealEstate.setAttribute('for', `business${index}RealEstate`);
+    checkboxLabelRealEstate.textContent = 'Is this a Real Estate Business?';
+
+    // Add checkbox input for Real Estate Business
+    const checkboxInputRealEstate = document.createElement('input');
+    checkboxInputRealEstate.type = 'checkbox';
+    checkboxInputRealEstate.id = `business${index}RealEstate`;
+    checkboxInputRealEstate.name = `business${index}RealEstate`;
+
+    // Append elements for Real Estate Business
+    checkboxContainerRealEstate.appendChild(checkboxInputRealEstate);
+    checkboxContainerRealEstate.appendChild(checkboxLabelRealEstate);
+    businessNameDiv.appendChild(checkboxContainerRealEstate);
 
     container.appendChild(businessNameDiv);
 }
@@ -1162,3 +1190,23 @@ function showRedDisclaimer(message, containerId) {
     disclaimer.textContent = message;
 
 }
+
+// --- NOTES FEATURE ---
+const notesButton = document.getElementById('notesButton');
+const notesContainer = document.getElementById('notesContainer');
+
+// Show/hide notepad on button click
+notesButton.addEventListener('click', (e) => {
+  e.stopPropagation(); // Prevent the click from bubbling to document
+  notesContainer.classList.toggle('hidden');
+});
+
+// Hide notepad if user clicks outside
+document.addEventListener('click', function(event) {
+  // If the user clicks outside the notes container and outside the button, close the notes
+  if (!notesContainer.contains(event.target) && event.target !== notesButton) {
+    if (!notesContainer.classList.contains('hidden')) {
+      notesContainer.classList.add('hidden');
+    }
+  }
+});
