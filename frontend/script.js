@@ -620,7 +620,7 @@ function handleBusinessTypeChange(businessIndex, businessType) {
         scheduleCDropdown.id = `scheduleCOwner${businessIndex}`;
         scheduleCDropdown.name = `scheduleCOwner${businessIndex}`;
 
-        ['Please Select', 'Client 1', 'Client 2', 'Both Clients'].forEach(clientOpt => {
+        ['Please Select', 'Client 1', 'Client 2'].forEach(clientOpt => {
             const opt = document.createElement('option');
             opt.value = clientOpt;
             opt.textContent = clientOpt;
@@ -640,6 +640,10 @@ function handleBusinessTypeChange(businessIndex, businessType) {
         // Display multi-owner fields for S-Corp, Partnership, or C-Corp
         ownersContainer.style.display = 'block';
     }
+}
+
+function roundToHalf(value) {
+    return Math.round(value * 2) / 2;
 }
 
 function createOwnerFields(businessIndex, numOwners) {
@@ -689,23 +693,17 @@ function createOwnerFields(businessIndex, numOwners) {
             percentInput.style.backgroundColor = '#f0f0f0';
 
         } else if (numOwners === 2) {
-            // 2 Owners => both freely input
-            // We still want disclaimers if sum != ~100
-            percentInput.addEventListener('input', () => {
-                validateTotalOwnership(businessIndex, numOwners);
-            });
+            percentInput.addEventListener('blur', () => handleTwoOwnersInput(businessIndex));
+            }
 
-        } else if (numOwners === 3) {
-            // 3 Owners => last owner is read-only remainder
-            if (i === 3) {
-                // The third input is read-only, auto-calculated
+        else if (numOwners === 3) {
+            // Three owners => first two are free (rounded), third is remainder
+            if (i < 3) {
+                percentInput.addEventListener('blur', () => autoCalculateLastOwner(businessIndex, numOwners));
+            } else {
+                // Third is read-only
                 percentInput.readOnly = true;
                 percentInput.style.backgroundColor = '#f0f0f0';
-            } else {
-                // Owner 1 and Owner 2 free input => triggers autoCalculateLastOwner
-                percentInput.addEventListener('input', () => {
-                    autoCalculateLastOwner(businessIndex, numOwners);
-                });
             }
         }
 
@@ -721,20 +719,61 @@ function createOwnerFields(businessIndex, numOwners) {
     }
 }
 
-function autoCalculateLastOwner(businessIndex, numOwners) {
-    if (numOwners !== 3) return; // Only apply if exactly 3 owners
+function handleTwoOwnersInput(businessIndex) {
+    const owner1Input = document.getElementById(`business${businessIndex}OwnerPercent1`);
+    const owner2Input = document.getElementById(`business${businessIndex}OwnerPercent2`);
+    if (!owner1Input || !owner2Input) return;
 
-    let sumOfFirstTwo = 0;
-    for (let i = 1; i <= 2; i++) {
-        const val = parseFloat(document.getElementById(`business${businessIndex}OwnerPercent${i}`).value) || 0;
-        sumOfFirstTwo += val;
+    const activeElement = document.activeElement;
+    let val1 = parseFloat(owner1Input.value) || 0;
+    let val2 = parseFloat(owner2Input.value) || 0;
+
+    if (activeElement === owner1Input) {
+        val1 = roundToHalf(val1);
+        val1 = Math.min(Math.max(val1, 0), 100);
+        owner1Input.value = val1.toFixed(2);
+
+        val2 = roundToHalf(100 - val1);
+        val2 = Math.min(Math.max(val2, 0), 100);
+        owner2Input.value = val2.toFixed(2);
+    } else if (activeElement === owner2Input) {
+        val2 = roundToHalf(val2);
+        val2 = Math.min(Math.max(val2, 0), 100);
+        owner2Input.value = val2.toFixed(2);
+
+        val1 = roundToHalf(100 - val2);
+        val1 = Math.min(Math.max(val1, 0), 100);
+        owner1Input.value = val1.toFixed(2);
     }
 
-    const lastOwnerInput = document.getElementById(`business${businessIndex}OwnerPercent3`);
-    const remaining = 100 - sumOfFirstTwo;
-    lastOwnerInput.value = Math.max(0, Math.min(100, remaining)).toFixed(2);
+    validateTotalOwnership(businessIndex, 2);
+}
 
-    validateTotalOwnership(businessIndex, numOwners);
+function autoCalculateLastOwner(businessIndex, numOwners) {
+    if (numOwners !== 3) return;
+
+    const owner1Input = document.getElementById(`business${businessIndex}OwnerPercent1`);
+    const owner2Input = document.getElementById(`business${businessIndex}OwnerPercent2`);
+    const owner3Input = document.getElementById(`business${businessIndex}OwnerPercent3`);
+    if (!owner1Input || !owner2Input || !owner3Input) return;
+
+    let val1 = parseFloat(owner1Input.value) || 0;
+    let val2 = parseFloat(owner2Input.value) || 0;
+
+    val1 = roundToHalf(val1);
+    val1 = Math.min(Math.max(val1, 0), 100);
+    owner1Input.value = val1.toFixed(2);
+
+    val2 = roundToHalf(val2);
+    val2 = Math.min(Math.max(val2, 0), 100);
+    owner2Input.value = val2.toFixed(2);
+
+    let remaining = 100 - (val1 + val2);
+    remaining = roundToHalf(remaining);
+    remaining = Math.min(Math.max(remaining, 0), 100);
+    owner3Input.value = remaining.toFixed(2);
+
+    validateTotalOwnership(businessIndex, 3);
 }
 
 function validateTotalOwnership(businessIndex, numOwners) {
