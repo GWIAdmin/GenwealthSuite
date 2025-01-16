@@ -1191,7 +1191,10 @@ function showRedDisclaimer(message, containerId) {
 
 }
 
-// --- NOTES FEATURE ---
+//----------------------------//
+// 20. NOTES FEATURE (HIDDEN) //
+//----------------------------//
+
 const notesButton = document.getElementById('notesButton');
 const notesContainer = document.getElementById('notesContainer');
 
