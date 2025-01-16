@@ -42,7 +42,7 @@ h3{
   position: fixed;
   top: 10px;
   left: 10px;
-  z-index: 2000; /* ensure it’s above other elements */
+  z-index: 2000;
 }
 
 .notes-btn {
