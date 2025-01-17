@@ -528,12 +528,17 @@ function createBusinessFields(container, index) {
     const businessDiv = document.createElement('div');
     businessDiv.classList.add('business-entry');
 
+    // Heading uses the business's name or a placeholder
     const heading = document.createElement('h3');
     const businessNameInput = document.getElementById(`business${index}Name`);
     heading.textContent = businessNameInput ? businessNameInput.value : `Business ${index}`;
-    businessNameInput.addEventListener('input', function() {
-        heading.textContent = businessNameInput.value;
-    });
+    
+    // Update heading if the business name changes
+    if (businessNameInput) {
+        businessNameInput.addEventListener('input', function() {
+            heading.textContent = businessNameInput.value;
+        });
+    }
     businessDiv.appendChild(heading);
 
     // Business Type
@@ -554,32 +559,41 @@ function createBusinessFields(container, index) {
     });
     businessDiv.appendChild(typeSelect);
 
-    // Owners Container
+    // Income
+    createLabelAndCurrencyField(businessDiv, `business${index}Income`, `Income:`);
+
+    // Expenses
+    createLabelAndCurrencyField(businessDiv, `business${index}Expenses`, `Expenses:`);
+
+    // Net (Income - Expenses)
+    createLabelAndTextField(businessDiv, `business${index}Net`, `Net (Income - Expenses):`);
+
+    // Owners container (Moved here, below "Net")
     const ownersContainer = document.createElement('div');
     ownersContainer.id = `ownersContainer${index}`;
     businessDiv.appendChild(ownersContainer);
 
-    // Ask: "How many owners does this business have?"
+    // Label and input: "How many owners does Business X have?"
     const numOwnersLabel = document.createElement('label');
     numOwnersLabel.textContent = `How many owners does Business ${index} have?`;
-    ownersContainer.appendChild(numOwnersLabel);
     numOwnersLabel.style.marginTop = '12px';
+    ownersContainer.appendChild(numOwnersLabel);
 
     const numOwnersInput = document.createElement('input');
     numOwnersInput.type = 'number';
     numOwnersInput.id = `numOwners${index}`;
     numOwnersInput.name = `numOwners${index}`;
     numOwnersInput.min = '0';
-    numOwnersInput.max = '3'; 
+    numOwnersInput.max = '3';
     ownersContainer.appendChild(numOwnersInput);
 
     // Container for the dynamic owner fields
     const dynamicOwnerFieldsDiv = document.createElement('div');
     dynamicOwnerFieldsDiv.id = `dynamicOwnerFields${index}`;
-    ownersContainer.appendChild(dynamicOwnerFieldsDiv);
     dynamicOwnerFieldsDiv.style.marginTop = '12px';
+    ownersContainer.appendChild(dynamicOwnerFieldsDiv);
 
-    // Listen for changes on business type (so we can do something special for Schedule-C)
+    // Listen for changes on business type (e.g., handle Schedule-C logic)
     typeSelect.addEventListener('change', function () {
         handleBusinessTypeChange(index, typeSelect.value);
     });
@@ -589,21 +603,13 @@ function createBusinessFields(container, index) {
         createOwnerFields(index, parseInt(numOwnersInput.value, 10));
     });
 
-    // Income
-    createLabelAndCurrencyField(businessDiv, `business${index}Income`, `Income:`);
-
-    // Expenses
-    createLabelAndCurrencyField(businessDiv, `business${index}Expenses`, `Expenses:`);
-
-    // Net (Income - Expenses)
-    createLabelAndTextField(businessDiv, `business${index}Net`, `Net (Income - Expenses):`);
+    // Append the entire business entry to the main container
     container.appendChild(businessDiv);
-
-    // Make the Net field read-only
+    
     const netField = document.getElementById(`business${index}Net`);
     netField.readOnly = true;
-
-    // Listen for Income & Expenses changes
+    
+    // Event listeners for recalculating the net
     const incomeField = document.getElementById(`business${index}Income`);
     const expensesField = document.getElementById(`business${index}Expenses`);
     incomeField.addEventListener('blur', function() {
