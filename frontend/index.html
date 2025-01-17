@@ -13,9 +13,17 @@
 <body>
 
   <div class="notes-area">
-    <button id="notesButton" class="notes-btn"><i class="fas fa-sticky-note"></i> Notes</button>
+    <button id="notesButton" class="notes-btn">
+      <i class="fas fa-sticky-note"></i> Notes
+    </button>
     <div id="notesContainer" class="notes-container hidden">
-      <textarea id="notesTextarea" placeholder="Type your notes here..."></textarea>
+      
+      <div class="notes-toolbar">
+        <button type="button" id="notesBoldBtn"><b>Bold</b></button>
+        <button type="button" id="notesHighlightBtn">Highlight</button>
+      </div>
+  
+      <div id="notesEditor" class="notes-editor" contenteditable="true"></div>
     </div>
   </div>
   

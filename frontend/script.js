@@ -1191,25 +1191,37 @@ function showRedDisclaimer(message, containerId) {
 
 }
 
-//----------------------------//
-// 20. NOTES FEATURE (HIDDEN) //
-//----------------------------//
+//-------------------//
+// 20. NOTES FEATURE //
+//-------------------//
 
 const notesButton = document.getElementById('notesButton');
 const notesContainer = document.getElementById('notesContainer');
+const notesEditor = document.getElementById('notesEditor');
+const boldBtn = document.getElementById('notesBoldBtn');
+const highlightBtn = document.getElementById('notesHighlightBtn');
 
-// Show/hide notepad on button click
 notesButton.addEventListener('click', (e) => {
-  e.stopPropagation(); // Prevent the click from bubbling to document
+  e.stopPropagation();
   notesContainer.classList.toggle('hidden');
 });
 
-// Hide notepad if user clicks outside
 document.addEventListener('click', function(event) {
-  // If the user clicks outside the notes container and outside the button, close the notes
   if (!notesContainer.contains(event.target) && event.target !== notesButton) {
     if (!notesContainer.classList.contains('hidden')) {
       notesContainer.classList.add('hidden');
     }
+  }
+});
+
+boldBtn.addEventListener('click', () => {
+  document.execCommand('bold', false, null);
+});
+
+highlightBtn.addEventListener('click', () => {
+
+  const currentSelection = window.getSelection();
+  if (!currentSelection.isCollapsed) {
+    document.execCommand('hiliteColor', false, 'yellow');
   }
 });
