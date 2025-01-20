@@ -145,7 +145,7 @@ function createDependentFields(container, index) {
     employmentConditionalContainer.id = `employmentConditionalContainer${index}`;
     dependentGroup.appendChild(employmentConditionalContainer);
 
-    // Append the dependent group to the container first
+    // Append the dependent group to the container
     container.appendChild(dependentGroup);
 
     // Add event listener for employment status
@@ -204,10 +204,6 @@ function handleEmploymentStatusChange(index, value) {
             ['Please Select', 'Yes', 'No']
         );
 
-        // If user selects "Yes" to 'EmployedInBusiness', we do NOT show "WillingToHire"
-        // because they're already employed. 
-        // If "No", still do not show "WillingToHire" here — that question is only in the else-block below.
-
         document.getElementById(`dependent${index}EmployedInBusiness`).addEventListener('change', function() {
             if (this.value === 'Yes') {
                 // (They’re already employed in a client business, so do nothing else.)
@@ -223,9 +219,7 @@ function handleEmploymentStatusChange(index, value) {
                     ['Please Select', ...(businessNames.length > 0 ? businessNames : ['No businesses available'])]
                 );
             } else if (this.value === 'No') {
-                // Not employed in one of the client's businesses
-                // Still do NOT show "WillingToHire" here, because user already answered "Yes" overall to 'Currently Employed?'
-                // The "WillingToHire" question only appears when "Currently Employed?" is No.
+                // Not employed in one of the client's businesses; do nothing more here.
             }
         });
 
@@ -568,7 +562,7 @@ function createBusinessFields(container, index) {
     // Net (Income - Expenses)
     createLabelAndTextField(businessDiv, `business${index}Net`, `Net (Income - Expenses):`);
 
-    // Owners container (Moved here, below "Net")
+    // Owners container
     const ownersContainer = document.createElement('div');
     ownersContainer.id = `ownersContainer${index}`;
     businessDiv.appendChild(ownersContainer);
@@ -627,17 +621,17 @@ function handleBusinessTypeChange(businessIndex, businessType) {
     const numOwnersInput = document.getElementById(`numOwners${businessIndex}`);
     const dynamicOwnerFieldsDiv = document.getElementById(`dynamicOwnerFields${businessIndex}`);
 
-        // 1) Clear existing owner fields
-        dynamicOwnerFieldsDiv.innerHTML = '';
+    // 1) Clear existing owner fields
+    dynamicOwnerFieldsDiv.innerHTML = '';
 
-        // 2) Find the outer .business-entry so we can attach/detach the Schedule-C question
-        const businessDiv = document.querySelectorAll('.business-entry')[businessIndex - 1];
+    // 2) Find the outer .business-entry so we can attach/detach the Schedule-C question
+    const businessDiv = document.querySelectorAll('.business-entry')[businessIndex - 1];
 
-        // 3) First, REMOVE any previously-created Schedule-C elements, if they exist
-        const oldLabel = businessDiv.querySelector(`#scheduleCLabel${businessIndex}`);
-        if (oldLabel) oldLabel.remove();
-        const oldDropdown = businessDiv.querySelector(`#scheduleCOwner${businessIndex}`);
-        if (oldDropdown) oldDropdown.remove();
+    // 3) Remove any previously-created Schedule-C elements, if they exist
+    const oldLabel = businessDiv.querySelector(`#scheduleCLabel${businessIndex}`);
+    if (oldLabel) oldLabel.remove();
+    const oldDropdown = businessDiv.querySelector(`#scheduleCOwner${businessIndex}`);
+    if (oldDropdown) oldDropdown.remove();
 
     if (businessType === "Schedule-C") {
         // Hide the "How many owners?" field and assume 1 owner
@@ -665,7 +659,6 @@ function handleBusinessTypeChange(businessIndex, businessType) {
         businessDiv.appendChild(scheduleCDropdownLabel);
         businessDiv.appendChild(scheduleCDropdown);
 
-        // You could optionally create one owner field with 100% set automatically
     } else if (businessType === "Please Select") {
         // If not selected, hide or reset
         ownersContainer.style.display = 'none';
@@ -676,22 +669,22 @@ function handleBusinessTypeChange(businessIndex, businessType) {
     }
 }
 
-function roundToHalf(value) {
-    return Math.round(value * 2) / 2;
+function roundToFour(value) {
+    return Math.round(value * 10000) / 10000;
 }
 
 function createOwnerFields(businessIndex, numOwners) {
     const dynamicOwnerFieldsDiv = document.getElementById(`dynamicOwnerFields${businessIndex}`);
     dynamicOwnerFieldsDiv.innerHTML = ''; // Clear old fields
 
-    if (isNaN(numOwners) || numOwners < 1) return; // No owners or invalid input
-    if (numOwners > 3) numOwners = 3; // Limit to a maximum of 3 owners
+    if (isNaN(numOwners) || numOwners < 1) return; 
+    if (numOwners > 3) numOwners = 3; // Limit to 3 owners
 
     for (let i = 1; i <= numOwners; i++) {
         const ownerSection = document.createElement('section');
         ownerSection.classList.add('owner-entry');
 
-        // Owner Name Field
+        // === Owner Name Field ===
         const nameLabel = document.createElement('label');
         nameLabel.textContent = `Owner ${i} (Select Who?):`;
         ownerSection.appendChild(nameLabel);
@@ -707,77 +700,109 @@ function createOwnerFields(businessIndex, numOwners) {
         });
         ownerSection.appendChild(nameSelect);
 
-        // Ownership Percentage Field
+        // === Ownership Percentage Field ===
         const percentLabel = document.createElement('label');
         percentLabel.textContent = `Owner ${i} Ownership %:`;
         ownerSection.appendChild(percentLabel);
 
         const percentInput = document.createElement('input');
         percentInput.type = 'number';
-        percentInput.step = '0.01';
+        percentInput.step = '0.0001';  // allow up to 4 decimals
         percentInput.min = '0';
         percentInput.id = `business${businessIndex}OwnerPercent${i}`;
         percentInput.name = `business${businessIndex}OwnerPercent${i}`;
 
-        // Handle each scenario:
+        // -- If only 1 owner, fix to 100% --
         if (numOwners === 1) {
-            // 1 Owner => 100% read-only
-            percentInput.value = '100';
+            percentInput.value = '100.0000';
             percentInput.readOnly = true;
             percentInput.style.backgroundColor = '#f0f0f0';
-
-        } else if (numOwners === 2) {
-            percentInput.addEventListener('blur', () => handleTwoOwnersInput(businessIndex));
-            }
-
-        else if (numOwners === 3) {
-            // Three owners => first two are free (rounded), third is remainder
-            if (i < 3) {
-                percentInput.addEventListener('blur', () => autoCalculateLastOwner(businessIndex, numOwners));
+        }
+        // -- If 2 owners, handle the complement on blur --
+        else if (numOwners === 2) {
+            if (i === 1) {
+                // This is Owner1 => on blur, recalc complement for Owner2
+                percentInput.addEventListener('blur', () => {
+                    handleTwoOwnersInput(businessIndex, 'owner1');
+                    updateOwnerApportionment(businessIndex);
+                });
             } else {
-                // Third is read-only
+                // This is Owner2 => on blur, recalc complement for Owner1
+                percentInput.addEventListener('blur', () => {
+                    handleTwoOwnersInput(businessIndex, 'owner2');
+                    updateOwnerApportionment(businessIndex);
+                });
+            }
+        }
+        // -- If 3 owners, handle the third automatically --
+        else if (numOwners === 3) {
+            if (i < 3) {
+                // Owner1 or Owner2 => on blur, recalc Owner3
+                percentInput.addEventListener('blur', () => {
+                    autoCalculateLastOwner(businessIndex, numOwners);
+                    updateOwnerApportionment(businessIndex);
+                });
+            } else {
+                // Owner3 is read-only
                 percentInput.readOnly = true;
                 percentInput.style.backgroundColor = '#f0f0f0';
             }
         }
 
         ownerSection.appendChild(percentInput);
+
+        // === Container for the green "Apportionment" line ===
+        const apportionmentContainer = document.createElement('div');
+        apportionmentContainer.id = `business${businessIndex}OwnerPercent${i}-apportionmentContainer`;
+        ownerSection.appendChild(apportionmentContainer);
+
         dynamicOwnerFieldsDiv.appendChild(ownerSection);
     }
 
-    // Validate once initially
+    // Validate total ownership once initially
     validateTotalOwnership(businessIndex, numOwners);
-    // If 3 owners, auto-calculate Owner 3 once initially
-    if (numOwners === 3) {
-        autoCalculateLastOwner(businessIndex, numOwners);
-    }
 }
 
-function handleTwoOwnersInput(businessIndex) {
+function handleTwoOwnersInput(businessIndex, whichOwner) {
     const owner1Input = document.getElementById(`business${businessIndex}OwnerPercent1`);
     const owner2Input = document.getElementById(`business${businessIndex}OwnerPercent2`);
     if (!owner1Input || !owner2Input) return;
 
-    const activeElement = document.activeElement;
-    let val1 = parseFloat(owner1Input.value) || 0;
-    let val2 = parseFloat(owner2Input.value) || 0;
+    // Helper to parse or return NaN if blank
+    function parsePercentage(value) {
+        const trimmed = value.trim();
+        if (!trimmed) return NaN;
+        return parseFloat(trimmed);
+    }
 
-    if (activeElement === owner1Input) {
-        val1 = roundToHalf(val1);
-        val1 = Math.min(Math.max(val1, 0), 100);
-        owner1Input.value = val1.toFixed(2);
+    let val1 = parsePercentage(owner1Input.value);
+    let val2 = parsePercentage(owner2Input.value);
 
-        val2 = roundToHalf(100 - val1);
-        val2 = Math.min(Math.max(val2, 0), 100);
-        owner2Input.value = val2.toFixed(2);
-    } else if (activeElement === owner2Input) {
-        val2 = roundToHalf(val2);
-        val2 = Math.min(Math.max(val2, 0), 100);
-        owner2Input.value = val2.toFixed(2);
-
-        val1 = roundToHalf(100 - val2);
-        val1 = Math.min(Math.max(val1, 0), 100);
-        owner1Input.value = val1.toFixed(2);
+    // If the user changed Owner1:
+    if (whichOwner === 'owner1') {
+        if (isNaN(val1)) {
+            // If user left it blank, clear the second
+            owner2Input.value = '';
+        } else {
+            // Clamp [0..100]
+            val1 = Math.min(Math.max(val1, 0), 100);
+            owner1Input.value = val1.toFixed(4);
+            // Complement goes to second
+            const complement = 100 - val1;
+            owner2Input.value = complement.toFixed(4);
+        }
+    }
+    // If the user changed Owner2:
+    else if (whichOwner === 'owner2') {
+        if (isNaN(val2)) {
+            owner1Input.value = '';
+        } else {
+            val2 = Math.min(Math.max(val2, 0), 100);
+            owner2Input.value = val2.toFixed(4);
+            // Complement goes to first
+            const complement = 100 - val2;
+            owner1Input.value = complement.toFixed(4);
+        }
     }
 
     validateTotalOwnership(businessIndex, 2);
@@ -791,21 +816,42 @@ function autoCalculateLastOwner(businessIndex, numOwners) {
     const owner3Input = document.getElementById(`business${businessIndex}OwnerPercent3`);
     if (!owner1Input || !owner2Input || !owner3Input) return;
 
-    let val1 = parseFloat(owner1Input.value) || 0;
-    let val2 = parseFloat(owner2Input.value) || 0;
+    // Helper to parse or return NaN if blank
+    function parsePercentage(value) {
+        const trimmed = value.trim();
+        if (!trimmed) return NaN;
+        return parseFloat(trimmed);
+    }
 
-    val1 = roundToHalf(val1);
+    let val1 = parsePercentage(owner1Input.value);
+    let val2 = parsePercentage(owner2Input.value);
+
+    // 1) If both are blank, keep the third blank
+    if (isNaN(val1) && isNaN(val2)) {
+        owner3Input.value = '';
+        validateTotalOwnership(businessIndex, 3);
+        return;
+    }
+
+    // 2) If either is blank, keep the third blank
+    if (isNaN(val1) || isNaN(val2)) {
+        owner3Input.value = '';
+        validateTotalOwnership(businessIndex, 3);
+        return;
+    }
+
+    // 3) Both are valid => clamp them, compute remainder for Owner3
     val1 = Math.min(Math.max(val1, 0), 100);
-    owner1Input.value = val1.toFixed(2);
-
-    val2 = roundToHalf(val2);
     val2 = Math.min(Math.max(val2, 0), 100);
-    owner2Input.value = val2.toFixed(2);
+
+    owner1Input.value = val1.toFixed(4);
+    owner2Input.value = val2.toFixed(4);
 
     let remaining = 100 - (val1 + val2);
-    remaining = roundToHalf(remaining);
-    remaining = Math.min(Math.max(remaining, 0), 100);
-    owner3Input.value = remaining.toFixed(2);
+    if (remaining < 0) remaining = 0;
+    if (remaining > 100) remaining = 100;
+
+    owner3Input.value = remaining.toFixed(4);
 
     validateTotalOwnership(businessIndex, 3);
 }
@@ -835,9 +881,9 @@ function validateTotalOwnership(businessIndex, numOwners) {
     }
 
     // 2) Otherwise, if total is not close to 100, show the disclaimer.
-    if (Math.abs(totalOwnership - 100) > 0.01) {
+    if (Math.abs(totalOwnership - 100) > 0.0001) {
         showRedDisclaimer(
-            `Total ownership must equal 100%. Currently, it is ${totalOwnership.toFixed(2)}%.`, 
+            `Total ownership must equal 100%. Currently, it is ${totalOwnership.toFixed(4)}%.`, 
             containerId
         );
     } else {
@@ -854,11 +900,35 @@ function updateBusinessNet(index) {
     const expensesVal = unformatCurrency(document.getElementById(`business${index}Expenses`).value);
     const netVal = incomeVal - expensesVal;
     document.getElementById(`business${index}Net`).value = formatCurrency(netVal.toString());
+
+    // Call this so the green apportionment lines reflect the new Net
+    updateOwnerApportionment(index);
 }
 
-//--------------------------------------------------//
+function updateOwnerApportionment(businessIndex) {
+    // Get the net value from the business's Net field
+    const netStr = document.getElementById(`business${businessIndex}Net`)?.value || '0';
+    const netVal = unformatCurrency(netStr);
+
+    // Find how many owners are declared
+    const numOwners = parseInt(document.getElementById(`numOwners${businessIndex}`)?.value || '0', 10);
+    if (isNaN(numOwners) || numOwners < 1) return;
+
+    // For each owner, compute the portion
+    for (let i = 1; i <= numOwners; i++) {
+        const percentStr = document.getElementById(`business${businessIndex}OwnerPercent${i}`)?.value || '0';
+        const pct = parseFloat(percentStr) || 0;
+        const portion = netVal * (pct / 100);
+
+        const message = `Apportionment of Owner ${i} is ${formatCurrency(portion.toString())}`;
+        const containerId = `business${businessIndex}OwnerPercent${i}-apportionmentContainer`;
+        showGreenApportionment(message, containerId);
+    }
+}
+
+//---------------------------------------------------//
 // 10. DYNAMIC GENERATION OF SCHEDULE E FIELDS + NET //
-//--------------------------------------------------//
+//---------------------------------------------------//
 
 document.getElementById('numScheduleEs').addEventListener('input', function() {
     const eCount = parseInt(this.value, 10);
@@ -1044,9 +1114,9 @@ function updateTaxableIncome() {
     document.getElementById('taxableIncome').value = taxableIncome.toFixed(2);
 }
 
-//-----------------------------------------------------------//
-// 13. ATTACHING EVENT LISTENERS FOR REAL-TIME CALCULATIONS  //
-//-----------------------------------------------------------//
+//----------------------------------------------------------//
+// 13. ATTACHING EVENT LISTENERS FOR REAL-TIME CALCULATIONS //
+//----------------------------------------------------------//
 
 // Fields that affect totalIncome and AGI:
 const fieldsToWatch = [
@@ -1113,7 +1183,7 @@ document.addEventListener('blur', function(event) {
         if (event.target.value.trim() !== '') {
             event.target.classList.add('input-completed');
         } else {
-            event.target.classList.remove('input-completed'); // Remove if no value
+            event.target.classList.remove('input-completed');
         }
     }
 }, true);
@@ -1194,7 +1264,6 @@ function showRedDisclaimer(message, containerId) {
 
     // Update the disclaimer message
     disclaimer.textContent = message;
-
 }
 
 //-------------------//
@@ -1225,9 +1294,33 @@ boldBtn.addEventListener('click', () => {
 });
 
 highlightBtn.addEventListener('click', () => {
-
   const currentSelection = window.getSelection();
   if (!currentSelection.isCollapsed) {
     document.execCommand('hiliteColor', false, 'yellow');
   }
 });
+
+//------------------------------//
+// 21. SHOW GREEN APPORTIONMENT //
+//------------------------------//
+
+function showGreenApportionment(message, containerId) {
+    // Reference the container (e.g., a <div> just after the Ownership % input)
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    // Look for an existing green apportionment element
+    let apportionmentEl = document.getElementById(`apportionment-${containerId}`);
+    if (!apportionmentEl) {
+        // Create one if it doesn’t exist
+        apportionmentEl = document.createElement('div');
+        apportionmentEl.id = `apportionment-${containerId}`;
+        apportionmentEl.style.color = 'green';
+        apportionmentEl.style.fontWeight = 'bold';
+        apportionmentEl.style.marginTop = '8px';
+        container.appendChild(apportionmentEl);
+    }
+
+    // Update the message
+    apportionmentEl.textContent = message;
+}
