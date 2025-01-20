@@ -382,3 +382,25 @@ button:hover {
   border-radius: 20px;
   border: 2px solid #552583;
 }
+
+/* A custom class for the up/down arrow buttons. */
+.arrow-btn {
+  display: inline-block;   /* override 'display: block' */
+  width: auto;            /* override 'width: 100%' */
+  background-color: #552583;
+  color: #E5E5E5;
+  padding: 5px 10px;
+  font-size: 1rem;
+  font-weight: normal;    /* or bold, your call */
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-left: 8px;       /* small gap to the previous text */
+  margin-top: 0;          /* ensure no extra top spacing */
+  transition: background-color 0.3s ease;
+}
+
+.arrow-btn:hover {
+  background-color: #FDB927;
+  color: #552583; 
+}

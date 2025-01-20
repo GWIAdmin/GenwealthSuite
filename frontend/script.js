@@ -38,16 +38,22 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
     }
 });
 
-// Display results from server
 function displayResults(resultData) {
     const resultsDiv = document.getElementById('results');
+
+    const truncatedTaxableIncome = parseInt(resultData.taxableIncome);
+    const truncatedTotalTax = parseInt(resultData.totalTax);
+    const truncatedRefundOrDue = parseInt(resultData.refundOrDue);
+
     resultsDiv.innerHTML = `
         <h2>Your Tax Results</h2>
-        <p><strong>Taxable Income:</strong> $${resultData.taxableIncome.toFixed(2)}</p>
-        <p><strong>Total Tax Owed:</strong> $${resultData.totalTax.toFixed(2)}</p>
-        <p><strong>Refund or Amount Due:</strong> $${resultData.refundOrDue.toFixed(2)}</p>
+        <p><strong>Taxable Income:</strong> $${truncatedTaxableIncome}</p>
+        <p><strong>Total Tax Owed:</strong> $${truncatedTotalTax}</p>
+        <p><strong>Refund or Amount Due:</strong> $${truncatedRefundOrDue}</p>
     `;
 }
+
+const apportionmentOverrides = {};
 
 //-------------------------------------------//
 // 2. "BACK TO TOP" BUTTON AND WINDOW SCROLL //
@@ -445,16 +451,19 @@ function getFieldValue(id) {
 }
 
 function formatCurrency(value) {
-    // remove any existing commas or dollar signs
     let numericValue = value.replace(/[^0-9.-]/g, '');
     if (numericValue === '') return '';
     let floatValue = parseFloat(numericValue);
     if (isNaN(floatValue)) return '';
 
-    // Format the value with parentheses for negative numbers
-    let formattedValue = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
-        .format(Math.abs(floatValue));
-    return floatValue < 0 ? `(${formattedValue})` : formattedValue;
+    let truncatedValue = parseInt(floatValue);
+
+    let absoluteVal = Math.abs(truncatedValue);
+    let formattedVal = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(absoluteVal);
+
+    return (truncatedValue < 0)
+        ? `(${formattedVal})`
+        : formattedVal;
 }
 
 function unformatCurrency(value) {
@@ -906,23 +915,36 @@ function updateBusinessNet(index) {
 }
 
 function updateOwnerApportionment(businessIndex) {
-    // Get the net value from the business's Net field
+    // 1) Get the net value from the business's Net field
     const netStr = document.getElementById(`business${businessIndex}Net`)?.value || '0';
     const netVal = unformatCurrency(netStr);
 
-    // Find how many owners are declared
+    // 2) Find how many owners are declared
     const numOwners = parseInt(document.getElementById(`numOwners${businessIndex}`)?.value || '0', 10);
     if (isNaN(numOwners) || numOwners < 1) return;
 
-    // For each owner, compute the portion
+    // 3) For each owner, compute portion or use the override
     for (let i = 1; i <= numOwners; i++) {
         const percentStr = document.getElementById(`business${businessIndex}OwnerPercent${i}`)?.value || '0';
         const pct = parseFloat(percentStr) || 0;
-        const portion = netVal * (pct / 100);
+        let calculatedPortion = netVal * (pct / 100);
 
-        const message = `Apportionment of Owner ${i} is ${formatCurrency(portion.toString())}`;
-        const containerId = `business${businessIndex}OwnerPercent${i}-apportionmentContainer`;
-        showGreenApportionment(message, containerId);
+        // Make sure we truncate the calculated portion
+        let truncatedCalculatedPortion = parseInt(calculatedPortion);
+
+        // Build a unique key for this owner
+        const overrideKey = `business${businessIndex}-owner${i}`;
+
+        // 4) If there's an override stored, use that; else use the calculated portion
+        let portionToDisplay;
+        if (overrideKey in apportionmentOverrides) {
+            portionToDisplay = apportionmentOverrides[overrideKey];
+        } else {
+            portionToDisplay = truncatedCalculatedPortion;
+        }
+
+        // 5) Actually show it (the green text + arrow buttons)
+        showGreenApportionment(businessIndex, i, portionToDisplay);
     }
 }
 
@@ -1009,7 +1031,7 @@ function recalculateTotals() {
     const passiveActivityLossAdjustments = getFieldValue('passiveActivityLossAdjustments');
     const qualifiedBusinessDeduction = getFieldValue('qualifiedBusinessDeduction');
 
-    // Combines net from dynamic businesses
+    // Sum of net from dynamic businesses
     let businessesNetTotal = 0;
     const numBusinessesVal = parseInt(document.getElementById('numOfBusinesses').value || '0', 10);
     for (let i = 1; i <= numBusinessesVal; i++) {
@@ -1018,7 +1040,7 @@ function recalculateTotals() {
         businessesNetTotal += netVal;
     }
 
-    // Combines net from dynamic Schedule E
+    // Sum of net from dynamic Schedule E
     let scheduleEsNetTotal = 0;
     const numScheduleEsVal = parseInt(document.getElementById('numScheduleEs')?.value || '0', 10);
     for (let i = 1; i <= numScheduleEsVal; i++) {
@@ -1065,9 +1087,11 @@ function recalculateTotals() {
         alimonyPaid -
         otherAdjustments;
 
-    // Update read-only fields
-    document.getElementById('totalIncome').value = totalIncomeVal.toFixed(2);
-    document.getElementById('totalAdjustedGrossIncome').value = totalAdjustedGrossIncomeVal.toFixed(2);
+    // Now truncate to integer for display (rather than toFixed(2)):
+    document.getElementById('totalIncome').value = isNaN(totalIncomeVal) ? '' : parseInt(totalIncomeVal);
+    document.getElementById('totalAdjustedGrossIncome').value = isNaN(totalAdjustedGrossIncomeVal)
+        ? ''
+        : parseInt(totalAdjustedGrossIncomeVal);
 
     // Also recalc taxable income
     updateTaxableIncome();
@@ -1101,7 +1125,8 @@ function recalculateDeductions() {
         miscellaneousDeductions +
         standardOrItemizedDeduction;
 
-    document.getElementById('totalDeductions').value = totalDeductionsVal.toFixed(2);
+    // Truncate
+    document.getElementById('totalDeductions').value = isNaN(totalDeductionsVal) ? '' : parseInt(totalDeductionsVal);
 
     // Then update Taxable Income
     updateTaxableIncome();
@@ -1110,8 +1135,9 @@ function recalculateDeductions() {
 function updateTaxableIncome() {
     const totalAdjustedGrossIncome = getFieldValue('totalAdjustedGrossIncome');
     const totalDeductions = getFieldValue('totalDeductions');
+
     const taxableIncome = totalAdjustedGrossIncome - totalDeductions;
-    document.getElementById('taxableIncome').value = taxableIncome.toFixed(2);
+    document.getElementById('taxableIncome').value = isNaN(taxableIncome) ? '' : parseInt(taxableIncome);
 }
 
 //----------------------------------------------------------//
@@ -1304,15 +1330,13 @@ highlightBtn.addEventListener('click', () => {
 // 21. SHOW GREEN APPORTIONMENT //
 //------------------------------//
 
-function showGreenApportionment(message, containerId) {
-    // Reference the container (e.g., a <div> just after the Ownership % input)
+function showGreenApportionment(businessIndex, ownerIndex, displayPortion) {
+    const containerId = `business${businessIndex}OwnerPercent${ownerIndex}-apportionmentContainer`;
     const container = document.getElementById(containerId);
     if (!container) return;
-
-    // Look for an existing green apportionment element
+  
     let apportionmentEl = document.getElementById(`apportionment-${containerId}`);
     if (!apportionmentEl) {
-        // Create one if it doesn’t exist
         apportionmentEl = document.createElement('div');
         apportionmentEl.id = `apportionment-${containerId}`;
         apportionmentEl.style.color = 'green';
@@ -1320,7 +1344,75 @@ function showGreenApportionment(message, containerId) {
         apportionmentEl.style.marginTop = '8px';
         container.appendChild(apportionmentEl);
     }
+  
+    // Clear out old content
+    apportionmentEl.innerHTML = '';
+  
+    // Create text node
+    const textSpan = document.createElement('span');
+    textSpan.textContent = `Apportionment of Owner ${ownerIndex} is ${formatCurrency(String(displayPortion))}`;
+    apportionmentEl.appendChild(textSpan);
+  
+    // Create UP button
+    const upButton = document.createElement('button');
+    upButton.textContent = '▲';
+    upButton.classList.add('arrow-btn');  // <-- Add custom class
+    upButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        incrementApportionment(businessIndex, ownerIndex);
+    });
+    apportionmentEl.appendChild(upButton);
+  
+    // Create DOWN button
+    const downButton = document.createElement('button');
+    downButton.textContent = '▼';
+    downButton.classList.add('arrow-btn'); // <-- Add custom class
+    downButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        decrementApportionment(businessIndex, ownerIndex);
+    });
+    apportionmentEl.appendChild(downButton);
+}
+  
+function incrementApportionment(businessIndex, ownerIndex) {
+    const overrideKey = `business${businessIndex}-owner${ownerIndex}`;
 
-    // Update the message
-    apportionmentEl.textContent = message;
+    // If we have no override yet, figure out what the portion *would be* right now:
+    if (!(overrideKey in apportionmentOverrides)) {
+        // 1) Recalculate the net
+        const netStr = document.getElementById(`business${businessIndex}Net`)?.value || '0';
+        const netVal = unformatCurrency(netStr);
+
+        // 2) Recalculate that owner’s share
+        const pctStr = document.getElementById(`business${businessIndex}OwnerPercent${ownerIndex}`)?.value || '0';
+        const pct = parseFloat(pctStr) || 0;
+        const calc = netVal * (pct / 100);
+
+        // 3) Truncate to integer
+        apportionmentOverrides[overrideKey] = parseInt(calc);
+    }
+
+    // Now bump it by 1
+    apportionmentOverrides[overrideKey] = apportionmentOverrides[overrideKey] + 1;
+
+    // Refresh
+    updateOwnerApportionment(businessIndex);
+}
+
+function decrementApportionment(businessIndex, ownerIndex) {
+    const overrideKey = `business${businessIndex}-owner${ownerIndex}`;
+
+    if (!(overrideKey in apportionmentOverrides)) {
+        const netStr = document.getElementById(`business${businessIndex}Net`)?.value || '0';
+        const netVal = unformatCurrency(netStr);
+
+        const pctStr = document.getElementById(`business${businessIndex}OwnerPercent${ownerIndex}`)?.value || '0';
+        const pct = parseFloat(pctStr) || 0;
+        const calc = netVal * (pct / 100);
+
+        apportionmentOverrides[overrideKey] = parseInt(calc);
+    }
+
+    apportionmentOverrides[overrideKey] = apportionmentOverrides[overrideKey] - 1;
+    updateOwnerApportionment(businessIndex);
 }
