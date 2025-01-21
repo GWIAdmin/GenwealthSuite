@@ -618,13 +618,18 @@ function createBusinessFields(container, index) {
     // Event listeners for recalculating the net
     const incomeField = document.getElementById(`business${index}Income`);
     const expensesField = document.getElementById(`business${index}Expenses`);
+
     incomeField.addEventListener('blur', function() {
         updateBusinessNet(index);
         recalculateTotals();
+        // If it's an S-Corp, also re-check compensation limits
+        checkSCorpReasonableComp(index);
     });
     expensesField.addEventListener('blur', function() {
         updateBusinessNet(index);
         recalculateTotals();
+        // If it's an S-Corp, also re-check compensation limits
+        checkSCorpReasonableComp(index);
     });
 }
 
@@ -692,11 +697,13 @@ function createOwnerFields(businessIndex, numOwners) {
     if (isNaN(numOwners) || numOwners < 1) return; 
     if (numOwners > 3) numOwners = 3; // Limit to 3 owners
 
+    const businessTypeVal = document.getElementById(`business${businessIndex}Type`)?.value || '';
+
     for (let i = 1; i <= numOwners; i++) {
         const ownerSection = document.createElement('section');
         ownerSection.classList.add('owner-entry');
 
-        // === Owner Name Field ===
+        // === Owner Selection ===
         const nameLabel = document.createElement('label');
         nameLabel.textContent = `Owner ${i} (Select Who?):`;
         ownerSection.appendChild(nameLabel);
@@ -712,55 +719,56 @@ function createOwnerFields(businessIndex, numOwners) {
         });
         ownerSection.appendChild(nameSelect);
 
-        // === Ownership Percentage Field ===
+        // === Reasonable Compensation (only for S-Corp) ===
+        if (businessTypeVal === 'S-Corp') {
+            const compLabel = document.createElement('label');
+            compLabel.textContent = `Reasonable Compensation ($) for Owner ${i}:`;
+            ownerSection.appendChild(compLabel);
+
+            const compInput = document.createElement('input');
+            compInput.type = 'text';
+            compInput.id = `business${businessIndex}OwnerComp${i}`;
+            compInput.name = `business${businessIndex}OwnerComp${i}`;
+            compInput.classList.add('currency-field');
+            compInput.addEventListener('blur', function() {
+                compInput.value = formatCurrency(compInput.value);
+                checkSCorpReasonableComp(businessIndex);
+            });
+            ownerSection.appendChild(compInput);
+        }
+
+        // === Ownership Percentage ===
         const percentLabel = document.createElement('label');
         percentLabel.textContent = `Owner ${i} Ownership %:`;
         ownerSection.appendChild(percentLabel);
 
         const percentInput = document.createElement('input');
         percentInput.type = 'number';
-        percentInput.step = '0.0001';  // allow up to 4 decimals
+        percentInput.step = '0.0001'; // Allow up to 4 decimals
         percentInput.min = '0';
         percentInput.id = `business${businessIndex}OwnerPercent${i}`;
         percentInput.name = `business${businessIndex}OwnerPercent${i}`;
 
-        // -- If only 1 owner, fix to 100% --
         if (numOwners === 1) {
             percentInput.value = '100.0000';
             percentInput.readOnly = true;
             percentInput.style.backgroundColor = '#f0f0f0';
-        }
-        // -- If 2 owners, handle the complement on blur --
-        else if (numOwners === 2) {
-            if (i === 1) {
-                // This is Owner1 => on blur, recalc complement for Owner2
-                percentInput.addEventListener('blur', () => {
-                    handleTwoOwnersInput(businessIndex, 'owner1');
-                    updateOwnerApportionment(businessIndex);
-                });
-            } else {
-                // This is Owner2 => on blur, recalc complement for Owner1
-                percentInput.addEventListener('blur', () => {
-                    handleTwoOwnersInput(businessIndex, 'owner2');
-                    updateOwnerApportionment(businessIndex);
-                });
-            }
-        }
-        // -- If 3 owners, handle the third automatically --
-        else if (numOwners === 3) {
+        } else if (numOwners === 2) {
+            percentInput.addEventListener('blur', () => {
+                handleTwoOwnersInput(businessIndex, i === 1 ? 'owner1' : 'owner2');
+                updateOwnerApportionment(businessIndex);
+            });
+        } else if (numOwners === 3) {
             if (i < 3) {
-                // Owner1 or Owner2 => on blur, recalc Owner3
                 percentInput.addEventListener('blur', () => {
                     autoCalculateLastOwner(businessIndex, numOwners);
                     updateOwnerApportionment(businessIndex);
                 });
             } else {
-                // Owner3 is read-only
                 percentInput.readOnly = true;
                 percentInput.style.backgroundColor = '#f0f0f0';
             }
         }
-
         ownerSection.appendChild(percentInput);
 
         // === Container for the green "Apportionment" line ===
@@ -771,7 +779,6 @@ function createOwnerFields(businessIndex, numOwners) {
         dynamicOwnerFieldsDiv.appendChild(ownerSection);
     }
 
-    // Validate total ownership once initially
     validateTotalOwnership(businessIndex, numOwners);
 }
 
@@ -1539,4 +1546,46 @@ function decrementApportionment(businessIndex, ownerIndex) {
 
     // 7) Update the green text lines
     updateOwnerApportionment(businessIndex);
+}
+
+//------------------------------------------//
+// 22. CHECK S-CORP REASONABLE COMPENSATION //
+//------------------------------------------//
+function checkSCorpReasonableComp(businessIndex) {
+    // 1) Ensure this business is actually an S-Corp
+    const businessTypeVal = document.getElementById(`business${businessIndex}Type`)?.value || '';
+    if (businessTypeVal !== 'S-Corp') return; // Only apply to S-Corps
+
+    // 2) Read the total expenses for this S-Corp
+    const expensesVal = unformatCurrency(
+        document.getElementById(`business${businessIndex}Expenses`)?.value || '0'
+    );
+
+    // 3) Read how many owners
+    const numOwners = parseInt(document.getElementById(`numOwners${businessIndex}`)?.value || '0', 10);
+    if (isNaN(numOwners) || numOwners < 1) return;
+
+    // 4) Sum all owners' "Reasonable Compensation"
+    let totalComp = 0;
+    for (let i = 1; i <= numOwners; i++) {
+        const compStr = document.getElementById(`business${businessIndex}OwnerComp${i}`)?.value || '0';
+        const compVal = unformatCurrency(compStr);
+        totalComp += compVal;
+    }
+
+    // 5) Compare totalComp to expenses
+    const containerId = `dynamicOwnerFields${businessIndex}`;
+    if (totalComp > expensesVal) {
+        // Show red disclaimer
+        showRedDisclaimer(
+            `Total Owners' Reasonable Compensation (${formatCurrency(totalComp.toString())}) cannot exceed this S-Corp's Expenses (${formatCurrency(expensesVal.toString())}).`,
+            containerId
+        );
+    } else {
+        // Remove the disclaimer if it was previously shown
+        const existingDisclaimer = document.getElementById(`disclaimer-${containerId}`);
+        if (existingDisclaimer) {
+            existingDisclaimer.remove();
+        }
+    }
 }
