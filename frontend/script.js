@@ -1378,44 +1378,165 @@ function showGreenApportionment(businessIndex, ownerIndex, displayPortion) {
 }
   
 function incrementApportionment(businessIndex, ownerIndex) {
-    const overrideKey = `business${businessIndex}-owner${ownerIndex}`;
+    // 1) Determine how many owners this business has
+    const numOwners = parseInt(document.getElementById(`numOwners${businessIndex}`)?.value || '0', 10);
+    if (isNaN(numOwners) || numOwners < 1) return;
 
-    // If we have no override yet, figure out what the portion *would be* right now:
-    if (!(overrideKey in apportionmentOverrides)) {
-        // 1) Recalculate the net
-        const netStr = document.getElementById(`business${businessIndex}Net`)?.value || '0';
-        const netVal = unformatCurrency(netStr);
+    // 2) Get the total Net from the business
+    const netStr = document.getElementById(`business${businessIndex}Net`)?.value || '0';
+    const netVal = unformatCurrency(netStr);
 
-        // 2) Recalculate that owner’s share
-        const pctStr = document.getElementById(`business${businessIndex}OwnerPercent${ownerIndex}`)?.value || '0';
-        const pct = parseFloat(pctStr) || 0;
-        const calc = netVal * (pct / 100);
-
-        // 3) Truncate to integer
-        apportionmentOverrides[overrideKey] = parseInt(calc);
+    // 3) Retrieve the current override portions for each owner, or calculate them if not yet overridden
+    const portions = [];
+    for (let i = 1; i <= numOwners; i++) {
+        const overrideKey = `business${businessIndex}-owner${i}`;
+        if (overrideKey in apportionmentOverrides) {
+            portions[i] = apportionmentOverrides[overrideKey];
+        } else {
+            // If no override is stored, use the default percentage-based calculation
+            const pctStr = document.getElementById(`business${businessIndex}OwnerPercent${i}`)?.value || '0';
+            const pct = parseFloat(pctStr) || 0;
+            portions[i] = parseInt(netVal * (pct / 100));
+        }
     }
 
-    // Now bump it by 1
-    apportionmentOverrides[overrideKey] = apportionmentOverrides[overrideKey] + 1;
+    // 4) Increment the selected owner by 1
+    portions[ownerIndex] = (portions[ownerIndex] || 0) + 1;
 
-    // Refresh
+    // 5) Adjust the other owner(s) accordingly
+    if (numOwners === 2) {
+        // For 2 owners, keep sum = netVal:
+        const otherIndex = (ownerIndex === 1) ? 2 : 1;
+        // The other owner's portion = netVal - this owner's portion
+        portions[otherIndex] = netVal - portions[ownerIndex];
+        // Prevent going negative if user increments beyond net:
+        if (portions[otherIndex] < 0) {
+            // If we exceed net, clamp at net. This is optional logic.
+            portions[ownerIndex] = netVal;
+            portions[otherIndex] = 0;
+        }
+    } else if (numOwners === 3) {
+        // For 3 owners, if you change owner1 or owner2, we adjust owner3 only (owner2 or owner1 is unaffected).
+        // If you change owner3, we'll adjust owner1. (Feel free to ask if you need different rules!)
+        let o1 = portions[1] || 0;
+        let o2 = portions[2] || 0;
+        let o3 = portions[3] || 0;
+
+        if (ownerIndex === 1) {
+            // Owner1 changed => keep Owner2, adjust Owner3
+            o3 = netVal - o1 - o2;
+        } else if (ownerIndex === 2) {
+            // Owner2 changed => keep Owner1, adjust Owner3
+            o3 = netVal - o1 - o2;
+        } else {
+            // Owner3 changed => keep Owner2, adjust Owner1
+            o1 = netVal - o2 - o3;
+        }
+
+        // If the adjustment causes a negative portion, clamp to 0
+        // and push the remainder back. Example of very basic boundary logic:
+        if (o1 < 0) { 
+            o1 = 0; 
+        }
+        if (o2 < 0) {
+            o2 = 0; 
+        }
+        if (o3 < 0) {
+            o3 = 0; 
+        }
+
+        // Re-assign back to array
+        portions[1] = o1;
+        portions[2] = o2;
+        portions[3] = o3;
+    }
+
+    // 6) Store the updated values in the global override object
+    for (let i = 1; i <= numOwners; i++) {
+        const overrideKey = `business${businessIndex}-owner${i}`;
+        apportionmentOverrides[overrideKey] = portions[i];
+    }
+
+    // 7) Re-render the green text
     updateOwnerApportionment(businessIndex);
 }
 
 function decrementApportionment(businessIndex, ownerIndex) {
-    const overrideKey = `business${businessIndex}-owner${ownerIndex}`;
+    // 1) Determine how many owners this business has
+    const numOwners = parseInt(document.getElementById(`numOwners${businessIndex}`)?.value || '0', 10);
+    if (isNaN(numOwners) || numOwners < 1) return;
 
-    if (!(overrideKey in apportionmentOverrides)) {
-        const netStr = document.getElementById(`business${businessIndex}Net`)?.value || '0';
-        const netVal = unformatCurrency(netStr);
+    // 2) Get the total Net
+    const netStr = document.getElementById(`business${businessIndex}Net`)?.value || '0';
+    const netVal = unformatCurrency(netStr);
 
-        const pctStr = document.getElementById(`business${businessIndex}OwnerPercent${ownerIndex}`)?.value || '0';
-        const pct = parseFloat(pctStr) || 0;
-        const calc = netVal * (pct / 100);
-
-        apportionmentOverrides[overrideKey] = parseInt(calc);
+    // 3) Retrieve current overrides or default calculations
+    const portions = [];
+    for (let i = 1; i <= numOwners; i++) {
+        const overrideKey = `business${businessIndex}-owner${i}`;
+        if (overrideKey in apportionmentOverrides) {
+            portions[i] = apportionmentOverrides[overrideKey];
+        } else {
+            const pctStr = document.getElementById(`business${businessIndex}OwnerPercent${i}`)?.value || '0';
+            const pct = parseFloat(pctStr) || 0;
+            portions[i] = parseInt(netVal * (pct / 100));
+        }
     }
 
-    apportionmentOverrides[overrideKey] = apportionmentOverrides[overrideKey] - 1;
+    // 4) Decrement the selected owner by 1
+    portions[ownerIndex] = (portions[ownerIndex] || 0) - 1;
+    if (portions[ownerIndex] < 0) {
+        // Don't let it go below zero (basic boundary check)
+        portions[ownerIndex] = 0;
+    }
+
+    // 5) Adjust the other(s) accordingly
+    if (numOwners === 2) {
+        const otherIndex = (ownerIndex === 1) ? 2 : 1;
+        portions[otherIndex] = netVal - portions[ownerIndex];
+        if (portions[otherIndex] < 0) {
+            // If the net was small, clamp
+            portions[ownerIndex] = netVal;
+            portions[otherIndex] = 0;
+        }
+    } else if (numOwners === 3) {
+        let o1 = portions[1] || 0;
+        let o2 = portions[2] || 0;
+        let o3 = portions[3] || 0;
+
+        if (ownerIndex === 1) {
+            // Owner1 changed => keep Owner2, adjust Owner3
+            o3 = netVal - o1 - o2;
+        } else if (ownerIndex === 2) {
+            // Owner2 changed => keep Owner1, adjust Owner3
+            o3 = netVal - o1 - o2;
+        } else {
+            // Owner3 changed => keep Owner2, adjust Owner1
+            o1 = netVal - o2 - o3;
+        }
+
+        // Basic negative clamp
+        if (o1 < 0) { 
+            o1 = 0; 
+        }
+        if (o2 < 0) {
+            o2 = 0; 
+        }
+        if (o3 < 0) {
+            o3 = 0; 
+        }
+
+        portions[1] = o1;
+        portions[2] = o2;
+        portions[3] = o3;
+    }
+
+    // 6) Save the updated values back into overrides
+    for (let i = 1; i <= numOwners; i++) {
+        const overrideKey = `business${businessIndex}-owner${i}`;
+        apportionmentOverrides[overrideKey] = portions[i];
+    }
+
+    // 7) Update the green text lines
     updateOwnerApportionment(businessIndex);
 }
