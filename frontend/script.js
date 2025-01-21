@@ -461,6 +461,9 @@ function formatCurrency(value) {
     let absoluteVal = Math.abs(truncatedValue);
     let formattedVal = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(absoluteVal);
 
+    // Remove trailing .00 if present
+    formattedVal = formattedVal.replace(/(\.00)$/, '');
+
     return (truncatedValue < 0)
         ? `(${formattedVal})`
         : formattedVal;
