@@ -317,6 +317,11 @@ input:focus, select:focus {
   border: 2px solid #4cd565;
 }
 
+.auto-copied {
+  border: 2px solid #FFFF00; /* Bright yellow border */
+  background-color: #FFFF99; /* Subtle yellow background */
+}
+
 /* Button Styling */
 button {
   display: block;
@@ -405,4 +410,9 @@ button:hover {
 .arrow-btn:hover {
   background-color: #FDB927;
   color: #552583; 
+}
+
+.input-error {
+  border: 2px solid red;
+  background-color: #ffe6e6; /* Light red background for clarity */
 }
