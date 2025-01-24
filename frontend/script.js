@@ -531,6 +531,7 @@ document.getElementById('numOfBusinesses').addEventListener('input', function() 
 function createBusinessFields(container, index) {
     const businessDiv = document.createElement('div');
     businessDiv.classList.add('business-entry');
+
     const heading = document.createElement('h3');
     const bNameInput = document.getElementById(`business${index}Name`);
     heading.textContent = bNameInput ? bNameInput.value : `Business ${index}`;
@@ -540,9 +541,11 @@ function createBusinessFields(container, index) {
         });
     }
     businessDiv.appendChild(heading);
+
     const typeLabel = document.createElement('label');
     typeLabel.textContent = `Business ${index} Type:`;
     businessDiv.appendChild(typeLabel);
+
     const typeSelect = document.createElement('select');
     typeSelect.name = `business${index}Type`;
     typeSelect.id = `business${index}Type`;
@@ -553,37 +556,47 @@ function createBusinessFields(container, index) {
         typeSelect.appendChild(opt);
     });
     businessDiv.appendChild(typeSelect);
+
     createLabelAndCurrencyField(businessDiv, `business${index}Income`, `Income:`);
     createLabelAndCurrencyField(businessDiv, `business${index}Expenses`, `Expenses:`);
     createLabelAndTextField(businessDiv, `business${index}Net`, `Net (Income - Expenses):`);
+
     const netField = businessDiv.querySelector(`#business${index}Net`);
     if (netField) {
         netField.readOnly = true;
     }
+
     const ownersContainer = document.createElement('div');
     ownersContainer.id = `ownersContainer${index}`;
     businessDiv.appendChild(ownersContainer);
+
     const numOwnersLabel = document.createElement('label');
     numOwnersLabel.textContent = `How many owners does Business ${index} have?`;
     numOwnersLabel.style.marginTop = '12px';
     ownersContainer.appendChild(numOwnersLabel);
+
     const numOwnersSelect = document.createElement('select');
     numOwnersSelect.id = `numOwnersSelect${index}`;
     numOwnersSelect.name = `numOwnersSelect${index}`;
     ownersContainer.appendChild(numOwnersSelect);
     populateNumOwnersOptions(numOwnersSelect);
+
     const dynamicOwnerFieldsDiv = document.createElement('div');
     dynamicOwnerFieldsDiv.id = `dynamicOwnerFields${index}`;
     dynamicOwnerFieldsDiv.style.marginTop = '12px';
     ownersContainer.appendChild(dynamicOwnerFieldsDiv);
+
     typeSelect.addEventListener('change', function () {
         handleBusinessTypeChange(index, typeSelect.value);
     });
+
     numOwnersSelect.addEventListener('change', function() {
         const selectedVal = parseInt(this.value, 10);
         createOwnerFields(index, selectedVal);
     });
+
     container.appendChild(businessDiv);
+
     const incomeField = document.getElementById(`business${index}Income`);
     const expensesField = document.getElementById(`business${index}Expenses`);
     incomeField.addEventListener('blur', function() {
@@ -624,14 +637,17 @@ function handleBusinessTypeChange(businessIndex, businessType) {
     const numOwnersSelect = document.getElementById(`numOwnersSelect${businessIndex}`);
     const dynamicOwnerFieldsDiv = document.getElementById(`dynamicOwnerFields${businessIndex}`);
     removeScheduleCQuestion(businessIndex);
+
     if (businessType === 'Schedule-C') {
         ownersContainer.style.display = 'none';
         numOwnersSelect.value = '1';
         addScheduleCQuestion(businessIndex);
+
     } else if (businessType === 'Please Select') {
         ownersContainer.style.display = 'none';
         numOwnersSelect.value = '0';
         dynamicOwnerFieldsDiv.innerHTML = '';
+
     } else {
         ownersContainer.style.display = 'block';
     }
@@ -986,7 +1002,7 @@ function updateBusinessNet(index) {
     const netVal = incomeVal - expensesVal;
     const netField = document.getElementById(`business${index}Net`);
     netField.value = formatCurrency(netVal.toString());
-    netField.style.color = (netVal < 0) ? 'red' : 'green';
+    netField.style.color = (netVal < 0) ? 'red' : 'black';
     updateOwnerApportionment(index);
 }
 
@@ -1202,21 +1218,28 @@ document.getElementById('numScheduleEs').addEventListener('input', function() {
 function createScheduleEFields(container, index) {
     const scheduleEDiv = document.createElement('div');
     scheduleEDiv.classList.add('schedule-e-entry');
+
     const heading = document.createElement('h3');
     heading.textContent = `Schedule-E ${index}`;
     scheduleEDiv.appendChild(heading);
+
     createLabelAndCurrencyField(scheduleEDiv, `scheduleE${index}Income`, `Schedule E-${index} Income:`);
     createLabelAndCurrencyField(scheduleEDiv, `scheduleE${index}Expenses`, `Schedule E-${index} Expenses:`);
     createLabelAndTextField(scheduleEDiv, `scheduleE${index}Net`, `Schedule E-${index} Net (Income - Expenses):`);
+
     container.appendChild(scheduleEDiv);
+
     const netField = document.getElementById(`scheduleE${index}Net`);
     netField.readOnly = true;
+
     const incomeField = document.getElementById(`scheduleE${index}Income`);
     const expensesField = document.getElementById(`scheduleE${index}Expenses`);
+
     incomeField.addEventListener('blur', function() {
         updateScheduleENet(index);
         recalculateTotals();
     });
+
     expensesField.addEventListener('blur', function() {
         updateScheduleENet(index);
         recalculateTotals();
