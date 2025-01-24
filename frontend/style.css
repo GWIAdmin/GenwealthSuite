@@ -320,8 +320,7 @@ input:focus, select:focus {
 }
 
 .auto-copied {
-  border: 2px solid #FFFF00; /* Bright yellow border */
-  background-color: #FFFF99; /* Subtle yellow background */
+  border: 2px solid #ffff00; /* Bright yellow border */
 }
 
 /* Button Styling */
@@ -416,7 +415,6 @@ button:hover {
 
 .input-error {
   border: 2px solid red;
-  background-color: #ffe6e6; /* Light red background for clarity */
 }
 
 .undo-redo-buttons {
