@@ -311,21 +311,29 @@ let businessNameStore = {};
 let businessDetailStore = {};
 
 document.getElementById('numOfBusinesses').addEventListener('input', function() {
-    const newCount = parseInt(this.value, 10) || 0;
+    // 1. Save existing data
     saveBusinessNameData();
-    const container = document.getElementById('numOfBusinessesContainer');
-    container.innerHTML = '';
+    saveBusinessDetailData();
+
+    // 2. Clear + rebuild "Business Name" fields
+    const newCount = parseInt(this.value, 10) || 0;
+    const nameContainer = document.getElementById('numOfBusinessesContainer');
+    nameContainer.innerHTML = '';
     for (let i = 1; i <= newCount; i++) {
-        createBusinessNameFields(container, i);
+        createBusinessNameFields(nameContainer, i);
         populateBusinessNameFields(i);
     }
-    saveBusinessDetailData();
+
+    // 3. Clear + rebuild "Business Detail" fields
     const mainBizContainer = document.getElementById('businessContainer');
     mainBizContainer.innerHTML = '';
     for (let i = 1; i <= newCount; i++) {
         createBusinessFields(mainBizContainer, i);
+        // 4. Now restore any data for that business
         populateBusinessDetailFields(i);
     }
+
+    // Finally, recalc
     recalculateTotals();
 });
 
@@ -668,54 +676,129 @@ function createOwnerFields(businessIndex, numOwners) {
     const dynamicOwnerFieldsDiv = document.getElementById(`dynamicOwnerFields${businessIndex}`);
     dynamicOwnerFieldsDiv.innerHTML = '';
     if (isNaN(numOwners) || numOwners < 1) return;
+
     const filingStatus = document.getElementById('filingStatus').value;
     const clientFirstName = document.getElementById('firstName').value.trim() || 'Client1';
     const spouseFirstName = document.getElementById('spouseFirstName').value.trim() || 'Client2';
-    for (let i = 1; i <= numOwners; i++) {
-        const ownerSection = document.createElement('section');
-        ownerSection.classList.add('owner-entry');
-        ownerSection.id = `ownerContainer-${businessIndex}-${i}`;
-        if (filingStatus === 'Married Filing Jointly' && numOwners === 3) {
+
+    // NEW: If MFJ and user selects 3 owners, just create read-only fields
+    if (filingStatus === 'Married Filing Jointly' && numOwners === 3) {
+        const ownerNames = [clientFirstName, spouseFirstName, 'Other'];
+
+        for (let i = 1; i <= 3; i++) {
+            const ownerSection = document.createElement('section');
+            ownerSection.classList.add('owner-entry');
+            ownerSection.id = `ownerContainer-${businessIndex}-${i}`;
+
+            // Label + read-only text field
             const nameLabel = document.createElement('label');
             nameLabel.textContent = `Owner ${i} Name:`;
             ownerSection.appendChild(nameLabel);
+
             const nameInput = document.createElement('input');
             nameInput.type = 'text';
             nameInput.id = `business${businessIndex}OwnerName${i}`;
             nameInput.name = `business${businessIndex}OwnerName${i}`;
+            nameInput.value = ownerNames[i-1];
+            nameInput.readOnly = true;
+            nameInput.style.backgroundColor = '#f0f0f0';
             ownerSection.appendChild(nameInput);
-        } else {
-            const nameLabel = document.createElement('label');
-            nameLabel.textContent = `Owner ${i} (Select Who?):`;
-            ownerSection.appendChild(nameLabel);
-            const nameSelect = document.createElement('select');
-            nameSelect.id = `business${businessIndex}OwnerName${i}`;
-            nameSelect.name = `business${businessIndex}OwnerName${i}`;
-            ownerSection.appendChild(nameSelect);
-            let optionsArr = [];
-            if (filingStatus === 'Married Filing Jointly') {
-                if (numOwners === 1) {
-                    optionsArr = [ 'Please Select', clientFirstName, spouseFirstName ];
-                } else if (numOwners === 2) {
-                    optionsArr = [ 'Please Select', clientFirstName, spouseFirstName, 'Other' ];
-                }
+
+            // If business type is S-Corp, add Reasonable Compensation input
+            const businessTypeVal = document.getElementById(`business${businessIndex}Type`)?.value || '';
+            if (businessTypeVal === 'S-Corp') {
+                const compLabel = document.createElement('label');
+                compLabel.textContent = `Reasonable Compensation ($) for Owner ${i}:`;
+                ownerSection.appendChild(compLabel);
+                const compInput = document.createElement('input');
+                compInput.type = 'text';
+                compInput.id = `business${businessIndex}OwnerComp${i}`;
+                compInput.name = `business${businessIndex}OwnerComp${i}`;
+                compInput.classList.add('currency-field');
+                compInput.addEventListener('blur', function() {
+                    compInput.value = formatCurrency(compInput.value);
+                    checkSCorpReasonableComp(businessIndex);
+                });
+                ownerSection.appendChild(compInput);
+            }
+
+            // Ownership %
+            const percentLabel = document.createElement('label');
+            percentLabel.textContent = `Owner ${i} Ownership %:`;
+            ownerSection.appendChild(percentLabel);
+
+            const percentInput = document.createElement('input');
+            percentInput.type = 'number';
+            percentInput.step = '0.0001';
+            percentInput.min = '0';
+            percentInput.id = `business${businessIndex}OwnerPercent${i}`;
+            percentInput.name = `business${businessIndex}OwnerPercent${i}`;
+            ownerSection.appendChild(percentInput);
+
+            // For 3 owners, we handle the sum in autoCalculateLastOwner
+            if (i < 3) {
+                percentInput.addEventListener('blur', () => {
+                    autoCalculateLastOwner(businessIndex, 3);
+                    updateOwnerApportionment(businessIndex);
+                });
             } else {
-                if (numOwners === 1) {
-                    optionsArr = [ 'Please Select', clientFirstName ];
-                } else if (numOwners === 2) {
-                    optionsArr = [ 'Please Select', clientFirstName, 'Other' ];
-                }
+                percentInput.readOnly = true;
+                percentInput.style.backgroundColor = '#f0f0f0';
             }
-            if (!optionsArr.length) {
-                optionsArr = [ 'Please Select', clientFirstName ];
-            }
-            optionsArr.forEach(optLabel => {
-                const opt = document.createElement('option');
-                opt.value = optLabel;
-                opt.textContent = optLabel;
-                nameSelect.appendChild(opt);
-            });
+
+            // Apportionment container
+            const apportionmentContainer = document.createElement('div');
+            apportionmentContainer.id = `business${businessIndex}OwnerPercent${i}-apportionmentContainer`;
+            ownerSection.appendChild(apportionmentContainer);
+
+            dynamicOwnerFieldsDiv.appendChild(ownerSection);
         }
+
+        // Validate ownership sum
+        validateTotalOwnership(businessIndex, numOwners);
+        return; // End here - no dropdown logic
+    }
+
+    // EXISTING LOGIC FOR 1 or 2 owners or other filing statuses
+    for (let i = 1; i <= numOwners; i++) {
+        const ownerSection = document.createElement('section');
+        ownerSection.classList.add('owner-entry');
+        ownerSection.id = `ownerContainer-${businessIndex}-${i}`;
+
+        const nameLabel = document.createElement('label');
+        nameLabel.textContent = `Owner ${i} (Select Who?):`;
+        ownerSection.appendChild(nameLabel);
+
+        const nameSelect = document.createElement('select');
+        nameSelect.id = `business${businessIndex}OwnerName${i}`;
+        nameSelect.name = `business${businessIndex}OwnerName${i}`;
+        ownerSection.appendChild(nameSelect);
+
+        let optionsArr = [];
+        if (filingStatus === 'Married Filing Jointly') {
+            if (numOwners === 1) {
+                optionsArr = [ 'Please Select', clientFirstName, spouseFirstName ];
+            } else if (numOwners === 2) {
+                optionsArr = [ 'Please Select', clientFirstName, spouseFirstName, 'Other' ];
+            }
+        } else {
+            if (numOwners === 1) {
+                optionsArr = [ 'Please Select', clientFirstName ];
+            } else if (numOwners === 2) {
+                optionsArr = [ 'Please Select', clientFirstName, 'Other' ];
+            }
+        }
+        if (!optionsArr.length) {
+            optionsArr = [ 'Please Select', clientFirstName ];
+        }
+        optionsArr.forEach(optLabel => {
+            const opt = document.createElement('option');
+            opt.value = optLabel;
+            opt.textContent = optLabel;
+            nameSelect.appendChild(opt);
+        });
+
+        // If S-Corp, add Reasonable Compensation
         const businessTypeVal = document.getElementById(`business${businessIndex}Type`)?.value || '';
         if (businessTypeVal === 'S-Corp') {
             const compLabel = document.createElement('label');
@@ -732,9 +815,12 @@ function createOwnerFields(businessIndex, numOwners) {
             });
             ownerSection.appendChild(compInput);
         }
+
+        // Ownership %
         const percentLabel = document.createElement('label');
         percentLabel.textContent = `Owner ${i} Ownership %:`;
         ownerSection.appendChild(percentLabel);
+
         const percentInput = document.createElement('input');
         percentInput.type = 'number';
         percentInput.step = '0.0001';
@@ -742,6 +828,7 @@ function createOwnerFields(businessIndex, numOwners) {
         percentInput.id = `business${businessIndex}OwnerPercent${i}`;
         percentInput.name = `business${businessIndex}OwnerPercent${i}`;
         ownerSection.appendChild(percentInput);
+
         if (numOwners === 1) {
             percentInput.value = '100.0000';
             percentInput.readOnly = true;
@@ -752,9 +839,11 @@ function createOwnerFields(businessIndex, numOwners) {
                 updateOwnerApportionment(businessIndex);
             });
         } else if (numOwners === 3) {
+            // This is the scenario for MFJ handled above, but if user tries 3 owners for other filing statuses
+            // same approach
             if (i < 3) {
                 percentInput.addEventListener('blur', () => {
-                    autoCalculateLastOwner(businessIndex, numOwners);
+                    autoCalculateLastOwner(businessIndex, 3);
                     updateOwnerApportionment(businessIndex);
                 });
             } else {
@@ -762,11 +851,16 @@ function createOwnerFields(businessIndex, numOwners) {
                 percentInput.style.backgroundColor = '#f0f0f0';
             }
         }
+
+        // Apportionment container
         const apportionmentContainer = document.createElement('div');
         apportionmentContainer.id = `business${businessIndex}OwnerPercent${i}-apportionmentContainer`;
         ownerSection.appendChild(apportionmentContainer);
+
         dynamicOwnerFieldsDiv.appendChild(ownerSection);
     }
+
+    // Validate total ownership
     validateTotalOwnership(businessIndex, numOwners);
 }
 
@@ -832,38 +926,56 @@ function autoCalculateLastOwner(businessIndex, numOwners) {
 function validateTotalOwnership(businessIndex, numOwners) {
     let totalOwnership = 0;
     let anyValueEntered = false;
-    const containerId = `dynamicOwnerFields${businessIndex}`;
-    const errorKey = 'OWNERSHIP_SUM';
-    removeDisclaimer(containerId, errorKey);
+
+    // We'll check each owner's input
     for (let i = 1; i <= numOwners; i++) {
         const ownerInput = document.getElementById(`business${businessIndex}OwnerPercent${i}`);
         if (!ownerInput) continue;
+
+        // Container ID for disclaimers under THIS owner
+        const ownerContainerId = `ownerContainer-${businessIndex}-${i}`;
+        const errorKey = 'OWNERSHIP_SUM';
+
+        // Remove any old disclaimers about ownership sum specifically for this owner
+        removeDisclaimer(ownerContainerId, errorKey);  // <-- ensures disclaimers accumulate properly
+
         ownerInput.classList.remove('input-error');
         const valStr = ownerInput.value.trim();
         const val = parseFloat(valStr);
         if (!isNaN(val) && val !== 0) anyValueEntered = true;
         totalOwnership += (isNaN(val) ? 0 : val);
     }
+
+    // If user hasn't entered anything, do not show disclaimers
     if (!anyValueEntered) {
         return;
     }
+
+    // If total ownership not equal to 100, add disclaimers to ALL owners
     if (Math.abs(totalOwnership - 100) > 0.0001) {
-        addDisclaimer(
-            containerId,
-            errorKey,
-            `Total ownership must equal 100%. Currently, it is ${totalOwnership.toFixed(4)}%.`
-        );
         for (let i = 1; i <= numOwners; i++) {
+            const ownerContainerId = `ownerContainer-${businessIndex}-${i}`;
+            const errorKey = 'OWNERSHIP_SUM';
+            addDisclaimer(
+                ownerContainerId,
+                errorKey,
+                `Total ownership must equal 100%. Currently, it is ${totalOwnership.toFixed(4)}%.`
+            );
+            // Mark the percentage input in red for each owner
             const ownerInput = document.getElementById(`business${businessIndex}OwnerPercent${i}`);
             if (ownerInput) {
                 ownerInput.classList.add('input-error');
             }
         }
     } else {
-        removeDisclaimer(containerId, errorKey);
+        // If total is now 100, remove disclaimers for all owners
         for (let i = 1; i <= numOwners; i++) {
+            const ownerContainerId = `ownerContainer-${businessIndex}-${i}`;
+            removeDisclaimer(ownerContainerId, 'OWNERSHIP_SUM');
             const ownerInput = document.getElementById(`business${businessIndex}OwnerPercent${i}`);
-            if (ownerInput) ownerInput.classList.remove('input-error');
+            if (ownerInput) {
+                ownerInput.classList.remove('input-error');
+            }
         }
     }
 }
@@ -902,15 +1014,31 @@ function showApportionment(businessIndex, ownerIndex, portion) {
     if (!apportionmentEl) {
         apportionmentEl = document.createElement('div');
         apportionmentEl.id = `apportionment-${containerId}`;
-        apportionmentEl.style.color = 'black';
         apportionmentEl.style.fontWeight = 'bold';
         apportionmentEl.style.marginTop = '8px';
         document.getElementById(containerId)?.appendChild(apportionmentEl);
     }
-    apportionmentEl.innerHTML = '';
-    const span = document.createElement('span');
-    span.textContent = `Apportionment of Owner ${ownerIndex} is ${formatCurrency(String(portion))}`;
-    apportionmentEl.appendChild(span);
+    apportionmentEl.innerHTML = ''; 
+
+    // Create the core text: "Apportionment of Owner X is "
+    const prefixSpan = document.createElement('span');
+    prefixSpan.textContent = `Apportionment of Owner ${ownerIndex} is `;
+    prefixSpan.style.color = 'black';
+    apportionmentEl.appendChild(prefixSpan);
+
+    // Create the amount + label ("(Income)/(Loss)") with color
+    const amountSpan = document.createElement('span');
+    const absolutePortion = Math.abs(portion);
+    if (portion < 0) {
+        amountSpan.textContent = `$${absolutePortion} (Loss)`;
+        amountSpan.style.color = 'red';
+    } else {
+        amountSpan.textContent = `$${absolutePortion} (Income)`;
+        amountSpan.style.color = 'green';
+    }
+    apportionmentEl.appendChild(amountSpan);
+
+    // Create up/down arrow buttons (unchanged from your existing code)
     const upBtn = document.createElement('button');
     upBtn.textContent = '▲';
     upBtn.classList.add('arrow-btn');
@@ -919,6 +1047,7 @@ function showApportionment(businessIndex, ownerIndex, portion) {
         incrementApportionment(businessIndex, ownerIndex);
     });
     apportionmentEl.appendChild(upBtn);
+
     const downBtn = document.createElement('button');
     downBtn.textContent = '▼';
     downBtn.classList.add('arrow-btn');
@@ -1455,5 +1584,79 @@ document.getElementById('redoButton').addEventListener('click', function() {
 // 22. PLACEHOLDERS TO AVOID BREAKING CODE //
 //-----------------------------------------//
 
-function saveBusinessDetailData() {}
-function populateBusinessDetailFields(index) {}
+function saveBusinessDetailData() {
+    const container = document.getElementById('businessContainer');
+    if (!container) return;
+
+    // Collect ALL inputs/selects for each business
+    const inputs = container.querySelectorAll('input, select');
+    inputs.forEach(input => {
+        const fieldId = input.id;
+        if (fieldId) {
+            businessDetailStore[fieldId] = input.value;
+        }
+    });
+}
+
+function populateBusinessDetailFields(index) {
+    // Populate the standard fields for business #index
+    const fields = [
+        `business${index}Type`,
+        `business${index}Income`,
+        `business${index}Expenses`,
+        `business${index}Net`,
+        `numOwnersSelect${index}`,
+        `scheduleCLabel${index}`,
+        `scheduleCOwner${index}`
+    ];
+
+    fields.forEach(f => {
+        if (businessDetailStore[f]) {
+            let el = document.getElementById(f);
+            if (el) {
+                el.value = businessDetailStore[f];
+            }
+        }
+    });
+
+    // Now handle the newly created owners
+    const numOwnersSelectEl = document.getElementById(`numOwnersSelect${index}`);
+    if (numOwnersSelectEl) {
+        const numOwners = parseInt(numOwnersSelectEl.value, 10) || 0;
+        // createOwnerFields was called already, so fields exist. We just fill them in:
+        for (let i = 1; i <= numOwners; i++) {
+            // For example: "business1OwnerName1", "business1OwnerPercent1", "business1OwnerComp1" etc.
+            const nameFieldId = `business${index}OwnerName${i}`;
+            if (businessDetailStore[nameFieldId] !== undefined) {
+                const nameFieldEl = document.getElementById(nameFieldId);
+                if (nameFieldEl) {
+                    nameFieldEl.value = businessDetailStore[nameFieldId];
+                }
+            }
+
+            const pctFieldId = `business${index}OwnerPercent${i}`;
+            if (businessDetailStore[pctFieldId] !== undefined) {
+                const pctFieldEl = document.getElementById(pctFieldId);
+                if (pctFieldEl) {
+                    pctFieldEl.value = businessDetailStore[pctFieldId];
+                }
+            }
+
+            const compFieldId = `business${index}OwnerComp${i}`;
+            if (businessDetailStore[compFieldId] !== undefined) {
+                const compFieldEl = document.getElementById(compFieldId);
+                if (compFieldEl) {
+                    compFieldEl.value = businessDetailStore[compFieldId];
+                }
+            }
+        }
+    }
+
+    // After re-populating, recalc net, disclaimers, etc.
+    updateBusinessNet(index);
+    checkSCorpReasonableComp(index);
+    const ownersSelect = document.getElementById(`numOwnersSelect${index}`);
+    if (ownersSelect) {
+        validateTotalOwnership(index, parseInt(ownersSelect.value, 10) || 0);
+    }
+}
