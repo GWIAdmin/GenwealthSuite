@@ -212,9 +212,14 @@
 
           <div class="form-group">
             <label for="olderthan65">How many 65 or older:</label>
-            <input type="text" id="olderthan65" name="olderthan65" min="0" required>
+            <select id="olderthan65" name="olderthan65" required>
+              <option value="Please Select">Please Select</option>
+              <option value="0">0</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+            </select>
           </div>
-
+          
           <div class="form-group">
             <label for="blind">How many blind:</label>
             <select  id="blind" name="blind" min="0" required>

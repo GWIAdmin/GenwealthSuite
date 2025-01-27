@@ -41,6 +41,12 @@ function displayResults(resultData) {
     `;
 }
 
+//-----------------------//
+// 1.1. Global Variables //
+//-----------------------//
+
+let userManuallyChanged65Plus = false;
+
 //-------------------------------------------//
 // 2. "BACK TO TOP" BUTTON AND WINDOW SCROLL //
 //-------------------------------------------//
@@ -297,6 +303,33 @@ function validateAgeInput(input, index) {
     }
 }
 
+function autoSet65Plus() {
+    if (userManuallyChanged65Plus) return;
+
+    const filingStatus = document.getElementById('filingStatus').value;
+
+    const clientAgeVal = parseInt(document.getElementById('currentAge').value, 10);
+    const spouseAgeVal = parseInt(document.getElementById('spouseCurrentAge').value, 10);
+
+    let client65Plus = false;
+    if (!isNaN(clientAgeVal) && clientAgeVal >= 65) client65Plus = true;
+
+    let spouse65Plus = false;
+    // For Married Filing Jointly, the spouse's field is relevant
+    if ((filingStatus === 'Married Filing Jointly') &&
+        !isNaN(spouseAgeVal) && spouseAgeVal >= 65) {
+        spouse65Plus = true;
+    }
+
+    // Count how many are 65+
+    const count65Plus = (client65Plus ? 1 : 0) + (spouse65Plus ? 1 : 0);
+
+    const clientAgeIsValid = !isNaN(clientAgeVal);
+    if (clientAgeIsValid) {
+        document.getElementById('olderthan65').value = count65Plus.toString();
+    }
+}
+
 function displayErrorMessage(errorMessageId, message, inputId) {
     let errorMessage = document.getElementById(errorMessageId);
     if (!errorMessage) {
@@ -322,6 +355,14 @@ document.getElementById('spouseBirthdate').addEventListener('change', function()
 
 document.getElementById('spouseCurrentAge').addEventListener('input', function() {
     validateAgeInput(this, 'spouse');
+});
+
+document.getElementById('birthdate').addEventListener('change', autoSet65Plus);
+document.getElementById('spouseBirthdate').addEventListener('change', autoSet65Plus);
+document.getElementById('currentAge').addEventListener('input', autoSet65Plus);
+document.getElementById('spouseCurrentAge').addEventListener('input', autoSet65Plus);
+document.getElementById('olderthan65').addEventListener('change', function() {
+    userManuallyChanged65Plus = true;
 });
 
 //----------------------------------------------//
