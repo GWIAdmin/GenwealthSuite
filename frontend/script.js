@@ -242,16 +242,70 @@ function createLabelAndInput(container, id, labelText, type) {
 
 function calculateAge(birthdateValue, ageInputId) {
     const birthdate = new Date(birthdateValue);
+    const errorMessageId = `${ageInputId}ErrorMessage`;
+    let errorMessage = document.getElementById(errorMessageId);
+    const today = new Date();
+
     if (isNaN(birthdate.getTime())) {
+        if (!errorMessage) {
+            errorMessage = document.createElement('p');
+            errorMessage.id = errorMessageId;
+            errorMessage.style.color = 'red';
+            errorMessage.textContent = 'Invalid date format. Please enter a valid date.';
+            document.getElementById(ageInputId).parentNode.appendChild(errorMessage);
+        }
         return;
     }
-    const today = new Date();
-    let age = today.getFullYear() - birthdate.getFullYear();
+
+    const todayYear = today.getFullYear();
+    const birthYear = birthdate.getFullYear();
+    let age = todayYear - birthYear;
     const monthDifference = today.getMonth() - birthdate.getMonth();
     if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthdate.getDate())) {
         age--;
     }
+
+    // Birthdate validation
+    if (birthdate > today) {
+        displayErrorMessage(errorMessageId, 'Birthdate cannot be in the future.', ageInputId);
+        document.getElementById(ageInputId).value = '';
+        return;
+    }
+
+    if (age > 100) {
+        displayErrorMessage(errorMessageId, 'Birthdate indicates an age greater than 100 years. Please check.', ageInputId);
+        document.getElementById(ageInputId).value = '';
+        return;
+    }
+
+    if (errorMessage) errorMessage.textContent = ''; // Clear error message if date is valid
     document.getElementById(ageInputId).value = age;
+}
+
+function validateAgeInput(input, index) {
+    const age = parseInt(input.value, 10);
+    const errorMessageId = `ageErrorMessage${index}`;
+    let errorMessage = document.getElementById(errorMessageId);
+
+    // Age validations
+    if (isNaN(age) || age < 0) {
+        displayErrorMessage(errorMessageId, 'Age cannot be less than 0.', input.id);
+    } else if (age > 100) {
+        displayErrorMessage(errorMessageId, 'Age cannot be greater than 100 years.', input.id);
+    } else {
+        if (errorMessage) errorMessage.textContent = ''; // Clear error if age is valid
+    }
+}
+
+function displayErrorMessage(errorMessageId, message, inputId) {
+    let errorMessage = document.getElementById(errorMessageId);
+    if (!errorMessage) {
+        errorMessage = document.createElement('p');
+        errorMessage.id = errorMessageId;
+        errorMessage.style.color = 'red';
+        document.getElementById(inputId).parentNode.appendChild(errorMessage);
+    }
+    errorMessage.textContent = message;
 }
 
 document.getElementById('birthdate').addEventListener('change', function() {
@@ -269,25 +323,6 @@ document.getElementById('spouseBirthdate').addEventListener('change', function()
 document.getElementById('spouseCurrentAge').addEventListener('input', function() {
     validateAgeInput(this, 'spouse');
 });
-
-function validateAgeInput(input, index) {
-    const age = parseInt(input.value, 10);
-    const errorMessageId = `ageErrorMessage${index}`;
-    let errorMessage = document.getElementById(errorMessageId);
-    if (!isNaN(age) && age >= 0) {
-        if (errorMessage) errorMessage.textContent = '';
-    } else {
-        if (!errorMessage) {
-            errorMessage = document.createElement('p');
-            errorMessage.id = errorMessageId;
-            errorMessage.style.color = 'red';
-            errorMessage.textContent = 'Please enter a valid age';
-            input.parentNode.appendChild(errorMessage);
-        } else {
-            errorMessage.textContent = 'Please enter a valid age';
-        }
-    }
-}
 
 //----------------------------------------------//
 // 6. AUTO-COPY LAST NAME TO SPOUSE'S LAST NAME //
