@@ -296,11 +296,25 @@ function validateAgeInput(input, index) {
 document.getElementById('lastName').addEventListener('input', function() {
     const spouseLast = document.getElementById('spouseLastName');
     spouseLast.value = this.value;
-    spouseLast.classList.add('auto-copied');
+    spouseLast.classList.add('auto-copied'); // bright yellow border
+    // Optionally remove green if it was previously set:
+    spouseLast.classList.remove('input-completed');
 });
 
 document.getElementById('spouseLastName').addEventListener('input', function() {
-    this.classList.remove('input-completed');
+    // If user typed anything at all, remove auto-copied
+    if (this.classList.contains('auto-copied')) {
+        this.classList.remove('auto-copied');
+    }
+    // We do NOT add green class yet; see onblur:
+});
+
+document.getElementById('spouseLastName').addEventListener('blur', function() {
+    if (this.value.trim() !== '') {
+        this.classList.add('input-completed'); // green border
+    } else {
+        this.classList.remove('input-completed');
+    }
 });
 
 //--------------------------------------//
@@ -434,8 +448,20 @@ function formatCurrency(value) {
 }
 
 function unformatCurrency(value) {
-    let numericValue = value.replace(/[^\d.-]/g, '');
-    return parseFloat(numericValue) || 0;
+    // Detect parentheses. If string is enclosed by (...) we treat it as negative.
+    let isNegative = false;
+    // e.g. "( $1,234 )"
+    if (/\(.*\)/.test(value)) {
+        isNegative = true;
+    }
+
+    // Strip out everything except digits and decimal point
+    let numericValue = value.replace(/[^\d.]/g, '');
+    let floatVal = parseFloat(numericValue);
+    if (isNaN(floatVal)) {
+        floatVal = 0;
+    }
+    return isNegative ? -floatVal : floatVal;
 }
 
 function createLabelAndTextField(parent, id, labelText) {
@@ -1529,11 +1555,29 @@ boldBtn.addEventListener('click', () => {
 });
 
 highlightBtn.addEventListener('click', () => {
-  const currentSelection = window.getSelection();
-  if (!currentSelection.isCollapsed) {
-    document.execCommand('hiliteColor', false, 'yellow');
-  }
-});
+    const currentSelection = window.getSelection();
+    if (!currentSelection || currentSelection.isCollapsed) {
+      return; // No selection
+    }
+  
+    // Check if selection's parent has background-color = 'yellow'
+    let isHighlighted = false;
+    if (currentSelection.rangeCount > 0) {
+      const range = currentSelection.getRangeAt(0);
+      const parent = range.commonAncestorContainer.parentNode;
+      if (parent && parent.style && parent.style.backgroundColor === 'yellow') {
+        isHighlighted = true;
+      }
+    }
+  
+    if (isHighlighted) {
+      // Remove highlight
+      document.execCommand('hiliteColor', false, 'transparent');
+    } else {
+      // Apply highlight
+      document.execCommand('hiliteColor', false, 'yellow');
+    }
+  });  
 
 //----------------------//
 // 21. UNDO/REDO BUTTON //
@@ -1634,7 +1678,7 @@ function populateBusinessDetailFields(index) {
     ];
 
     fields.forEach(f => {
-        if (businessDetailStore[f]) {
+        if (businessDetailStore[f] !== undefined) {
             let el = document.getElementById(f);
             if (el) {
                 el.value = businessDetailStore[f];
@@ -1642,11 +1686,19 @@ function populateBusinessDetailFields(index) {
         }
     });
 
-    // Now handle the newly created owners
+    // 1) Retrieve the number of owners from the stored data:
     const numOwnersSelectEl = document.getElementById(`numOwnersSelect${index}`);
     if (numOwnersSelectEl) {
+        // If we have it in storage, this ensures the UI matches
+        if (businessDetailStore[`numOwnersSelect${index}`]) {
+            numOwnersSelectEl.value = businessDetailStore[`numOwnersSelect${index}`];
+        }
+
+        // 2) Now actually CREATE the owner fields in the DOM:
         const numOwners = parseInt(numOwnersSelectEl.value, 10) || 0;
-        // createOwnerFields was called already, so fields exist. We just fill them in:
+        createOwnerFields(index, numOwners);
+
+        // 3) Populate each new owner field with stored data:
         for (let i = 1; i <= numOwners; i++) {
             // For example: "business1OwnerName1", "business1OwnerPercent1", "business1OwnerComp1" etc.
             const nameFieldId = `business${index}OwnerName${i}`;
@@ -1678,8 +1730,9 @@ function populateBusinessDetailFields(index) {
     // After re-populating, recalc net, disclaimers, etc.
     updateBusinessNet(index);
     checkSCorpReasonableComp(index);
-    const ownersSelect = document.getElementById(`numOwnersSelect${index}`);
-    if (ownersSelect) {
-        validateTotalOwnership(index, parseInt(ownersSelect.value, 10) || 0);
+
+    // If owners exist, check that their total ownership = 100
+    if (numOwnersSelectEl) {
+        validateTotalOwnership(index, parseInt(numOwnersSelectEl.value, 10) || 0);
     }
 }
