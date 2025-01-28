@@ -921,6 +921,7 @@ function createOwnerFields(businessIndex, numOwners) {
                 compInput.addEventListener('blur', function() {
                     compInput.value = formatCurrency(compInput.value);
                     checkSCorpReasonableComp(businessIndex);
+                    updateBusinessNet(businessIndex);
                 });
                 ownerSection.appendChild(compInput);
             }
@@ -1015,6 +1016,7 @@ function createOwnerFields(businessIndex, numOwners) {
             compInput.addEventListener('blur', function() {
                 compInput.value = formatCurrency(compInput.value);
                 checkSCorpReasonableComp(businessIndex);
+                updateBusinessNet(businessIndex);
             });
             ownerSection.appendChild(compInput);
         }
