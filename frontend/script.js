@@ -46,6 +46,7 @@ function displayResults(resultData) {
 //-----------------------//
 
 let userManuallyChanged65Plus = false;
+let dependentBizMap = {};
 
 //-------------------------------------------//
 // 2. "BACK TO TOP" BUTTON AND WINDOW SCROLL //
@@ -167,9 +168,27 @@ function handleDOBOrAgeChange(index, value) {
 function handleEmploymentStatusChange(index, value) {
     const container = document.getElementById(`employmentConditionalContainer${index}`);
     container.innerHTML = '';
+
     if (value === 'Yes') {
+        // Create the Income field for Dependent
         createLabelAndCurrencyField(container, `dependent${index}Income`, `Dependent ${index} Income:`);
+
+        // Add an event so if user changes the wage, we update the mapping.
+        const incomeField = document.getElementById(`dependent${index}Income`);
+        incomeField.addEventListener('blur', function() {
+            updateDependentBizMap(index);
+            // If we know which business the dependent belongs to, recalc that business net
+            const depData = dependentBizMap[index];
+            if (depData && depData.businessIndex) {
+                updateBusinessNet(depData.businessIndex);
+                recalculateTotals();
+            }
+        });
+
+        // Create the "Is Dependent Employed in One of the Client's Businesses?" dropdown
         createLabelAndDropdown(container, `dependent${index}EmployedInBusiness`, `Is Dependent ${index} Employed in One of the Client's Businesses?`, ['Please Select', 'Yes', 'No']);
+
+        // Listen for user selecting "Yes" or "No"
         document.getElementById(`dependent${index}EmployedInBusiness`).addEventListener('change', function() {
             if (this.value === 'Yes') {
                 const numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
@@ -179,9 +198,31 @@ function handleEmploymentStatusChange(index, value) {
                     businessNames.push(bName);
                 }
                 createLabelAndDropdown(container, `dependent${index}BusinessName`, `Which Business?`, ['Please Select', ...(businessNames.length > 0 ? businessNames : ['No businesses available'])]);
+
+                // Once "Which Business?" is created, attach a listener
+                const bizSelect = document.getElementById(`dependent${index}BusinessName`);
+                bizSelect.addEventListener('change', function() {
+                    updateDependentBizMap(index);
+                    const depData = dependentBizMap[index];
+                    if (depData && depData.businessIndex) {
+                        updateBusinessNet(depData.businessIndex);
+                        recalculateTotals();
+                    }
+                });
+            } else {
+                // "No" means not employed in a client business. Remove any prior mapping
+                const existingBizDropdown = document.getElementById(`dependent${index}BusinessName`);
+                if (existingBizDropdown) {
+                    existingBizDropdown.parentNode.removeChild(existingBizDropdown.previousSibling);
+                    existingBizDropdown.parentNode.removeChild(existingBizDropdown);
+                }
+                delete dependentBizMap[index];
+                recalculateTotals();
             }
         });
+
     } else if (value === 'No') {
+        // If Dependent is not employed at all, show "Willing to Hire?" etc.
         createLabelAndDropdown(container, `dependent${index}WillingToHire`, `Is the Client Willing to Hire Dependent ${index}?`, ['Please Select', 'Yes', 'No']);
         const willingDropdown = document.getElementById(`dependent${index}WillingToHire`);
         if (willingDropdown) {
@@ -206,7 +247,48 @@ function handleEmploymentStatusChange(index, value) {
                 }
             });
         }
+        // Also remove any prior business assignment
+        delete dependentBizMap[index];
+        recalculateTotals();
     }
+}
+
+function updateDependentBizMap(dependentIndex) {
+    // 1) Read the dependent's wage
+    const wageStr = document.getElementById(`dependent${dependentIndex}Income`)?.value || '0';
+    const wageVal = unformatCurrency(wageStr);
+
+    // 2) Check "Is Dependent Employed in One of the Client's Businesses?"
+    const employedVal = document.getElementById(`dependent${dependentIndex}EmployedInBusiness`)?.value || 'No';
+    if (employedVal !== 'Yes') {
+        // Not employed in a business, remove from map
+        delete dependentBizMap[dependentIndex];
+        return;
+    }
+
+    // 3) Identify which business they picked
+    const businessName = document.getElementById(`dependent${dependentIndex}BusinessName`)?.value || '';
+    let matchedBusinessIndex = null;
+    const numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
+    for (let i = 1; i <= numBusinesses; i++) {
+        const currentBizName = document.getElementById(`business${i}Name`)?.value || '';
+        if (currentBizName === businessName) {
+            matchedBusinessIndex = i;
+            break;
+        }
+    }
+
+    // If user didn't select any real business, remove from map
+    if (!matchedBusinessIndex) {
+        delete dependentBizMap[dependentIndex];
+        return;
+    }
+
+    // 4) Store the assignment
+    dependentBizMap[dependentIndex] = {
+        businessIndex: matchedBusinessIndex,
+        wage: wageVal
+    };
 }
 
 function createLabelAndDropdown(container, id, labelText, options) {
@@ -634,6 +716,9 @@ function createBusinessFields(container, index) {
     const businessDiv = document.createElement('div');
     businessDiv.classList.add('business-entry');
 
+    // NEW: give each business an id for disclaimers
+    businessDiv.id = `businessEntry${index}`;
+
     const heading = document.createElement('h3');
     const bNameInput = document.getElementById(`business${index}Name`);
     heading.textContent = bNameInput ? bNameInput.value : `Business ${index}`;
@@ -688,7 +773,7 @@ function createBusinessFields(container, index) {
     dynamicOwnerFieldsDiv.style.marginTop = '12px';
     ownersContainer.appendChild(dynamicOwnerFieldsDiv);
 
-    typeSelect.addEventListener('change', function () {
+    typeSelect.addEventListener('change', function() {
         handleBusinessTypeChange(index, typeSelect.value);
     });
 
@@ -1099,13 +1184,41 @@ function validateTotalOwnership(businessIndex, numOwners) {
 }
 
 function updateBusinessNet(index) {
-    const incomeVal = unformatCurrency(document.getElementById(`business${index}Income`).value || '0');
-    const expensesVal = unformatCurrency(document.getElementById(`business${index}Expenses`).value || '0');
+    const incomeVal = unformatCurrency(document.getElementById(`business${index}Income`)?.value || '0');
+    let expensesVal = unformatCurrency(document.getElementById(`business${index}Expenses`)?.value || '0');
+
+    // Gather total wages from *all* dependents assigned to this business
+    let totalDependentWages = 0;
+    for (let depIndex in dependentBizMap) {
+        if (dependentBizMap.hasOwnProperty(depIndex)) {
+            const entry = dependentBizMap[depIndex];
+            if (entry.businessIndex === index) {
+                totalDependentWages += entry.wage;
+            }
+        }
+    }
+
+    if (totalDependentWages > 0) {
+        expensesVal += totalDependentWages;
+        showBlueDisclaimer(
+            `Dependent wages of $${totalDependentWages} have been included in ${document.getElementById(`business${index}Name`)?.value || 'this business'}'s expenses.`,
+            `businessEntry${index}`
+        );
+    } else {
+        // No dependent wages, remove any prior disclaimer
+        removeBlueDisclaimer(`businessEntry${index}`);
+    }
+
     const netVal = incomeVal - expensesVal;
     const netField = document.getElementById(`business${index}Net`);
-    netField.value = formatCurrency(netVal.toString());
-    netField.style.color = (netVal < 0) ? 'red' : 'black';
+    if (netField) {
+        netField.value = formatCurrency(String(netVal));
+        netField.style.color = netVal < 0 ? 'red' : 'black';
+    }
+
+    // Preserve your existing calls:
     updateOwnerApportionment(index);
+    checkSCorpReasonableComp(index);
 }
 
 const apportionmentOverrides = {};
@@ -1601,6 +1714,28 @@ function showRedDisclaimer(message, containerId) {
         container.appendChild(disclaimer);
     }
     disclaimer.textContent = message;
+}
+
+function showBlueDisclaimer(message, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    let disclaimer = document.getElementById(`blue-disclaimer-${containerId}`);
+    if (!disclaimer) {
+        disclaimer = document.createElement('div');
+        disclaimer.id = `blue-disclaimer-${containerId}`;
+        disclaimer.style.color = 'blue';
+        disclaimer.style.fontWeight = 'bold';
+        disclaimer.style.marginTop = '12px';
+        container.appendChild(disclaimer);
+    }
+    disclaimer.textContent = message;
+}
+
+function removeBlueDisclaimer(containerId) {
+    const disclaimer = document.getElementById(`blue-disclaimer-${containerId}`);
+    if (disclaimer && disclaimer.parentNode) {
+        disclaimer.parentNode.removeChild(disclaimer);
+    }
 }
 
 //-------------------//
