@@ -1184,10 +1184,11 @@ function validateTotalOwnership(businessIndex, numOwners) {
 }
 
 function updateBusinessNet(index) {
+    // Grab the Income and Expenses fields
     const incomeVal = unformatCurrency(document.getElementById(`business${index}Income`)?.value || '0');
-    let expensesVal = unformatCurrency(document.getElementById(`business${index}Expenses`)?.value || '0');
+    const expensesVal = unformatCurrency(document.getElementById(`business${index}Expenses`)?.value || '0');
 
-    // Gather total wages from *all* dependents assigned to this business
+    // Sum up total dependent wages assigned to this business (but DO NOT add to expenses!)
     let totalDependentWages = 0;
     for (let depIndex in dependentBizMap) {
         if (dependentBizMap.hasOwnProperty(depIndex)) {
@@ -1198,17 +1199,7 @@ function updateBusinessNet(index) {
         }
     }
 
-    if (totalDependentWages > 0) {
-        expensesVal += totalDependentWages;
-        showBlueDisclaimer(
-            `Dependent wages of $${totalDependentWages} have been included in ${document.getElementById(`business${index}Name`)?.value || 'this business'}'s expenses.`,
-            `businessEntry${index}`
-        );
-    } else {
-        // No dependent wages, remove any prior disclaimer
-        removeBlueDisclaimer(`businessEntry${index}`);
-    }
-
+    // Calculate the net (Income - Expenses) ONLY
     const netVal = incomeVal - expensesVal;
     const netField = document.getElementById(`business${index}Net`);
     if (netField) {
@@ -1216,9 +1207,53 @@ function updateBusinessNet(index) {
         netField.style.color = netVal < 0 ? 'red' : 'black';
     }
 
-    // Preserve your existing calls:
     updateOwnerApportionment(index);
     checkSCorpReasonableComp(index);
+
+    // Show a red disclaimer if dependent wages exceed (for non-S-corp) OR
+    // if dependent wages + total reasonable comp exceed (for S-corp) the business expenses.
+
+    removeDisclaimer(`businessEntry${index}`, 'DEPENDENT_WAGE');
+
+    const businessTypeVal = document.getElementById(`business${index}Type`)?.value || '';
+
+    // Sum up Reasonable Compensation for all owners if this is an S-Corp
+    let totalReasonableComp = 0;
+    if (businessTypeVal === 'S-Corp') {
+        const numOwnersSelect = document.getElementById(`numOwnersSelect${index}`);
+        if (numOwnersSelect) {
+            const numOwners = parseInt(numOwnersSelect.value, 10) || 0;
+            for (let i = 1; i <= numOwners; i++) {
+                const compStr = document.getElementById(`business${index}OwnerComp${i}`)?.value || '0';
+                totalReasonableComp += unformatCurrency(compStr);
+            }
+        }
+    }
+
+        // For S-Corp: check if (dependentWages + totalReasonableComp) > expensesVal
+        if (businessTypeVal === 'S-Corp') {
+            if ((totalDependentWages + totalReasonableComp) > expensesVal) {
+                addDisclaimer(
+                    `businessEntry${index}`,
+                    'DEPENDENT_WAGE',
+                    `WARNING: Dependent wages + Reasonable Compensation (${
+                        formatCurrency(String(totalDependentWages + totalReasonableComp))
+                    }) exceed total Expenses (${formatCurrency(String(expensesVal))}).`
+                );
+            }
+        }
+        // For all other business types: check if dependentWages > expensesVal
+        else {
+            if (totalDependentWages > expensesVal) {
+                addDisclaimer(
+                    `businessEntry${index}`,
+                    'DEPENDENT_WAGE',
+                    `WARNING: Dependent wages (${
+                        formatCurrency(String(totalDependentWages))
+                    }) exceed total Expenses (${formatCurrency(String(expensesVal))}).`
+                );
+            }
+        }
 }
 
 const apportionmentOverrides = {};
