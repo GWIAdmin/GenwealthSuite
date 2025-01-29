@@ -1694,6 +1694,13 @@ document.addEventListener('DOMContentLoaded', function() {
     recalculateTotals();
     recalculateDeductions();
     undoStack.push(getFormSnapshot());
+    
+    const allCurrencyFields = document.querySelectorAll('.currency-field');
+    allCurrencyFields.forEach((field) => {
+        field.addEventListener('blur', () => {
+            field.value = formatCurrency(field.value);
+        });
+    });
 });
 
 //--------------------------------------//
