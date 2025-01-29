@@ -1843,34 +1843,134 @@ function getFormSnapshot() {
 
 function restoreFormSnapshot(snapshot) {
     const dataObj = JSON.parse(snapshot);
+
+    // 1) First, restore all basic fields that already exist in the DOM
     for (let key in dataObj) {
         const field = document.getElementsByName(key)[0];
         if (field) {
             field.value = dataObj[key];
         }
     }
+
+    // 2) Re-run your real-time calculations
     recalculateTotals();
     recalculateDeductions();
+
+    // 3) Restore the dynamic "Number of Businesses" fields
     const numBiz = parseInt(document.getElementById('numOfBusinesses').value || '0', 10);
+
+    // Clear + re-create the main business container
     const bizContainer = document.getElementById('businessContainer');
     bizContainer.innerHTML = '';
     for (let i = 1; i <= numBiz; i++) {
         createBusinessFields(bizContainer, i);
         populateBusinessDetailFields(i);
     }
+
+    // Clear + re-create the business name container as well
     const newCount = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
-    const container = document.getElementById('numOfBusinessesContainer');
-    container.innerHTML = '';
+    const namesContainer = document.getElementById('numOfBusinessesContainer');
+    namesContainer.innerHTML = '';
     for (let i = 1; i <= newCount; i++) {
-        createBusinessNameFields(container, i);
+        createBusinessNameFields(namesContainer, i);
         populateBusinessNameFields(i);
     }
+
+    // 4) Restore dynamic Schedule E fields
     const eCount = parseInt(document.getElementById('numScheduleEs').value, 10) || 0;
     const seContainer = document.getElementById('scheduleEsContainer');
     seContainer.innerHTML = '';
     for (let i = 1; i <= eCount; i++) {
         createScheduleEFields(seContainer, i);
+        // The field values themselves were assigned up in the basic loop
+        // so the net calculation function is called next:
+        updateScheduleENet(i);
     }
+
+    // 5) NOW, RESTORE CHILDREN/DEPENDENTS FIELDS (the missing piece):
+    const depCount = parseInt(document.getElementById('numberOfDependents').value || '0', 10);
+    const depContainer = document.getElementById('dependentsContainer');
+    depContainer.innerHTML = '';
+
+    if (depCount > 0) {
+        // Create each dependent's sub-fields
+        const heading = document.createElement('h1');
+        heading.textContent = 'Children / Dependents Details';
+        depContainer.appendChild(heading);
+
+        for (let i = 1; i <= depCount; i++) {
+            createDependentFields(depContainer, i);
+        }
+
+        // Re-assign the dynamic sub-fields from the snapshot so we get "Yes"/"No" states back
+        for (let i = 1; i <= depCount; i++) {
+            // For example, if "dependent1DOBOrAge" was "Yes", you must call handleDOBOrAgeChange
+            const dobOrAgeVal = dataObj[`dependent${i}DOBOrAge`];
+            if (dobOrAgeVal) {
+                const dobOrAgeSelect = document.getElementById(`dependent${i}DOBOrAge`);
+                dobOrAgeSelect.value = dobOrAgeVal;
+                handleDOBOrAgeChange(i, dobOrAgeVal);
+            }
+
+            const employedVal = dataObj[`dependent${i}Employed`];
+            if (employedVal) {
+                const employedSelect = document.getElementById(`dependent${i}Employed`);
+                employedSelect.value = employedVal;
+                handleEmploymentStatusChange(i, employedVal);
+            }
+
+            // Now that the sub-fields (e.g., Age, DOB, etc.) are created, set them:
+            if (dataObj[`dependent${i}Birthdate`]) {
+                const bdField = document.getElementById(`dependent${i}Birthdate`);
+                bdField.value = dataObj[`dependent${i}Birthdate`];
+            }
+            if (dataObj[`dependent${i}Age`]) {
+                const ageField = document.getElementById(`dependent${i}Age`);
+                ageField.value = dataObj[`dependent${i}Age`];
+            }
+            if (dataObj[`dependent${i}AgeRange`]) {
+                const ageRangeSel = document.getElementById(`dependent${i}AgeRange`);
+                if (ageRangeSel) {
+                    ageRangeSel.value = dataObj[`dependent${i}AgeRange`];
+                }
+            }
+            if (dataObj[`dependent${i}Income`]) {
+                const incField = document.getElementById(`dependent${i}Income`);
+                if (incField) {
+                    incField.value = dataObj[`dependent${i}Income`];
+                }
+            }
+            if (dataObj[`dependent${i}EmployedInBusiness`]) {
+                const eibField = document.getElementById(`dependent${i}EmployedInBusiness`);
+                if (eibField) {
+                    eibField.value = dataObj[`dependent${i}EmployedInBusiness`];
+                }
+            }
+            if (dataObj[`dependent${i}BusinessName`]) {
+                const bizNameSel = document.getElementById(`dependent${i}BusinessName`);
+                if (bizNameSel) {
+                    bizNameSel.value = dataObj[`dependent${i}BusinessName`];
+                }
+            }
+            if (dataObj[`dependent${i}WillingToHire`]) {
+                const hireSel = document.getElementById(`dependent${i}WillingToHire`);
+                if (hireSel) {
+                    hireSel.value = dataObj[`dependent${i}WillingToHire`];
+                }
+            }
+            if (dataObj[`dependent${i}Credit`]) {
+                const creditSel = document.getElementById(`dependent${i}Credit`);
+                if (creditSel) {
+                    creditSel.value = dataObj[`dependent${i}Credit`];
+                }
+            }
+            // … etc., for all dependent sub-fields you have
+        }
+    }
+
+    // 6) Finally, run your real-time recalc again
+    recalculateTotals();
+    recalculateDeductions();
 }
 
 document.getElementById('taxForm').addEventListener('input', function(e) {
