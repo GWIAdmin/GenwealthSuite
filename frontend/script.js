@@ -1303,16 +1303,57 @@ const apportionmentOverrides = {};
 function updateOwnerApportionment(businessIndex) {
     const netStr = document.getElementById(`business${businessIndex}Net`)?.value || '0';
     const netVal = unformatCurrency(netStr);
+
     const numOwnersSelect = document.getElementById(`numOwnersSelect${businessIndex}`);
     if (!numOwnersSelect) return;
+
     const numOwners = parseInt(numOwnersSelect.value, 10) || 0;
+    if (numOwners < 1) return;
+
+    // 1) Compute each owner's portion from the percentages, using parseInt().
+    let portions = new Array(numOwners).fill(0);
     for (let i = 1; i <= numOwners; i++) {
         const pctStr = document.getElementById(`business${businessIndex}OwnerPercent${i}`)?.value || '0';
         const pct = parseFloat(pctStr) || 0;
-        let defaultPortion = parseInt(netVal * (pct / 100));
-        const overrideKey = `biz${businessIndex}-owner${i}`;
-        let portionToDisplay = overrideKey in apportionmentOverrides ? apportionmentOverrides[overrideKey] : defaultPortion;
-        showApportionment(businessIndex, i, portionToDisplay);
+        // Truncate the portion to an integer
+        portions[i - 1] = parseInt(netVal * (pct / 100));
+    }
+
+    // 2) Compare sum of portions to netVal to see if there's a remainder.
+    const partialSum = portions.reduce((a, b) => a + b, 0);
+    let remainder = netVal - partialSum;
+
+    // 3) If remainder != 0, handle leftover for the first or first two owners.
+    //    Positive remainder => add +1 dollars to those owners,
+    //    Negative remainder => subtract 1 dollar from those owners.
+    //    Only if numOwners == 2 or 3.
+    if (remainder !== 0) {
+        if (numOwners === 2) {
+            // All leftover (positive or negative) goes to Owner #1
+            portions[0] += remainder;
+            remainder = 0;
+        } else if (numOwners === 3) {
+            while (remainder !== 0) {
+                // Give or take 1 from Owner 1, then Owner 2, alternating:
+                for (let i = 0; i < 2; i++) {
+                    if (remainder === 0) break;
+
+                    if (remainder > 0) {
+                        portions[i] += 1;
+                        remainder -= 1;
+                    } else {
+                        portions[i] -= 1;
+                        remainder += 1;
+                    }
+                }
+
+            }
+        }
+    }
+
+    // 4) Render the final amounts in the UI
+    for (let i = 1; i <= numOwners; i++) {
+        showApportionment(businessIndex, i, portions[i - 1]);
     }
 }
 
