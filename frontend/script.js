@@ -1557,7 +1557,11 @@ function recalculateTotals() {
         interestPrivateBonds +
         passiveActivityLossAdjustments +
         qualifiedBusinessDeduction;
-    document.getElementById('totalIncome').value = isNaN(totalIncomeVal) ? '' : parseInt(totalIncomeVal);
+        document.getElementById('totalIncome').value = 
+        isNaN(totalIncomeVal) 
+            ? '' 
+            : formatCurrency(String(parseInt(totalIncomeVal)));
+    
     const halfSETax = getFieldValue('halfSETax');
     const retirementDeduction = getFieldValue('retirementDeduction');
     const medicalReimbursementPlan = getFieldValue('medicalReimbursementPlan');
@@ -1694,7 +1698,7 @@ document.addEventListener('DOMContentLoaded', function() {
     recalculateTotals();
     recalculateDeductions();
     undoStack.push(getFormSnapshot());
-    
+
     const allCurrencyFields = document.querySelectorAll('.currency-field');
     allCurrencyFields.forEach((field) => {
         field.addEventListener('blur', () => {
