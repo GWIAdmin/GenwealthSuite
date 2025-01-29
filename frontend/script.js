@@ -1909,6 +1909,12 @@ function restoreFormSnapshot(snapshot) {
 
     // 2) Restore the "controller" fields for dynamic sections first
     //    so that we can rebuild them in the DOM
+    if (dataObj.filingStatus !== undefined) {
+        const filingStatusEl = document.getElementById('filingStatus');
+        filingStatusEl.value = dataObj.filingStatus;
+        // Fire 'change' so the spouse section properly shows/hides
+        filingStatusEl.dispatchEvent(new Event('change'));
+    }
     if (dataObj.numOfBusinesses !== undefined) {
         const numOfBusinessesField = document.getElementById('numOfBusinesses');
         if (numOfBusinessesField) {
