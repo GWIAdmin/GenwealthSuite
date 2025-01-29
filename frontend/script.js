@@ -1333,6 +1333,9 @@ function incrementApportionment(businessIndex, ownerIndex) {
     const numOwnersSelect = document.getElementById(`numOwnersSelect${businessIndex}`);
     if (!numOwnersSelect) return;
     const numOwners = parseInt(numOwnersSelect.value, 10);
+
+    // Gather existing apportionment amounts (if any),
+    // or derive them from (netVal * percentage).
     let portions = [];
     for (let i = 1; i <= numOwners; i++) {
         const overrideKey = `biz${businessIndex}-owner${i}`;
@@ -1344,18 +1347,29 @@ function incrementApportionment(businessIndex, ownerIndex) {
             portions[i] = parseInt(netVal * (pct / 100));
         }
     }
+
+    // Increment the chosen owner's portion
     portions[ownerIndex] = (portions[ownerIndex] || 0) + 1;
+
+    // If 2 owners, recalc the other so sum = netVal
     if (numOwners === 2) {
         const other = (ownerIndex === 1) ? 2 : 1;
         portions[other] = netVal - portions[ownerIndex];
-        if (portions[other] < 0) {
+
+        // Only clamp to 0 if netVal is positive.
+        // If netVal is negative, let them remain negative.
+        if (netVal > 0 && portions[other] < 0) {
             portions[ownerIndex] = netVal;
             portions[other] = 0;
         }
-    } else if (numOwners === 3) {
+    }
+    // If 3 owners, do a similar approach for rema
+    else if (numOwners === 3) {
         let o1 = portions[1] || 0;
         let o2 = portions[2] || 0;
         let o3 = portions[3] || 0;
+
+        // Recompute the “third” portion so total sums to netVal
         if (ownerIndex === 1) {
             o3 = netVal - o1 - o2;
         } else if (ownerIndex === 2) {
@@ -1363,14 +1377,25 @@ function incrementApportionment(businessIndex, ownerIndex) {
         } else {
             o1 = netVal - o2 - o3;
         }
-        if (o1 < 0) o1 = 0;
-        if (o2 < 0) o2 = 0;
-        if (o3 < 0) o3 = 0;
-        portions[1] = o1; portions[2] = o2; portions[3] = o3;
+
+        // Only clamp if netVal is positive
+        if (netVal > 0) {
+            if (o1 < 0) o1 = 0;
+            if (o2 < 0) o2 = 0;
+            if (o3 < 0) o3 = 0;
+        }
+
+        portions[1] = o1;
+        portions[2] = o2;
+        portions[3] = o3;
     }
+
+    // Save the updated portions
     for (let i = 1; i <= numOwners; i++) {
         apportionmentOverrides[`biz${businessIndex}-owner${i}`] = portions[i];
     }
+
+    // Re-render
     updateOwnerApportionment(businessIndex);
 }
 
@@ -1380,6 +1405,8 @@ function decrementApportionment(businessIndex, ownerIndex) {
     const numOwnersSelect = document.getElementById(`numOwnersSelect${businessIndex}`);
     if (!numOwnersSelect) return;
     const numOwners = parseInt(numOwnersSelect.value, 10);
+
+    // Gather existing apportionment
     let portions = [];
     for (let i = 1; i <= numOwners; i++) {
         const overrideKey = `biz${businessIndex}-owner${i}`;
@@ -1391,19 +1418,31 @@ function decrementApportionment(businessIndex, ownerIndex) {
             portions[i] = parseInt(netVal * (pct / 100));
         }
     }
+
+    // Decrement this owner's portion
     portions[ownerIndex] = (portions[ownerIndex] || 0) - 1;
-    if (portions[ownerIndex] < 0) {
-        portions[ownerIndex] = 0;
+    if (portions[ownerIndex] > 0 && netVal < 0) {
+        // If netVal is negative but user tries to decrement from a positive portion,
+        // no forced clamp here – continue normally.
     }
+
+    // If 2 owners, keep sum = netVal
     if (numOwners === 2) {
         const other = (ownerIndex === 1) ? 2 : 1;
         portions[other] = netVal - portions[ownerIndex];
-        if (portions[other] < 0) {
+
+        // Only clamp to 0 if netVal is positive
+        if (netVal > 0 && portions[other] < 0) {
             portions[ownerIndex] = netVal;
             portions[other] = 0;
         }
-    } else if (numOwners === 3) {
-        let o1 = portions[1], o2 = portions[2], o3 = portions[3];
+    }
+    // If 3 owners, recalc for each
+    else if (numOwners === 3) {
+        let o1 = portions[1];
+        let o2 = portions[2];
+        let o3 = portions[3];
+
         if (ownerIndex === 1) {
             o3 = netVal - o1 - o2;
         } else if (ownerIndex === 2) {
@@ -1411,14 +1450,25 @@ function decrementApportionment(businessIndex, ownerIndex) {
         } else {
             o1 = netVal - o2 - o3;
         }
-        if (o1 < 0) o1 = 0;
-        if (o2 < 0) o2 = 0;
-        if (o3 < 0) o3 = 0;
-        portions[1] = o1; portions[2] = o2; portions[3] = o3;
+
+        // Only clamp if netVal is positive
+        if (netVal > 0) {
+            if (o1 < 0) o1 = 0;
+            if (o2 < 0) o2 = 0;
+            if (o3 < 0) o3 = 0;
+        }
+
+        portions[1] = o1;
+        portions[2] = o2;
+        portions[3] = o3;
     }
+
+    // Save updated
     for (let i = 1; i <= numOwners; i++) {
         apportionmentOverrides[`biz${businessIndex}-owner${i}`] = portions[i];
     }
+
+    // Re-render
     updateOwnerApportionment(businessIndex);
 }
 
