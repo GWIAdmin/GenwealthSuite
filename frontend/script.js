@@ -47,6 +47,7 @@ function displayResults(resultData) {
 
 let userManuallyChanged65Plus = false;
 let dependentBizMap = {};
+let dependentsStore = {};
 
 //-------------------------------------------//
 // 2. "BACK TO TOP" BUTTON AND WINDOW SCROLL //
@@ -109,10 +110,41 @@ function hideElement(element) {
 // 4. DYNAMIC DEPENDENTS CREATION //
 //--------------------------------//
 
+function saveDependentsData() {
+    const dependentsContainer = document.getElementById('dependentsSection');
+    if (!dependentsContainer) return;
+    const inputs = dependentsContainer.querySelectorAll('input, select');
+    inputs.forEach(input => {
+        if (input.id) {
+            dependentsStore[input.id] = input.value;
+        }
+    });
+}
+
+function populateDependentsData() {
+    for (let key in dependentsStore) {
+        const el = document.getElementById(key);
+        if (el) {
+            el.value = dependentsStore[key];
+
+            // Trigger any relevant "change" listeners if needed. For example, 
+            // we need to re-show age fields if "Do You Know the DOB?" is "Yes," etc.
+            // We'll manually dispatch change if the field is a <select>.
+            if (el.tagName.toLowerCase() === 'select') {
+                el.dispatchEvent(new Event('change'));
+            }
+        }
+    }
+}
+
 document.getElementById('numberOfDependents').addEventListener('input', function() {
+    // 1) Save existing data before we clear and rebuild
+    saveDependentsData();
+
     const numDependents = parseInt(this.value, 10);
     const dependentsContainer = document.getElementById('dependentsSection');
     dependentsContainer.innerHTML = '';
+
     if (!isNaN(numDependents) && numDependents > 0) {
         const heading = document.createElement('h1');
         heading.textContent = 'Children / Dependents Details';
@@ -121,6 +153,9 @@ document.getElementById('numberOfDependents').addEventListener('input', function
             createDependentFields(dependentsContainer, i);
         }
     }
+
+    // 2) Now repopulate the newly created fields
+    populateDependentsData();
 });
 
 function createDependentFields(container, index) {
@@ -779,8 +814,12 @@ function createBusinessFields(container, index) {
     });
 
     numOwnersSelect.addEventListener('change', function() {
+        saveBusinessDetailData();
+    
         const selectedVal = parseInt(this.value, 10);
         createOwnerFields(index, selectedVal);
+    
+        populateBusinessDetailFields(index);
     });
 
     container.appendChild(businessDiv);
