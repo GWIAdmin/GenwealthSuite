@@ -189,15 +189,27 @@ function createDependentFields(container, index) {
 function handleDOBOrAgeChange(index, value) {
     const container = document.getElementById(`conditionalContainer${index}`);
     container.innerHTML = '';
+
     if (value === 'Yes') {
+        // Create the "Birthdate" field:
         createLabelAndInput(container, `dependent${index}Birthdate`, `Dependent ${index} Birthdate:`, 'date');
+
+        // Create the "Age" field:
         createLabelAndInput(container, `dependent${index}Age`, `Dependent ${index} Current Age:`, 'number');
+
+        // Existing listener to auto-calculate age from birthdate:
         document.getElementById(`dependent${index}Birthdate`).addEventListener('change', function() {
             calculateAge(this.value, `dependent${index}Age`);
         });
-    } else if (value === 'No') {
-        createLabelAndDropdown(container, `dependent${index}AgeRange`, `What is the Age Category of Child/Dependent ${index}?`, ['Please Select','17 or younger', '18 or older']);
+
+        // NEW: If the user types into the Age field, clear the birthdate:
+        document.getElementById(`dependent${index}Age`).addEventListener('input', function() {
+            if (this.value.trim() !== '') {
+                document.getElementById(`dependent${index}Birthdate`).value = '';
+            }
+        });
     }
+    // else if (value === 'No') { ... }
 }
 
 function handleEmploymentStatusChange(index, value) {
@@ -463,7 +475,12 @@ document.getElementById('birthdate').addEventListener('change', function() {
 });
 
 document.getElementById('currentAge').addEventListener('input', function() {
-    validateAgeInput(this, 'current');
+    // If the user manually enters something into 'currentAge', clear the birthdate
+    if (this.value.trim() !== '') {
+        document.getElementById('birthdate').value = '';
+    }
+    validateAgeInput(this, 'current'); 
+    autoSet65Plus();
 });
 
 document.getElementById('spouseBirthdate').addEventListener('change', function() {
@@ -471,7 +488,11 @@ document.getElementById('spouseBirthdate').addEventListener('change', function()
 });
 
 document.getElementById('spouseCurrentAge').addEventListener('input', function() {
+    if (this.value.trim() !== '') {
+        document.getElementById('spouseBirthdate').value = '';
+    }
     validateAgeInput(this, 'spouse');
+    autoSet65Plus();
 });
 
 document.getElementById('birthdate').addEventListener('change', autoSet65Plus);
