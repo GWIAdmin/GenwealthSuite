@@ -888,11 +888,36 @@ function handleBusinessTypeChange(index, businessType) {
     removeScheduleCQuestion(index);
 
     if (businessType === 'Schedule-C') {
-        // Existing logic for Schedule C
-        ownersContainer.style.display = 'none';
-        numOwnersSelect.value = '1';
-        addScheduleCQuestion(index);
 
+        // 1) Check if Filing Status is "Married Filing Jointly"
+        const isMFJ = (document.getElementById('filingStatus').value === 'Married Filing Jointly');
+
+        if (isMFJ) {
+            // Existing logic for MFJ — show "Which client owns this Schedule-C?" dropdown
+            // so the user can choose between “Client1” or “Spouse.”
+            ownersContainer.style.display = 'none';
+            numOwnersSelect.value = '1';
+            addScheduleCQuestion(index);
+
+        } else {
+            // NEW LOGIC for non-MFJ:
+            //  -- We want exactly 1 owner, automatically "Client1."
+            ownersContainer.style.display = 'block';
+            numOwnersSelect.value = '1';
+
+            // Clear out any existing dynamic owners and rebuild
+            dynamicOwnerFieldsDiv.innerHTML = '';
+            createOwnerFields(index, 1);
+
+            // Force the single owner’s name to “Client1”
+            const nameField = document.getElementById(`business${index}OwnerName1`);
+            if (nameField) {
+                nameField.value = 'Client1';
+                nameField.readOnly = true;  // Make read-only to prevent user from overriding
+                nameField.style.backgroundColor = '#f0f0f0'; // visually indicate read-only
+            }
+        }
+    
     } else if (businessType === 'Please Select') {
         // Existing logic for "Please Select"
         ownersContainer.style.display = 'none';
