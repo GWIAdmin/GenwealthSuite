@@ -880,23 +880,58 @@ function populateNumOwnersOptions(selectEl) {
     });
 }
 
-function handleBusinessTypeChange(businessIndex, businessType) {
-    const ownersContainer = document.getElementById(`ownersContainer${businessIndex}`);
-    const numOwnersSelect = document.getElementById(`numOwnersSelect${businessIndex}`);
-    const dynamicOwnerFieldsDiv = document.getElementById(`dynamicOwnerFields${businessIndex}`);
-    removeScheduleCQuestion(businessIndex);
+function handleBusinessTypeChange(index, businessType) {
+    const ownersContainer = document.getElementById(`ownersContainer${index}`);
+    const numOwnersSelect = document.getElementById(`numOwnersSelect${index}`);
+    const dynamicOwnerFieldsDiv = document.getElementById(`dynamicOwnerFields${index}`);
+
+    removeScheduleCQuestion(index);
 
     if (businessType === 'Schedule-C') {
+        // Existing logic for Schedule C
         ownersContainer.style.display = 'none';
         numOwnersSelect.value = '1';
-        addScheduleCQuestion(businessIndex);
+        addScheduleCQuestion(index);
 
     } else if (businessType === 'Please Select') {
+        // Existing logic for "Please Select"
         ownersContainer.style.display = 'none';
         numOwnersSelect.value = '0';
         dynamicOwnerFieldsDiv.innerHTML = '';
 
+    } else if (businessType === 'Partnership') {
+        // NEW: Partnerships MUST have 2 or 3 owners. No single-owner.
+        ownersContainer.style.display = 'block';
+
+        // Rebuild the numOwnersSelect so that it ONLY offers:
+        // "Please Select" (0), "2", "3"
+        while (numOwnersSelect.firstChild) {
+            numOwnersSelect.removeChild(numOwnersSelect.firstChild);
+        }
+
+        const pleaseOpt = document.createElement('option');
+        pleaseOpt.value = 0;
+        pleaseOpt.textContent = 'Please Select';
+        numOwnersSelect.appendChild(pleaseOpt);
+
+        const twoOpt = document.createElement('option');
+        twoOpt.value = 2;
+        twoOpt.textContent = '2';
+        numOwnersSelect.appendChild(twoOpt);
+
+        const threeOpt = document.createElement('option');
+        threeOpt.value = 3;
+        threeOpt.textContent = '3';
+        numOwnersSelect.appendChild(threeOpt);
+
+        // Force the selection to "0" so user *must* pick either 2 or 3
+        numOwnersSelect.value = '0';
+
+        // Clear out any existing dynamic owner fields
+        dynamicOwnerFieldsDiv.innerHTML = '';
+
     } else {
+        // For S-Corp, C-Corp, etc. - your existing logic
         ownersContainer.style.display = 'block';
     }
 }
