@@ -813,14 +813,14 @@ function createBusinessFields(container, index) {
         handleBusinessTypeChange(index, typeSelect.value);
     });
 
-    numOwnersSelect.addEventListener('change', function() {
-        saveBusinessDetailData();
-    
-        const selectedVal = parseInt(this.value, 10);
-        createOwnerFields(index, selectedVal);
-    
-        populateBusinessDetailFields(index);
-    });
+    numOwnersSelect.addEventListener('change', function(e) {
+
+            saveBusinessDetailData();
+            // Regardless, always re-create owners + populate them
+            const selectedVal = parseInt(this.value, 10);
+            createOwnerFields(index, selectedVal);
+            populateBusinessDetailFields(index);
+        });
 
     container.appendChild(businessDiv);
 
@@ -1988,7 +1988,6 @@ function restoreFormSnapshot(snapshot) {
     const dataObj = JSON.parse(snapshot);
 
     // 2) Restore the "controller" fields for dynamic sections first
-    //    so that we can rebuild them in the DOM
     if (dataObj.filingStatus !== undefined) {
         const filingStatusEl = document.getElementById('filingStatus');
         filingStatusEl.value = dataObj.filingStatus;
@@ -2063,7 +2062,6 @@ function restoreFormSnapshot(snapshot) {
     for (let key in dataObj) {
         const fieldList = document.getElementsByName(key);
         if (fieldList && fieldList.length > 0) {
-            // If there is exactly one element with this name, set its value
             const field = fieldList[0];
             if (field) {
                 field.value = dataObj[key];
@@ -2071,14 +2069,22 @@ function restoreFormSnapshot(snapshot) {
         }
     }
 
-    // 5) Trigger any needed finalization (e.g. the business net
-    //    calculations, disclaimers, re-formatting, etc.)
-    //    For instance, recompute net for each business:
+    //Force the owners dropdown to re-run "change" event,
+    // so it calls createOwnerFields(...) again
+    for (let i = 1; i <= numBiz; i++) {
+        const ownersSelect = document.getElementById(`numOwnersSelect${i}`);
+        if (ownersSelect) {
+            ownersSelect.dispatchEvent(new Event('change'));
+        }
+    }
+
+    // 5) Recompute net + disclaimers for each business
     for (let i = 1; i <= numBiz; i++) {
         updateBusinessNet(i);
         checkSCorpReasonableComp(i);
     }
-    // 6) And for each Schedule E
+
+    // 6) Recompute net for each Schedule E
     const eCountFinal = parseInt(document.getElementById('numScheduleEs').value || '0', 10);
     for (let i = 1; i <= eCountFinal; i++) {
         updateScheduleENet(i);
@@ -2152,9 +2158,13 @@ function populateBusinessDetailFields(index) {
 
     fields.forEach(f => {
         if (businessDetailStore[f] !== undefined) {
-            let el = document.getElementById(f);
+            const el = document.getElementById(f);
             if (el) {
                 el.value = businessDetailStore[f];
+
+                if (f === `business${index}Type`) {
+                    el.dispatchEvent(new Event('change'));
+                }
             }
         }
     });
@@ -2203,6 +2213,7 @@ function populateBusinessDetailFields(index) {
     // After re-populating, recalc net, disclaimers, etc.
     updateBusinessNet(index);
     checkSCorpReasonableComp(index);
+    validateTotalOwnership(index, parseInt(numOwnersSelectEl.value, 10) || 0);
 
     // If owners exist, check that their total ownership = 100
     if (numOwnersSelectEl) {
