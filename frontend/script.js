@@ -1435,10 +1435,10 @@ function showApportionment(businessIndex, ownerIndex, portion) {
     const amountSpan = document.createElement('span');
     const absolutePortion = Math.abs(portion);
     if (portion < 0) {
-        amountSpan.textContent = `$${absolutePortion} (Loss)`;
+        amountSpan.textContent = `${formatCurrency(String(absolutePortion))} (Loss)`;
         amountSpan.style.color = 'red';
     } else {
-        amountSpan.textContent = `$${absolutePortion} (Income)`;
+        amountSpan.textContent = `${formatCurrency(String(absolutePortion))} (Income)`;
         amountSpan.style.color = 'green';
     }
     apportionmentEl.appendChild(amountSpan);
