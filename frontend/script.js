@@ -568,31 +568,57 @@ document.getElementById('numOfBusinesses').addEventListener('input', function() 
 function createBusinessNameFields(container, index) {
     const businessNameDiv = document.createElement('div');
     businessNameDiv.classList.add('business-name-entry');
+
     createLabelAndInput(businessNameDiv, `business${index}Name`, `Business ${index} Name:`, 'text');
+    
+    const checkboxContainerReports = document.createElement('div');
+    checkboxContainerReports.classList.add('checkbox-container');
+
+    const checkboxLabelReports = document.createElement('label');
+    checkboxLabelReports.setAttribute('for', `business${index}Reports`);
+    checkboxLabelReports.textContent = 'Do you have the financial reports for this business?';
+
+    const checkboxInputReports = document.createElement('input');
+    checkboxInputReports.type = 'checkbox';
+    checkboxInputReports.id = `business${index}Reports`;
+    checkboxInputReports.name = `business${index}Reports`;
+    checkboxContainerReports.appendChild(checkboxInputReports);
+    checkboxContainerReports.appendChild(checkboxLabelReports);
+
+    businessNameDiv.appendChild(checkboxContainerReports);
+
     const checkboxContainerMedical = document.createElement('div');
     checkboxContainerMedical.classList.add('checkbox-container');
+ 
     const checkboxLabelMedical = document.createElement('label');
     checkboxLabelMedical.setAttribute('for', `business${index}Medical`);
     checkboxLabelMedical.textContent = 'Is this a Medical/Professional Business?';
+
     const checkboxInputMedical = document.createElement('input');
     checkboxInputMedical.type = 'checkbox';
     checkboxInputMedical.id = `business${index}Medical`;
     checkboxInputMedical.name = `business${index}Medical`;
     checkboxContainerMedical.appendChild(checkboxInputMedical);
     checkboxContainerMedical.appendChild(checkboxLabelMedical);
+
     businessNameDiv.appendChild(checkboxContainerMedical);
+
     const checkboxContainerRealEstate = document.createElement('div');
     checkboxContainerRealEstate.classList.add('checkbox-container');
+
     const checkboxLabelRealEstate = document.createElement('label');
     checkboxLabelRealEstate.setAttribute('for', `business${index}RealEstate`);
     checkboxLabelRealEstate.textContent = 'Is this a Real Estate Business?';
+
     const checkboxInputRealEstate = document.createElement('input');
     checkboxInputRealEstate.type = 'checkbox';
     checkboxInputRealEstate.id = `business${index}RealEstate`;
     checkboxInputRealEstate.name = `business${index}RealEstate`;
     checkboxContainerRealEstate.appendChild(checkboxInputRealEstate);
     checkboxContainerRealEstate.appendChild(checkboxLabelRealEstate);
+
     businessNameDiv.appendChild(checkboxContainerRealEstate);
+
     container.appendChild(businessNameDiv);
 }
 
