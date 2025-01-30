@@ -1854,18 +1854,26 @@ document.getElementById('state').addEventListener('input', function() {
 
 document.getElementById('taxForm').addEventListener('keydown', function (e) {
     if (e.key === 'Enter') {
-        e.preventDefault();
-        const focusable = Array.from(this.elements).filter(
-            el => el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA'
-        );
-        const index = focusable.indexOf(document.activeElement);
-        if (index > -1 && index < focusable.length - 1) {
-            focusable[index + 1].focus();
-        } else if (index === focusable.length - 1) {
-            focusable[0].focus();
-        }
+      e.preventDefault();
+  
+      // Grab all inputs, selects, and textareas
+      let allElements = Array.from(this.elements).filter(el =>
+        el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA'
+      );
+  
+      // Filter out the ones that are hidden (display:none or offsetParent = null)
+      let visibleElements = allElements.filter(el => el.offsetParent !== null);
+  
+      let index = visibleElements.indexOf(document.activeElement);
+  
+      if (index > -1 && index < visibleElements.length - 1) {
+        visibleElements[index + 1].focus();
+      } else if (index === visibleElements.length - 1) {
+        // If we're at the very last visible field, loop back around
+        visibleElements[0].focus();
+      }
     }
-});
+  });
 
 //--------------------------//
 // 18. COLLAPSIBLE SECTIONS //
