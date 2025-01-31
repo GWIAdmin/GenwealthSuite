@@ -49,6 +49,9 @@ let userManuallyChanged65Plus = false;
 let dependentBizMap = {};
 let dependentsStore = {};
 
+window.blurredIncome = {};
+window.blurredExpenses = {};
+
 //-------------------------------------------//
 // 2. "BACK TO TOP" BUTTON AND WINDOW SCROLL //
 //-------------------------------------------//
@@ -795,6 +798,14 @@ document.getElementById('numOfBusinesses').addEventListener('input', function() 
 });
 
 function createBusinessFields(container, index) {
+
+    if (blurredIncome[index] === undefined) {
+        blurredIncome[index] = false;
+    }
+    if (blurredExpenses[index] === undefined) {
+        blurredExpenses[index] = false;
+    }
+
     const businessDiv = document.createElement('div');
     businessDiv.classList.add('business-entry');
 
@@ -831,6 +842,23 @@ function createBusinessFields(container, index) {
     createLabelAndCurrencyField(businessDiv, `business${index}Expenses`, `Expenses:`);
     createLabelAndTextField(businessDiv, `business${index}Net`, `Net (Income - Expenses):`);
 
+    const incomeField = businessDiv.querySelector(`#business${index}Income`);
+    const expensesField = businessDiv.querySelector(`#business${index}Expenses`);
+
+        incomeField.addEventListener('blur', function() {
+            blurredIncome[index] = true;
+            updateBusinessNet(index);
+            recalculateTotals();
+            checkSCorpReasonableComp(index);
+        });
+
+        expensesField.addEventListener('blur', function() {
+            blurredExpenses[index] = true;
+            updateBusinessNet(index);
+            recalculateTotals();
+            checkSCorpReasonableComp(index);
+        });
+
     const netField = businessDiv.querySelector(`#business${index}Net`);
     if (netField) {
         netField.readOnly = true;
@@ -861,28 +889,14 @@ function createBusinessFields(container, index) {
     });
 
     numOwnersSelect.addEventListener('change', function(e) {
-
-            saveBusinessDetailData();
-            // Regardless, always re-create owners + populate them
-            const selectedVal = parseInt(this.value, 10);
-            createOwnerFields(index, selectedVal);
-            populateBusinessDetailFields(index);
-        });
+        saveBusinessDetailData();
+        // Re-create owners
+        const selectedVal = parseInt(this.value, 10);
+        createOwnerFields(index, selectedVal);
+        populateBusinessDetailFields(index);
+    });
 
     container.appendChild(businessDiv);
-
-    const incomeField = document.getElementById(`business${index}Income`);
-    const expensesField = document.getElementById(`business${index}Expenses`);
-    incomeField.addEventListener('blur', function() {
-        updateBusinessNet(index);
-        recalculateTotals();
-        checkSCorpReasonableComp(index);
-    });
-    expensesField.addEventListener('blur', function() {
-        updateBusinessNet(index);
-        recalculateTotals();
-        checkSCorpReasonableComp(index);
-    });
 }
 
 function populateNumOwnersOptions(selectEl) {
@@ -1279,31 +1293,24 @@ function validateTotalOwnership(businessIndex, numOwners) {
     let totalOwnership = 0;
     let anyValueEntered = false;
 
-    // We'll check each owner's input
     for (let i = 1; i <= numOwners; i++) {
         const ownerInput = document.getElementById(`business${businessIndex}OwnerPercent${i}`);
         if (!ownerInput) continue;
-
-        // Container ID for disclaimers under THIS owner
         const ownerContainerId = `ownerContainer-${businessIndex}-${i}`;
         const errorKey = 'OWNERSHIP_SUM';
-
-        // Remove any old disclaimers about ownership sum specifically for this owner
-        removeDisclaimer(ownerContainerId, errorKey);  // <-- ensures disclaimers accumulate properly
-
+        removeDisclaimer(ownerContainerId, errorKey);
         ownerInput.classList.remove('input-error');
+        
         const valStr = ownerInput.value.trim();
         const val = parseFloat(valStr);
         if (!isNaN(val) && val !== 0) anyValueEntered = true;
         totalOwnership += (isNaN(val) ? 0 : val);
     }
 
-    // If user hasn't entered anything, do not show disclaimers
     if (!anyValueEntered) {
         return;
     }
 
-    // If total ownership not equal to 100, add disclaimers to ALL owners
     if (Math.abs(totalOwnership - 100) > 0.0001) {
         for (let i = 1; i <= numOwners; i++) {
             const ownerContainerId = `ownerContainer-${businessIndex}-${i}`;
@@ -1313,14 +1320,13 @@ function validateTotalOwnership(businessIndex, numOwners) {
                 errorKey,
                 `Total ownership must equal 100%. Currently, it is ${totalOwnership.toFixed(4)}%.`
             );
-            // Mark the percentage input in red for each owner
             const ownerInput = document.getElementById(`business${businessIndex}OwnerPercent${i}`);
             if (ownerInput) {
                 ownerInput.classList.add('input-error');
             }
         }
     } else {
-        // If total is now 100, remove disclaimers for all owners
+        // Clear disclaimers if total is 100
         for (let i = 1; i <= numOwners; i++) {
             const ownerContainerId = `ownerContainer-${businessIndex}-${i}`;
             removeDisclaimer(ownerContainerId, 'OWNERSHIP_SUM');
@@ -1333,22 +1339,30 @@ function validateTotalOwnership(businessIndex, numOwners) {
 }
 
 function updateBusinessNet(index) {
-    // Grab the Income and Expenses fields
+    // 1) If the user has not blurred both the Income AND the Expenses fields yet,
+    //    we skip disclaimers entirely. But still set the "Net" field value.
+    if (!blurredIncome[index] || !blurredExpenses[index]) {
+        // Update the Net field even if disclaimers are skipped:
+        const incomeVal = unformatCurrency(document.getElementById(`business${index}Income`)?.value || '0');
+        const expensesVal = unformatCurrency(document.getElementById(`business${index}Expenses`)?.value || '0');
+        const netVal = incomeVal - expensesVal;
+        const netField = document.getElementById(`business${index}Net`);
+        if (netField) {
+            netField.value = formatCurrency(String(netVal));
+            netField.style.color = netVal < 0 ? 'red' : 'black';
+        }
+        return;  // Stop here; no disclaimers yet
+    }
+
+    // 2) Clear disclaimers for this business
+    removeDisclaimer(`businessEntry${index}`, 'DEPENDENT_WAGE');
+    removeDisclaimer(`dynamicOwnerFields${index}`, 'SCORP_COMP');
+
+    // 3) Grab the Income/Expenses
     const incomeVal = unformatCurrency(document.getElementById(`business${index}Income`)?.value || '0');
     const expensesVal = unformatCurrency(document.getElementById(`business${index}Expenses`)?.value || '0');
 
-    // Sum up total dependent wages assigned to this business (but DO NOT add to expenses!)
-    let totalDependentWages = 0;
-    for (let depIndex in dependentBizMap) {
-        if (dependentBizMap.hasOwnProperty(depIndex)) {
-            const entry = dependentBizMap[depIndex];
-            if (entry.businessIndex === index) {
-                totalDependentWages += entry.wage;
-            }
-        }
-    }
-
-    // Calculate the net (Income - Expenses) ONLY
+    // 4) Compute Net, update the Net field
     const netVal = incomeVal - expensesVal;
     const netField = document.getElementById(`business${index}Net`);
     if (netField) {
@@ -1356,17 +1370,23 @@ function updateBusinessNet(index) {
         netField.style.color = netVal < 0 ? 'red' : 'black';
     }
 
-    updateOwnerApportionment(index);
-    checkSCorpReasonableComp(index);
+    // 5) Sum Dependent wages for this business
+    let totalDependentWages = 0;
+    let dependentStrings = [];
+    for (let depIndex in dependentBizMap) {
+        if (dependentBizMap.hasOwnProperty(depIndex)) {
+            const entry = dependentBizMap[depIndex];
+            if (entry.businessIndex === index) {
+                totalDependentWages += entry.wage;
+                const depNameEl = document.getElementById(`dependent${depIndex}Name`);
+                const depName = depNameEl ? depNameEl.value.trim() || `Dependent${depIndex}` : `Dependent${depIndex}`;
+                dependentStrings.push(`${depName}'s wages (${formatCurrency(String(entry.wage))})`);
+            }
+        }
+    }
 
-    // Show a red disclaimer if dependent wages exceed (for non-S-corp) OR
-    // if dependent wages + total reasonable comp exceed (for S-corp) the business expenses.
-
-    removeDisclaimer(`businessEntry${index}`, 'DEPENDENT_WAGE');
-
+    // 6) For S-Corp, sum up Reasonable Compensation
     const businessTypeVal = document.getElementById(`business${index}Type`)?.value || '';
-
-    // Sum up Reasonable Compensation for all owners if this is an S-Corp
     let totalReasonableComp = 0;
     if (businessTypeVal === 'S-Corp') {
         const numOwnersSelect = document.getElementById(`numOwnersSelect${index}`);
@@ -1379,30 +1399,46 @@ function updateBusinessNet(index) {
         }
     }
 
-        // For S-Corp: check if (dependentWages + totalReasonableComp) > expensesVal
-        if (businessTypeVal === 'S-Corp') {
-            if ((totalDependentWages + totalReasonableComp) > expensesVal) {
-                addDisclaimer(
-                    `businessEntry${index}`,
-                    'DEPENDENT_WAGE',
-                    `WARNING: Dependent wages + Reasonable Compensation (${
-                        formatCurrency(String(totalDependentWages + totalReasonableComp))
-                    }) exceed total Expenses (${formatCurrency(String(expensesVal))}).`
-                );
-            }
+    // 7) If truly nothing is entered, skip disclaimers
+    const anythingEntered = (incomeVal !== 0 || expensesVal !== 0 || totalReasonableComp !== 0);
+    if (!anythingEntered) {
+        return;
+    }
+
+    // 8) Check disclaimers for S-Corp vs. non-S-corp
+    const sumDependentWagesPlusComp = totalDependentWages + totalReasonableComp;
+    const wagesPlusCompString = [
+        dependentStrings.length ? dependentStrings.join(" + ") : null,
+        (businessTypeVal === 'S-Corp' && totalReasonableComp > 0)
+            ? `Reasonable Compensation (${formatCurrency(String(totalReasonableComp))})`
+            : null
+    ].filter(Boolean).join(" + ");
+
+    if (businessTypeVal === 'S-Corp') {
+        if (sumDependentWagesPlusComp > expensesVal && wagesPlusCompString) {
+            // Show the "bigger" combined disclaimer
+            addDisclaimer(
+                `businessEntry${index}`,
+                'DEPENDENT_WAGE',
+                `WARNING: ${wagesPlusCompString} exceed total Expenses (${formatCurrency(String(expensesVal))}).`
+            );
+        } else {
+            // Otherwise check simpler S-Corp Reasonable Compensation
+            checkSCorpReasonableComp(index);
         }
-        // For all other business types: check if dependentWages > expensesVal
-        else {
-            if (totalDependentWages > expensesVal) {
-                addDisclaimer(
-                    `businessEntry${index}`,
-                    'DEPENDENT_WAGE',
-                    `WARNING: Dependent wages (${
-                        formatCurrency(String(totalDependentWages))
-                    }) exceed total Expenses (${formatCurrency(String(expensesVal))}).`
-                );
-            }
+    } else {
+        // Non-S-corp scenario
+        if (totalDependentWages > expensesVal && dependentStrings.length > 0) {
+            addDisclaimer(
+                `businessEntry${index}`,
+                'DEPENDENT_WAGE',
+                `WARNING: ${dependentStrings.join(" + ")} exceed total Expenses (${formatCurrency(String(expensesVal))}).`
+            );
         }
+    }
+
+    // 9) Update owner apportionment after net changes
+    updateOwnerApportionment(index);
 }
 
 const apportionmentOverrides = {};
@@ -1659,14 +1695,24 @@ function decrementApportionment(businessIndex, ownerIndex) {
     updateOwnerApportionment(businessIndex);
 }
 
-function checkSCorpReasonableComp(businessIndex) {
+function checkSCorpReasonableComp(businessIndex, depWages = 0) {
+    // If "dependent wages + comp" disclaimers already triggered, we skip
+    // We'll do that check by verifying disclaimers were not shown for 'DEPENDENT_WAGE'
+    if (DISCLAIMER_MAP[`businessEntry${businessIndex}`] && DISCLAIMER_MAP[`businessEntry${businessIndex}`]['DEPENDENT_WAGE']) {
+        // Means the bigger disclaimers has been triggered, so skip
+        return;
+    }
+
     const businessTypeVal = document.getElementById(`business${businessIndex}Type`)?.value || '';
     if (businessTypeVal !== 'S-Corp') return;
+
     const expensesVal = unformatCurrency(document.getElementById(`business${businessIndex}Expenses`)?.value || '0');
     const numOwnersSelect = document.getElementById(`numOwnersSelect${businessIndex}`);
     if (!numOwnersSelect) return;
+
     const numOwners = parseInt(numOwnersSelect.value, 10);
     if (isNaN(numOwners) || numOwners < 1) return;
+
     let totalComp = 0;
     let compFields = [];
     for (let i = 1; i <= numOwners; i++) {
@@ -1676,14 +1722,16 @@ function checkSCorpReasonableComp(businessIndex) {
         const compEl = document.getElementById(`business${businessIndex}OwnerComp${i}`);
         if (compEl) compFields.push(compEl);
     }
-    const containerId = `dynamicOwnerFields${businessIndex}`;
-    const errorKey = 'SCORP_COMP';
-    removeDisclaimer(containerId, errorKey);
+
+    removeDisclaimer(`dynamicOwnerFields${businessIndex}`, 'SCORP_COMP');
     compFields.forEach(f => f.classList.remove('input-error'));
+
+    // If totalComp alone > expensesVal, disclaim
+    // (Only if we didn't disclaim for "dep wages + comp" above)
     if (totalComp > expensesVal) {
         addDisclaimer(
-            containerId,
-            errorKey,
+            `dynamicOwnerFields${businessIndex}`,
+            'SCORP_COMP',
             `Total Owners' Reasonable Compensation (${formatCurrency(totalComp.toString())}) cannot exceed this S-Corp's Expenses (${formatCurrency(expensesVal.toString())}).`
         );
         compFields.forEach(f => f.classList.add('input-error'));
