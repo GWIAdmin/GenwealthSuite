@@ -48,6 +48,7 @@ function displayResults(resultData) {
 let userManuallyChanged65Plus = false;
 let dependentBizMap = {};
 let dependentsStore = {};
+let lastManualAdjustment = {};
 
 window.blurredIncome = {};
 window.blurredExpenses = {};
@@ -1140,8 +1141,10 @@ function createOwnerFields(businessIndex, numOwners) {
             percentInput.style.backgroundColor = '';
 
             // Whenever this changes, handleTwoOwnersInput will fix the other owner's %
-            percentInput.addEventListener('blur', () => {
+            percentInput.addEventListener('change', () => {
                 handleTwoOwnersInput(businessIndex, i);
+                updateOwnerApportionment(businessIndex);
+                
             });
 
         // Three‐owner => the first two are free‐entry, the third is read‐only
@@ -1171,7 +1174,7 @@ function createOwnerFields(businessIndex, numOwners) {
 
         dynamicOwnerFieldsDiv.appendChild(ownerSection);
     }
-
+    updateOwnerApportionment(businessIndex);
     // Finally, check disclaimers if the sum is not 100%
     validateTotalOwnership(businessIndex, numOwners);
 }
@@ -1390,204 +1393,180 @@ function updateBusinessNet(index) {
 const apportionmentOverrides = {};
 
 function updateOwnerApportionment(businessIndex) {
-    const netStr = document.getElementById(`business${businessIndex}Net`)?.value || '0';
+    const netStr = document.getElementById(`business${businessIndex}Net`)?.value || "0";
     const netVal = unformatCurrency(netStr);
     const numOwnersSelect = document.getElementById(`numOwnersSelect${businessIndex}`);
     if (!numOwnersSelect) return;
     const numOwners = parseInt(numOwnersSelect.value, 10) || 0;
     if (numOwners < 1) return;
-
-    let portions = getCurrentPortions(businessIndex, netVal, numOwners);
-
-    // If netVal <= 0, we skip leftover distribution
-    if (netVal > 0) {
-        // Distribute leftover so sum(portions) = netVal
-        let partialSum = portions.reduce((a, b) => a + b, 0);
-        let remainder = netVal - partialSum;
-
-        if (numOwners === 2 && remainder !== 0) {
-            // Give leftover to the first owner
-            portions[0] += remainder;
-            remainder = 0;
-        } else if (numOwners === 3 && remainder !== 0) {
-            // Round-robin leftover among owner #1 and #2
-            while (remainder !== 0) {
-                for (let i = 0; i < 2; i++) {
-                    if (remainder === 0) break;
-                    if (remainder > 0) {
-                        portions[i]++;
-                        remainder--;
-                    } else {
-                        portions[i]--;
-                        remainder++;
-                    }
-                }
-            }
-        }
-    }
-
-    // Save final portion array back into overrides
+    
+    const portions = getCurrentPortions(businessIndex, netVal, numOwners);
+    
+    // Save the computed portions in the overrides (if not null)
     for (let i = 1; i <= numOwners; i++) {
+      if (portions[i - 1] !== null) {
         apportionmentOverrides[`biz${businessIndex}-owner${i}`] = portions[i - 1];
+      }
     }
-
-    // Optionally update ownership % fields so they reflect final portion
-    // Only update the ownership fields automatically if there is 1 owner or if the business is Schedule‑C.
-    const businessType = document.getElementById(`business${businessIndex}Type`)?.value || '';
-    if (netVal > 0 && (numOwners === 1 || businessType === 'Schedule-C')) {
-        for (let i = 1; i <= numOwners; i++) {
-            const pctInput = document.getElementById(`business${businessIndex}OwnerPercent${i}`);
-            if (pctInput) {
-                const newPct = (portions[i - 1] / netVal) * 100;
-                pctInput.value = newPct.toFixed(4);
-            }
-        }
-    }
-
-    // Render results for each owner
+    
+    // Update the display for each owner.
     for (let i = 1; i <= numOwners; i++) {
-        showApportionment(businessIndex, i, portions[i - 1]);
+      showApportionment(businessIndex, i, portions[i - 1]);
     }
-
-    // Re-check disclaimers (like S-Corp comp) or other logic if needed
+    
     checkSCorpReasonableComp(businessIndex);
-
-    // Finally, re-run your overall totals so the UI and disclaimers are synced
     recalculateTotals();
 }
-
+  
 function showApportionment(businessIndex, ownerIndex, portion) {
     const containerId = `business${businessIndex}OwnerPercent${ownerIndex}-apportionmentContainer`;
     let apportionmentEl = document.getElementById(`apportionment-${containerId}`);
     if (!apportionmentEl) {
-        apportionmentEl = document.createElement('div');
-        apportionmentEl.id = `apportionment-${containerId}`;
-        apportionmentEl.style.fontWeight = 'bold';
-        apportionmentEl.style.marginTop = '8px';
-        document.getElementById(containerId)?.appendChild(apportionmentEl);
+      apportionmentEl = document.createElement("div");
+      apportionmentEl.id = `apportionment-${containerId}`;
+      apportionmentEl.style.fontWeight = "bold";
+      apportionmentEl.style.marginTop = "8px";
+      const container = document.getElementById(containerId);
+      if (container) container.appendChild(apportionmentEl);
     }
-    apportionmentEl.innerHTML = ''; 
-
-    // Basic text
-    const prefixSpan = document.createElement('span');
+    apportionmentEl.innerHTML = "";
+    
+    // If portion is null (i.e. no percentage entered yet), do not display any apportionment.
+    if (portion === null) return;
+    
+    // Display the apportionment amount.
+    const prefixSpan = document.createElement("span");
     prefixSpan.textContent = `Apportionment of Owner ${ownerIndex} is `;
-    prefixSpan.style.color = 'black';
+    prefixSpan.style.color = "black";
     apportionmentEl.appendChild(prefixSpan);
-
-    // Amount + label
-    const amountSpan = document.createElement('span');
+    
+    const amountSpan = document.createElement("span");
     const absolutePortion = Math.abs(portion);
     if (portion < 0) {
-        amountSpan.textContent = `${formatCurrency(String(absolutePortion))} (Loss)`;
-        amountSpan.style.color = 'red';
+      amountSpan.textContent = `${formatCurrency(String(absolutePortion))} (Loss)`;
+      amountSpan.style.color = "red";
     } else {
-        amountSpan.textContent = `${formatCurrency(String(absolutePortion))} (Income)`;
-        amountSpan.style.color = 'green';
+      amountSpan.textContent = `${formatCurrency(String(absolutePortion))} (Income)`;
+      amountSpan.style.color = "green";
     }
     apportionmentEl.appendChild(amountSpan);
-
-    // Up arrow
-    const upBtn = document.createElement('button');
-    upBtn.textContent = '▲';
-    upBtn.classList.add('arrow-btn');
-    upBtn.addEventListener('click', (e) => {
+    
+    // Only add up/down arrow buttons if there is more than one owner.
+    const numOwnersSelect = document.getElementById(`numOwnersSelect${businessIndex}`);
+    const numOwners = numOwnersSelect ? parseInt(numOwnersSelect.value, 10) : 0;
+    if (numOwners > 1) {
+      const upBtn = document.createElement("button");
+      upBtn.textContent = "▲";
+      upBtn.classList.add("arrow-btn");
+      upBtn.addEventListener("click", (e) => {
         e.preventDefault();
         incrementApportionment(businessIndex, ownerIndex);
-    });
-    apportionmentEl.appendChild(upBtn);
-
-    // Down arrow
-    const downBtn = document.createElement('button');
-    downBtn.textContent = '▼';
-    downBtn.classList.add('arrow-btn');
-    downBtn.addEventListener('click', (e) => {
+      });
+      apportionmentEl.appendChild(upBtn);
+      
+      const downBtn = document.createElement("button");
+      downBtn.textContent = "▼";
+      downBtn.classList.add("arrow-btn");
+      downBtn.addEventListener("click", (e) => {
         e.preventDefault();
         decrementApportionment(businessIndex, ownerIndex);
-    });
-    apportionmentEl.appendChild(downBtn);
+      });
+      apportionmentEl.appendChild(downBtn);
+    }
 }
-
+  
 function incrementApportionment(businessIndex, ownerIndex) {
     const netStr = document.getElementById(`business${businessIndex}Net`)?.value || '0';
     const netVal = unformatCurrency(netStr);
-
     const numOwnersSelect = document.getElementById(`numOwnersSelect${businessIndex}`);
     if (!numOwnersSelect) return;
     const numOwners = parseInt(numOwnersSelect.value, 10) || 0;
     if (numOwners < 1) return;
-
-    // 1) Build an array from overrides (if any) or from netVal * percentages
+  
+    // Record that this owner was manually adjusted
+    lastManualAdjustment[businessIndex] = ownerIndex;
+  
     let portions = getCurrentPortions(businessIndex, netVal, numOwners);
-
-    // 2) Bump the chosen owner
-    portions[ownerIndex - 1]++;
-
-    // 3) Save them back into overrides
+    portions[ownerIndex - 1]++; // Increase by $1
     for (let i = 1; i <= numOwners; i++) {
-        apportionmentOverrides[`biz${businessIndex}-owner${i}`] = portions[i - 1];
+      apportionmentOverrides[`biz${businessIndex}-owner${i}`] = portions[i - 1];
     }
-
-    // 4) Re-run main update to finalize leftover distribution & disclaimers
     updateOwnerApportionment(businessIndex);
 }
-
+  
 function decrementApportionment(businessIndex, ownerIndex) {
     const netStr = document.getElementById(`business${businessIndex}Net`)?.value || '0';
     const netVal = unformatCurrency(netStr);
-
-    // If net is zero or negative, no real "down" distribution can happen:
     if (netVal <= 0) {
-        // Optionally skip or disclaim
-        return;
+      return;
     }
-
     const numOwnersSelect = document.getElementById(`numOwnersSelect${businessIndex}`);
     if (!numOwnersSelect) return;
     const numOwners = parseInt(numOwnersSelect.value, 10) || 0;
     if (numOwners < 1) return;
-
+  
+    // Record that this owner was manually adjusted
+    lastManualAdjustment[businessIndex] = ownerIndex;
+  
     let portions = getCurrentPortions(businessIndex, netVal, numOwners);
-
-    portions[ownerIndex - 1]--;
-
+    portions[ownerIndex - 1]--; // Decrease by $1
     for (let i = 1; i <= numOwners; i++) {
-        apportionmentOverrides[`biz${businessIndex}-owner${i}`] = portions[i - 1];
+      apportionmentOverrides[`biz${businessIndex}-owner${i}`] = portions[i - 1];
     }
-
     updateOwnerApportionment(businessIndex);
 }
-
+  
 function getCurrentPortions(businessIndex, netVal, numOwners) {
-    let portions = new Array(numOwners).fill(0);
-
-    // 1) Check if any override is present
-    let hasOverride = false;
+    // Read percentages from owner fields.
+    let percentages = [];
+    let totalEntered = 0;
+    let blankCount = 0;
     for (let i = 1; i <= numOwners; i++) {
-        const key = `biz${businessIndex}-owner${i}`;
-        if (key in apportionmentOverrides) {
-            hasOverride = true;
-            break;
+      const input = document.getElementById(`business${businessIndex}OwnerPercent${i}`);
+      const valStr = input ? input.value.trim() : "";
+      if (valStr === "") {
+        percentages.push(null);
+        blankCount++;
+      } else {
+        const num = parseFloat(valStr);
+        if (isNaN(num)) {
+          percentages.push(null);
+          blankCount++;
+        } else {
+          percentages.push(num);
+          totalEntered += num;
         }
+      }
     }
-
-    // 2) If we have overrides, use them; otherwise use netVal * percentage
-    if (hasOverride) {
-        for (let i = 1; i <= numOwners; i++) {
-            const key = `biz${businessIndex}-owner${i}`;
-            portions[i - 1] = apportionmentOverrides[key] || 0;
-        }
-    } else {
-        // No override => do standard "netVal * percentage"
-        for (let i = 1; i <= numOwners; i++) {
-            const pctStr = document.getElementById(`business${businessIndex}OwnerPercent${i}`)?.value || '0';
-            const pct = parseFloat(pctStr) || 0;
-            // Force integer portion
-            portions[i - 1] = parseInt(netVal * (pct / 100));
-        }
+    // If no percentage is entered at all, return an array of nulls.
+    if (blankCount === numOwners) {
+      return new Array(numOwners).fill(null);
     }
-
+    // For blank entries, distribute the remaining percentage equally.
+    const remaining = 100 - totalEntered;
+    const equalShare = (blankCount > 0) ? remaining / blankCount : 0;
+    for (let i = 0; i < numOwners; i++) {
+      if (percentages[i] === null) {
+        percentages[i] = equalShare;
+      }
+    }
+    // Now compute each apportionment: portion = netVal * (percentage / 100)
+    let portions = percentages.map(pct => Math.round(netVal * (pct / 100)));
+    // Adjust for any rounding differences.
+    const allocated = portions.reduce((a, b) => a + b, 0);
+    const diff = netVal - allocated;
+    if (diff !== 0) {
+      // Adjust the first owner whose percentage was explicitly entered;
+      // if none, adjust the first owner.
+      let indexToAdjust = percentages.findIndex((pct, idx) => {
+        const input = document.getElementById(`business${businessIndex}OwnerPercent${idx+1}`);
+        return input && input.value.trim() !== "";
+      });
+      if (indexToAdjust === -1) { indexToAdjust = 0; }
+      portions[indexToAdjust] += diff;
+    }
     return portions;
-}
+  }  
 
 function checkSCorpReasonableComp(businessIndex, depWages = 0) {
     // If "dependent wages + comp" disclaimers already triggered, we skip
