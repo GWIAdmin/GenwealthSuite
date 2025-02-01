@@ -825,6 +825,7 @@ function createBusinessFields(container, index) {
 
     const typeLabel = document.createElement('label');
     typeLabel.textContent = `Business ${index} Type:`;
+    typeLabel.setAttribute('for', `business${index}Type`);
     businessDiv.appendChild(typeLabel);
 
     const typeSelect = document.createElement('select');
@@ -870,6 +871,7 @@ function createBusinessFields(container, index) {
 
     const numOwnersLabel = document.createElement('label');
     numOwnersLabel.textContent = `How many owners does Business ${index} have?`;
+    numOwnersLabel.setAttribute('for', `numOwnersSelect${index}`);
     numOwnersLabel.style.marginTop = '12px';
     ownersContainer.appendChild(numOwnersLabel);
 
@@ -1057,6 +1059,7 @@ function createOwnerFields(businessIndex, numOwners) {
         // ----- Owner name select -----
         const nameLabel = document.createElement('label');
         nameLabel.textContent = `Owner ${i} (Select Who?):`;
+        nameLabel.setAttribute('for', `business${businessIndex}OwnerName${i}`);
         ownerSection.appendChild(nameLabel);
 
         const nameSelect = document.createElement('select');
@@ -1093,6 +1096,7 @@ function createOwnerFields(businessIndex, numOwners) {
         if (businessTypeVal === 'S-Corp') {
             const compLabel = document.createElement('label');
             compLabel.textContent = `Reasonable Compensation ($) for Owner ${i}:`;
+            compLabel.setAttribute('for', `business${businessIndex}OwnerComp${i}`);
             ownerSection.appendChild(compLabel);
 
             const compInput = document.createElement('input');
@@ -1111,6 +1115,7 @@ function createOwnerFields(businessIndex, numOwners) {
         // ----- Ownership % -----
         const percentLabel = document.createElement('label');
         percentLabel.textContent = `Owner ${i} Ownership %:`;
+        percentLabel.setAttribute('for', `business${businessIndex}OwnerPercent${i}`);
         ownerSection.appendChild(percentLabel);
 
         const percentInput = document.createElement('input');
