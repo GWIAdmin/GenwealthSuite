@@ -1157,6 +1157,7 @@ function createOwnerFields(businessIndex, numOwners) {
                 // When the user types a share for owner1 or owner2, recalc owner3 automatically
                 percentInput.addEventListener('blur', () => {
                     autoCalculateLastOwner(businessIndex, 3);
+                    updateOwnerApportionment(businessIndex);
                 });
 
             // For the third owner, we keep it read‐only (auto‐calculated remainder)
