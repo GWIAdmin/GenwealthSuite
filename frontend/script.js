@@ -1142,7 +1142,6 @@ function createOwnerFields(businessIndex, numOwners) {
             // Whenever this changes, handleTwoOwnersInput will fix the other owner's %
             percentInput.addEventListener('blur', () => {
                 handleTwoOwnersInput(businessIndex, i);
-                updateOwnerApportionment(businessIndex);  // optional, if you need re-apportionment
             });
 
         // Three‐owner => the first two are free‐entry, the third is read‐only
@@ -1155,7 +1154,6 @@ function createOwnerFields(businessIndex, numOwners) {
                 // When the user types a share for owner1 or owner2, recalc owner3 automatically
                 percentInput.addEventListener('blur', () => {
                     autoCalculateLastOwner(businessIndex, 3);
-                    updateOwnerApportionment(businessIndex);  
                 });
 
             // For the third owner, we keep it read‐only (auto‐calculated remainder)
@@ -1434,7 +1432,9 @@ function updateOwnerApportionment(businessIndex) {
     }
 
     // Optionally update ownership % fields so they reflect final portion
-    if (netVal > 0) {
+    // Only update the ownership fields automatically if there is 1 owner or if the business is Schedule‑C.
+    const businessType = document.getElementById(`business${businessIndex}Type`)?.value || '';
+    if (netVal > 0 && (numOwners === 1 || businessType === 'Schedule-C')) {
         for (let i = 1; i <= numOwners; i++) {
             const pctInput = document.getElementById(`business${businessIndex}OwnerPercent${i}`);
             if (pctInput) {
