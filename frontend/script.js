@@ -213,7 +213,9 @@ function handleDOBOrAgeChange(index, value) {
             }
         });
     }
-    // else if (value === 'No') { ... }
+    else if (value === 'No') {
+        createLabelAndDropdown(container, `dependent${index}AgeRange`, `What is the Age Category of Child/Dependent ${index}?`, ['Please Select','17 or younger', '18 or older']);
+    }
 }
 
 function handleEmploymentStatusChange(index, value) {
