@@ -1135,32 +1135,33 @@ function createOwnerFields(businessIndex, numOwners) {
 
         // Two‐owner => attach an input listener that calls handleTwoOwnersInput
         } else if (numOwners === 2) {
-            // Start empty so user can type
-            percentInput.value = '';
-            percentInput.readOnly = false;
-            percentInput.style.backgroundColor = '';
 
-            // Whenever this changes, handleTwoOwnersInput will fix the other owner's %
-            percentInput.addEventListener('change', () => {
+            let typingTimer;
+            percentInput.addEventListener('input', () => {
+              clearTimeout(typingTimer);
+              typingTimer = setTimeout(() => {
+                // After the user stops typing for ~1000ms:
                 handleTwoOwnersInput(businessIndex, i);
                 updateOwnerApportionment(businessIndex);
-                
+              }, 1000);
             });
 
         // Three‐owner => the first two are free‐entry, the third is read‐only
         } else if (numOwners === 3) {
             // For the first two owners:
             if (i < 3) {
-                percentInput.value = '';
-                percentInput.readOnly = false;
-                percentInput.style.backgroundColor = '';
-                // When the user types a share for owner1 or owner2, recalc owner3 automatically
-                percentInput.addEventListener('blur', () => {
+                percentInput.value = '0.0000';
+                let typingTimer;
+                percentInput.addEventListener('input', () => {
+                  clearTimeout(typingTimer);
+                  typingTimer = setTimeout(() => {
+                    // After the user stops typing for ~1000ms:
                     autoCalculateLastOwner(businessIndex, 3);
                     updateOwnerApportionment(businessIndex);
+                  }, 1000);
                 });
 
-            // For the third owner, we keep it read‐only (auto‐calculated remainder)
+                // For the third owner, we keep it read‐only (auto‐calculated remainder)
             } else {
                 percentInput.value = '0.0000'; // autoCalculateLastOwner sets real value
                 percentInput.readOnly = true;
@@ -1175,9 +1176,9 @@ function createOwnerFields(businessIndex, numOwners) {
 
         dynamicOwnerFieldsDiv.appendChild(ownerSection);
     }
-    updateOwnerApportionment(businessIndex);
-    // Finally, check disclaimers if the sum is not 100%
+
     validateTotalOwnership(businessIndex, numOwners);
+    updateOwnerApportionment(businessIndex);
 }
 
 function handleTwoOwnersInput(businessIndex, ownerIndex) {
@@ -1394,27 +1395,24 @@ function updateBusinessNet(index) {
 const apportionmentOverrides = {};
 
 function updateOwnerApportionment(businessIndex) {
-    const netStr = document.getElementById(`business${businessIndex}Net`)?.value || "0";
+    const netStr = document.getElementById(`business${businessIndex}Net`)?.value || '0';
     const netVal = unformatCurrency(netStr);
     const numOwnersSelect = document.getElementById(`numOwnersSelect${businessIndex}`);
     if (!numOwnersSelect) return;
+
     const numOwners = parseInt(numOwnersSelect.value, 10) || 0;
     if (numOwners < 1) return;
-    
+
+    // We'll rely on getCurrentPortions() to figure out final amounts,
+    // but it now merges overrides with the percent-based calculation.
     const portions = getCurrentPortions(businessIndex, netVal, numOwners);
-    
-    // Save the computed portions in the overrides (if not null)
+
+    // Render each owner's final portion
     for (let i = 1; i <= numOwners; i++) {
-      if (portions[i - 1] !== null) {
-        apportionmentOverrides[`biz${businessIndex}-owner${i}`] = portions[i - 1];
-      }
+        showApportionment(businessIndex, i, portions[i - 1]);
     }
-    
-    // Update the display for each owner.
-    for (let i = 1; i <= numOwners; i++) {
-      showApportionment(businessIndex, i, portions[i - 1]);
-    }
-    
+
+    // Check disclaimers again
     checkSCorpReasonableComp(businessIndex);
     recalculateTotals();
 }
@@ -1479,18 +1477,58 @@ function showApportionment(businessIndex, ownerIndex, portion) {
 function incrementApportionment(businessIndex, ownerIndex) {
     const netStr = document.getElementById(`business${businessIndex}Net`)?.value || '0';
     const netVal = unformatCurrency(netStr);
+
     const numOwnersSelect = document.getElementById(`numOwnersSelect${businessIndex}`);
     if (!numOwnersSelect) return;
     const numOwners = parseInt(numOwnersSelect.value, 10) || 0;
-    if (numOwners < 1) return;
-  
-    // Record that this owner was manually adjusted
-    lastManualAdjustment[businessIndex] = ownerIndex;
-  
+    if (numOwners < 2) return; // If only 1 owner, no need to adjust
+
+    // 1) Get the current portion array
     let portions = getCurrentPortions(businessIndex, netVal, numOwners);
-    portions[ownerIndex - 1]++; // Increase by $1
+
+    // 2) Increase the chosen owner by $1
+    portions[ownerIndex - 1] += 1;
+
+    // 3) For a 2-owner situation, we simply recalc the other so sum = netVal
+    if (numOwners === 2) {
+        const otherIdx = (ownerIndex === 1) ? 1 : 0;
+        portions[otherIdx] = netVal - portions[ownerIndex - 1];
+        // Don’t let other become negative if netVal is positive
+        if (netVal > 0 && portions[otherIdx] < 0) {
+            portions[ownerIndex - 1] = netVal;
+            portions[otherIdx] = 0;
+        }
+    }
+    // For 3 owners, you could do partial distribution if you want:
+    else if (numOwners === 3) {
+        // Recompute leftover, then distribute among the other owners
+        let sumNow = portions.reduce((a, b) => a + b, 0);
+        let leftover = netVal - sumNow;
+        // Go in a small loop adjusting the other owners if leftover != 0
+        let i = 0;
+        while (leftover !== 0 && i < 3) {
+            if (i !== (ownerIndex - 1)) {
+                // Each time, push or pull $1 to/from the other owners
+                if (leftover > 0) {
+                    portions[i] += 1;
+                    leftover -= 1;
+                } else {
+                    // leftover < 0 => reduce that owner
+                    if (portions[i] > 0) {
+                        portions[i] -= 1;
+                        leftover += 1;
+                    }
+                }
+            }
+            i++;
+            if (i >= 3 && leftover !== 0) i = 0; // keep distributing if needed
+        }
+    }
+
+    // 4) Save these overrides, then update
     for (let i = 1; i <= numOwners; i++) {
-      apportionmentOverrides[`biz${businessIndex}-owner${i}`] = portions[i - 1];
+        const overrideKey = `biz${businessIndex}-owner${i}`;
+        apportionmentOverrides[overrideKey] = portions[i - 1];
     }
     updateOwnerApportionment(businessIndex);
 }
@@ -1498,76 +1536,146 @@ function incrementApportionment(businessIndex, ownerIndex) {
 function decrementApportionment(businessIndex, ownerIndex) {
     const netStr = document.getElementById(`business${businessIndex}Net`)?.value || '0';
     const netVal = unformatCurrency(netStr);
-    if (netVal <= 0) {
-      return;
-    }
+
     const numOwnersSelect = document.getElementById(`numOwnersSelect${businessIndex}`);
     if (!numOwnersSelect) return;
     const numOwners = parseInt(numOwnersSelect.value, 10) || 0;
-    if (numOwners < 1) return;
-  
-    // Record that this owner was manually adjusted
-    lastManualAdjustment[businessIndex] = ownerIndex;
-  
+    if (numOwners < 2) return; // If only 1 owner, no need to adjust
+
+    // 1) Get the current portion array
     let portions = getCurrentPortions(businessIndex, netVal, numOwners);
-    portions[ownerIndex - 1]--; // Decrease by $1
+
+    // 2) Decrease the chosen owner by $1 (but not below 0 if netVal is positive)
+    if (netVal > 0 && portions[ownerIndex - 1] > 0) {
+        portions[ownerIndex - 1] -= 1;
+    } else if (netVal <= 0) {
+        // If netVal is zero/negative, you can decide to let them go negative or not.
+        portions[ownerIndex - 1] -= 1;
+    }
+
+    // 3) For 2 owners, recalc the other so sum = netVal
+    if (numOwners === 2) {
+        const otherIdx = (ownerIndex === 1) ? 1 : 0;
+        portions[otherIdx] = netVal - portions[ownerIndex - 1];
+        // Don’t let other portion become negative if netVal is positive
+        if (netVal > 0 && portions[otherIdx] < 0) {
+            portions[ownerIndex - 1] = netVal;
+            portions[otherIdx] = 0;
+        }
+    }
+    // For 3 owners, do a small leftover distribution approach
+    else if (numOwners === 3) {
+        let sumNow = portions.reduce((a, b) => a + b, 0);
+        let leftover = netVal - sumNow;
+        let i = 0;
+        while (leftover !== 0 && i < 3) {
+            if (i !== (ownerIndex - 1)) {
+                // Each time, push or pull $1 to/from the other owners
+                if (leftover > 0) {
+                    portions[i] += 1;
+                    leftover -= 1;
+                } else {
+                    if (portions[i] > 0) {
+                        portions[i] -= 1;
+                        leftover += 1;
+                    }
+                }
+            }
+            i++;
+            if (i >= 3 && leftover !== 0) i = 0;
+        }
+    }
+
+    // 4) Save these overrides, then update
     for (let i = 1; i <= numOwners; i++) {
-      apportionmentOverrides[`biz${businessIndex}-owner${i}`] = portions[i - 1];
+        const overrideKey = `biz${businessIndex}-owner${i}`;
+        apportionmentOverrides[overrideKey] = portions[i - 1];
     }
     updateOwnerApportionment(businessIndex);
 }
-  
+
 function getCurrentPortions(businessIndex, netVal, numOwners) {
-    // Read percentages from owner fields.
+    // Step A: get the percent-based "default" portion
     let percentages = [];
     let totalEntered = 0;
     let blankCount = 0;
+
     for (let i = 1; i <= numOwners; i++) {
-      const input = document.getElementById(`business${businessIndex}OwnerPercent${i}`);
-      const valStr = input ? input.value.trim() : "";
-      if (valStr === "") {
-        percentages.push(null);
-        blankCount++;
-      } else {
-        const num = parseFloat(valStr);
-        if (isNaN(num)) {
-          percentages.push(null);
-          blankCount++;
+        const input = document.getElementById(`business${businessIndex}OwnerPercent${i}`);
+        const valStr = input ? input.value.trim() : "";
+        if (valStr === "") {
+            percentages.push(null);
+            blankCount++;
         } else {
-          percentages.push(num);
-          totalEntered += num;
+            const num = parseFloat(valStr);
+            if (isNaN(num)) {
+                percentages.push(null);
+                blankCount++;
+            } else {
+                percentages.push(num);
+                totalEntered += num;
+            }
         }
-      }
     }
-    // If no percentage is entered at all, return an array of nulls.
+
+    // If no percentage is entered at all, your base portions = null
     if (blankCount === numOwners) {
-      return new Array(numOwners).fill(null);
+        // Everyone's portion would be 0 by default
+        return new Array(numOwners).fill(0).map((_, i) => {
+            // But if there's an override for this owner, use it
+            const overrideKey = `biz${businessIndex}-owner${i + 1}`;
+            return apportionmentOverrides[overrideKey] ?? 0;
+        });
     }
-    // For blank entries, distribute the remaining percentage equally.
+
+    // Step B: fill in blanks with an equal share of leftover
     const remaining = 100 - totalEntered;
     const equalShare = (blankCount > 0) ? remaining / blankCount : 0;
     for (let i = 0; i < numOwners; i++) {
-      if (percentages[i] === null) {
-        percentages[i] = equalShare;
-      }
+        if (percentages[i] === null) {
+            percentages[i] = equalShare;
+        }
     }
-    // Now compute each apportionment: portion = netVal * (percentage / 100)
-    let portions = percentages.map(pct => Math.round(netVal * (pct / 100)));
-    // Adjust for any rounding differences.
-    const allocated = portions.reduce((a, b) => a + b, 0);
+
+    // Step C: turn % into portion of netVal, rounding to integer
+    let basePortions = percentages.map(pct => Math.round(netVal * (pct / 100)));
+    // fix rounding difference
+    const allocated = basePortions.reduce((a, b) => a + b, 0);
     const diff = netVal - allocated;
-    if (diff !== 0) {
-      // Adjust the first owner whose percentage was explicitly entered;
-      // if none, adjust the first owner.
-      let indexToAdjust = percentages.findIndex((pct, idx) => {
-        const input = document.getElementById(`business${businessIndex}OwnerPercent${idx+1}`);
-        return input && input.value.trim() !== "";
-      });
-      if (indexToAdjust === -1) { indexToAdjust = 0; }
-      portions[indexToAdjust] += diff;
+    if (diff !== 0 && basePortions.length) {
+        basePortions[0] += diff;
     }
-    return portions;
-  }  
+
+    // Step D: merge with any manual overrides
+    // If an overrideKey exists, we treat that as final for that owner
+    // BUT we do not exceed netVal total. We'll handle any leftover or negative leftover
+    // by adjusting the *first* non-override or the first we find.
+    let finalPortions = [...basePortions];
+    let totalManual = 0;
+    for (let i = 1; i <= numOwners; i++) {
+        const overrideKey = `biz${businessIndex}-owner${i}`;
+        if (overrideKey in apportionmentOverrides) {
+            finalPortions[i - 1] = apportionmentOverrides[overrideKey];
+        }
+    }
+    // Now see if the sum of finalPortions > netVal or < netVal
+    let finalSum = finalPortions.reduce((a, b) => a + b, 0);
+    let leftover = netVal - finalSum;
+
+    // If leftover != 0, push/pull it onto the first owner who doesn't have an override
+    if (leftover !== 0) {
+        // find the first index that is not in apportionmentOverrides
+        // or if all are overridden, adjust the first one
+        let idxToFix = finalPortions.findIndex((amt, idx) => {
+            const overrideKey = `biz${businessIndex}-owner${idx + 1}`;
+            return !(overrideKey in apportionmentOverrides);
+        });
+        if (idxToFix === -1) idxToFix = 0; // if all owners are overridden, pick 0
+        finalPortions[idxToFix] += leftover;
+    }
+
+    return finalPortions;
+}
 
 function checkSCorpReasonableComp(businessIndex, depWages = 0) {
     // If "dependent wages + comp" disclaimers already triggered, we skip
