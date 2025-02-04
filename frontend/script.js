@@ -470,7 +470,7 @@ function displayErrorMessage(errorMessageId, message, inputId) {
     if (!errorMessage) {
         errorMessage = document.createElement('p');
         errorMessage.id = errorMessageId;
-        errorMessage.style.color = 'red';
+        errorMessage.classList.add('red-disclaimer');
         document.getElementById(inputId).parentNode.appendChild(errorMessage);
     }
     errorMessage.textContent = message;
@@ -763,8 +763,7 @@ function renderDisclaimers(containerId) {
         return;
     }
     const ul = document.createElement('ul');
-    ul.style.color = 'red';
-    ul.style.fontWeight = 'bold';
+    ul.classList.add('red-disclaimer'); 
     keys.forEach(errorKey => {
         const li = document.createElement('li');
         li.textContent = disclaimersForThis[errorKey];
@@ -817,6 +816,7 @@ function createBusinessFields(container, index) {
 
     const heading = document.createElement('h3');
     heading.id = `businessNameHeading${index}`;
+    heading.classList.add('dynamic-heading');
     const bNameInput = document.getElementById(`business${index}Name`);
     heading.textContent = bNameInput ? bNameInput.value : `Business ${index}`;
     if (bNameInput) {
@@ -1460,7 +1460,7 @@ function showApportionment(businessIndex, ownerIndex, portion) {
     // Display the apportionment amount.
     const prefixSpan = document.createElement("span");
     prefixSpan.textContent = `Apportionment of Owner ${ownerIndex} is `;
-    prefixSpan.style.color = "black";
+    prefixSpan.classList.add("apportionment-text");
     apportionmentEl.appendChild(prefixSpan);
     
     const amountSpan = document.createElement("span");
@@ -2054,16 +2054,15 @@ function showRedDisclaimer(message, containerId) {
     if (!container) return;
     let disclaimer = document.getElementById(`disclaimer-${containerId}`);
     if (!disclaimer) {
-        disclaimer = document.createElement('div');
-        disclaimer.id = `disclaimer-${containerId}`;
-        disclaimer.style.color = 'red';
-        disclaimer.style.fontWeight = 'bold';
-        disclaimer.style.marginTop = '12px';
-        container.appendChild(disclaimer);
+      disclaimer = document.createElement('div');
+      disclaimer.id = `disclaimer-${containerId}`;
+      // Add the red-disclaimer class so CSS controls the color
+      disclaimer.classList.add('red-disclaimer');
+      container.appendChild(disclaimer);
     }
     disclaimer.textContent = message;
 }
-
+  
 function showBlueDisclaimer(message, containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -2119,12 +2118,17 @@ highlightBtn.addEventListener('click', () => {
       return; // No selection
     }
   
-    // Check if selection's parent has background-color = 'yellow'
+    // Determine which highlight color to use based on dark mode
+    const highlightColor = document.body.classList.contains('dark-mode')
+      ? 'fuchsia'  // A soft blue for dark mode; change as desired
+      : 'yellow';  // Default yellow for light mode
+  
     let isHighlighted = false;
     if (currentSelection.rangeCount > 0) {
       const range = currentSelection.getRangeAt(0);
       const parent = range.commonAncestorContainer.parentNode;
-      if (parent && parent.style && parent.style.backgroundColor === 'yellow') {
+      // Check if the current highlight matches our chosen color
+      if (parent && parent.style && parent.style.backgroundColor === highlightColor) {
         isHighlighted = true;
       }
     }
@@ -2133,11 +2137,11 @@ highlightBtn.addEventListener('click', () => {
       // Remove highlight
       document.execCommand('hiliteColor', false, 'transparent');
     } else {
-      // Apply highlight
-      document.execCommand('hiliteColor', false, 'yellow');
+      // Apply our chosen highlight color
+      document.execCommand('hiliteColor', false, highlightColor);
     }
-  });  
-
+  });
+   
 //----------------------//
 // 21. UNDO/REDO BUTTON //
 //----------------------//
@@ -2347,3 +2351,28 @@ function populateBusinessDetailFields(index) {
         validateTotalOwnership(index, parseInt(numOwnersSelectEl.value, 10) || 0);
     }
 }
+
+//----------------------//
+// 23. DARK MODE TOGGLE //
+//----------------------//
+
+const darkModeCheckbox = document.getElementById('darkModeToggle');
+
+document.addEventListener('DOMContentLoaded', () => {
+  // e.g. if localStorage says "dark" then set checkbox & add class
+  const userPrefersDark = localStorage.getItem('preferred-theme') === 'dark';
+  if (userPrefersDark) {
+    darkModeCheckbox.checked = true;
+    document.body.classList.add('dark-mode');
+  }
+});
+
+darkModeCheckbox.addEventListener('change', () => {
+  if (darkModeCheckbox.checked) {
+    document.body.classList.add('dark-mode');
+    localStorage.setItem('preferred-theme', 'dark');
+  } else {
+    document.body.classList.remove('dark-mode');
+    localStorage.setItem('preferred-theme', 'light');
+  }
+});
