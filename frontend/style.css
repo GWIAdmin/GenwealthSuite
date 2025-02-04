@@ -7,6 +7,207 @@ body {
   padding-top: 30px;
 }
 
+:root {
+  /* Light Mode (unchanged) */
+  --bg-light: #eeeaff;
+  --text-light: #4E4C5E;
+  --card-light: #ffffff;
+  
+  /* Dark Mode – a complementary, softened palette */
+  --bg-dark: #101828;
+  --text-dark: #9199A7;
+  --card-dark: #253245;
+  --h1-dark: #F8F8F9;
+  --h2-dark: #F8F8F9;
+  --h3-dark: #F8F8F9;
+  --section-dark: #101828;
+  --label-dark: #F8F8F9;
+  --dependent-entry: #253245;
+  --spouseSection: #253245;
+  --business-name-entry: #253245;
+  --business-entry: #253245;
+  --input-dark: #3c385d;
+  --select-dark: #3c385d;
+  --notesEditor-dark: #101828;
+  --notesContainer-dark: #253245;
+  --disclaimer-red-light: #ff0000;
+  --disclaimer-red-dark: #ff4f4f;
+
+  --accent: #FDB927;
+  --accent-hover: #FFC107;
+  
+  --border-dark: #555; 
+  --input-bg-dark: #333;
+}
+
+/* Global Transition for Smooth Theme Change */
+body,
+h1,
+h2,
+h3,
+section,
+label,
+input,
+select,
+.dependent-entry,
+.spouseSection,
+.business-name-entry
+.business-entry,
+.container,
+.navbar,
+.notes-editor,
+.notes-container,
+input,
+select,
+textarea,
+button,
+.dark-mode-label,
+.toggle-ball {
+  transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease;
+}
+
+body.dark-mode  {
+  background-color: var(--bg-dark) !important;
+  color: var(--text-dark) !important;
+}
+
+body.dark-mode input,
+body.dark-mode select,
+body.dark-mode textarea {
+  color: var(--h3-dark) !important;
+}
+
+body.dark-mode input:-webkit-autofill {
+  -webkit-text-fill-color: var(--h3-dark) !important;
+}
+
+.dark-mode .container {
+  background-color: var(--card-dark) !important;
+  color: var(--text-dark) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6) !important;
+}
+
+.dark-mode input {
+  background-color: var(--input-dark) !important;
+  color: var(--text-dark) !important;
+}
+
+.dark-mode select {
+  background-color: var(--select-dark) !important;
+  color: var(--text-dark) !important;
+}
+
+.dark-mode .navbar {
+  background-color: #101828 !important;
+  color: #F8F8F9 !important;
+}
+
+.dark-mode .notes-editor {
+  background-color: var(--notesEditor-dark) !important;
+  color: var(--h3-dark) !important;
+  border: 2px solid var(--border-dark) !important;
+}
+
+.dark-mode .notes-container {
+  background-color: var(--notesContainer-dark) !important;
+  border: 2px solid #552583;}
+
+.dark-mode section {
+  background-color: var(--section-dark) !important;
+  border-color: var(--border-dark) !important;
+}
+
+.dark-mode label {
+  color: var(--label-dark) !important;
+}
+
+.dark-mode h1 {
+  color: var(--h1-dark);
+}
+
+.dark-mode h2 {
+  color: var(--h2-dark);
+}
+
+body.dark-mode .dynamic-heading {
+  color: var(--h3-dark); 
+}
+
+body.dark-mode .apportionment-text {
+  color: var(--h3-dark);
+}
+
+.red-disclaimer {
+  color: var(--disclaimer-red-light);
+  font-weight: bold;
+}
+
+body.dark-mode .red-disclaimer {
+  color: var(--disclaimer-red-dark) !important;
+}
+
+.dark-mode .spouseSection {
+  background-color: var(--spouseSection) !important;
+}
+
+.dark-mode .business-name-entry {
+  background-color: var(--business-name-entry) !important;
+}
+
+.dark-mode .business-entry {
+  background-color: var(--business-entry) !important;
+}
+
+.dark-mode .dependent-entry {
+  background-color: var(--dependent-entry) !important;
+}
+
+.dark-mode-toggle {
+  position: relative;
+  width: 60px;
+  height: 25px;
+}
+
+/* Hide the actual checkbox */
+.dark-mode-toggle input[type="checkbox"] {
+  display: none;
+}
+
+/* Style the label as a rounded toggle background */
+.dark-mode-label {
+  background-color: #552583;           /* Light grey for off-state */
+  border-radius: 25px;
+  top: 8px;
+  right: 30px;
+  width: 130%;
+  height: 129%;
+  display: block;
+  cursor: pointer;
+  position: relative;
+  transition: background-color 0.3s ease;
+}
+
+/* The toggle ball */
+.toggle-ball {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 28px;
+  height: 28px;
+  background-color: #fff;
+  border-radius: 50%;
+  transition: transform 0.5s ease, background-color 0.5s ease;
+}
+
+/* When dark mode is active (checkbox checked) */
+.dark-mode-toggle input[type="checkbox"]:checked + .dark-mode-label {
+  background-color: var(--accent);  /* Uses your signature gold accent */
+}
+
+.dark-mode-toggle input[type="checkbox"]:checked + .dark-mode-label .toggle-ball {
+  transform: translateX(45px);       /* Moves the ball to the right */
+}
+
 h1, h2 {
   font-family: 'Merriweather', serif;
   margin-bottom: 20px;
@@ -27,7 +228,7 @@ h2 {
 }
 
 h2:hover {
-  background-color: #FDB927;
+  background-color: #d3c9fb;
   cursor: pointer;
   border-radius: 40px;
 }
@@ -200,14 +401,16 @@ h3{
   border-radius: 25px;
   box-shadow: 8px 16px 32px 8px rgba(0,0,0,0.2);
   z-index: 2000;
+  border: 2px solid #552583;
 }
 
 /* Spouse Section Background */
 #spouseSection {
   background-color: #FFFFFF;
   padding: 15px;
-  border-radius: 5px;
+  border-radius: 20px;
   margin-top: 20px;
+  border: 2px solid #552583;
 }
 
 .dependent-entry {
@@ -245,6 +448,14 @@ section {
   margin-bottom: 15px;
   border-radius: 20px;
   border: 2px solid #552583;
+}
+
+.dynamic-heading {
+  color: #4E4C5E;  /* Replace with your desired light mode color */
+}
+
+.apportionment-text {
+  color: #4E4C5E; /* Replace with your desired light mode color */
 }
 
 .checkbox-container {
