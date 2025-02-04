@@ -1010,22 +1010,26 @@ function addScheduleCQuestion(businessIndex) {
     const businessDivs = document.querySelectorAll('.business-entry');
     const myDiv = businessDivs[businessIndex - 1];
     if (!myDiv) return;
+
     const label = document.createElement('label');
     label.id = `scheduleCLabel${businessIndex}`;
     label.style.marginTop = '12px';
     label.textContent = 'Which client owns this Schedule C?';
     myDiv.appendChild(label);
+
     const scheduleCDropdown = document.createElement('select');
     scheduleCDropdown.id = `scheduleCOwner${businessIndex}`;
     scheduleCDropdown.name = `scheduleCOwner${businessIndex}`;
     myDiv.appendChild(scheduleCDropdown);
+
     const clientFirst = document.getElementById('firstName').value.trim() || 'Client1';
     const spouseFirst = document.getElementById('spouseFirstName').value.trim() || 'Client2';
     const filingStatus = document.getElementById('filingStatus').value;
-    let optionsArr = [ 'Please Select', clientFirst ];
+    let optionsArr = ['Please Select', clientFirst];
     if (filingStatus === 'Married Filing Jointly') {
         optionsArr.push(spouseFirst);
     }
+
     optionsArr.forEach(optLabel => {
         const opt = document.createElement('option');
         opt.value = optLabel;
@@ -1124,10 +1128,26 @@ function createOwnerFields(businessIndex, numOwners) {
         const percentInput = document.createElement('input');
         percentInput.type = 'number';
         percentInput.step = '0.0001';
-        percentInput.min = '0';
+        percentInput.min = '0.0001';
         percentInput.id = `business${businessIndex}OwnerPercent${i}`;
         percentInput.name = `business${businessIndex}OwnerPercent${i}`;
         ownerSection.appendChild(percentInput);
+
+        // For non-Schedule-C owners (and for non-single-owner situations) add a red border until a value is entered.
+        if (businessTypeVal !== 'Schedule-C' && numOwners !== 1) {
+            // Initially, if empty, mark the field red.
+            if (percentInput.value.trim() === '') {
+                percentInput.style.border = '2px solid red';
+            }
+            // Remove the red border as soon as the user types in a value.
+            percentInput.addEventListener('input', function() {
+                if (this.value.trim() === '') {
+                    this.style.border = '2px solid red';
+                } else {
+                    this.style.border = '';
+                }
+            });
+        }
 
         // Single‐owner => lock at 100% read‐only
         if (numOwners === 1) {
@@ -1137,7 +1157,8 @@ function createOwnerFields(businessIndex, numOwners) {
 
         // Two‐owner => attach an input listener that calls handleTwoOwnersInput
         } else if (numOwners === 2) {
-
+            percentInput.value = '';
+            percentInput.min = '0.0001';
             let typingTimer;
             percentInput.addEventListener('input', () => {
               clearTimeout(typingTimer);
@@ -1152,7 +1173,8 @@ function createOwnerFields(businessIndex, numOwners) {
         } else if (numOwners === 3) {
             // For the first two owners:
             if (i < 3) {
-                percentInput.value = '0.0000';
+                percentInput.value = '';
+                percentInput.min = '0.0001';
                 let typingTimer;
                 percentInput.addEventListener('input', () => {
                   clearTimeout(typingTimer);
@@ -1165,7 +1187,7 @@ function createOwnerFields(businessIndex, numOwners) {
 
                 // For the third owner, we keep it read‐only (auto‐calculated remainder)
             } else {
-                percentInput.value = '0.0000'; // autoCalculateLastOwner sets real value
+                percentInput.value = ''; // autoCalculateLastOwner sets real value
                 percentInput.readOnly = true;
                 percentInput.style.backgroundColor = '#f0f0f0';
             }
