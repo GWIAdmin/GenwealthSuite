@@ -1058,6 +1058,15 @@ function createOwnerFields(businessIndex, numOwners) {
     const spouseFirstName = document.getElementById('spouseFirstName').value.trim() || 'Client2';
     const businessTypeVal = document.getElementById(`business${businessIndex}Type`)?.value || '';
 
+    // For non–Schedule‑C businesses, build base options including "Other"
+    // For MFJ, options are: Client1, Client2, "Other"; otherwise, Client1, "Other"
+    let baseOptions = [];
+    if (filingStatus === 'Married Filing Jointly') {
+        baseOptions = [clientFirstName, spouseFirstName, 'Other'];
+    } else {
+        baseOptions = [clientFirstName, 'Other'];
+    }
+    
     for (let i = 1; i <= numOwners; i++) {
         const ownerSection = document.createElement('section');
         ownerSection.classList.add('owner-entry');
@@ -1074,32 +1083,44 @@ function createOwnerFields(businessIndex, numOwners) {
         nameSelect.name = `business${businessIndex}OwnerName${i}`;
         ownerSection.appendChild(nameSelect);
 
-        // Build dropdown options for this business’s owners
-        let optionsArr = [];
-        if (filingStatus === 'Married Filing Jointly') {
-            if (numOwners === 1) {
-                optionsArr = [ 'Please Select', clientFirstName, spouseFirstName ];
+        if (businessTypeVal === 'Schedule-C') {
+            // For Schedule-C, use the static dropdown logic (unchanged)
+            let optionsArr;
+            if (filingStatus === 'Married Filing Jointly') {
+                if (numOwners === 1) {
+                    optionsArr = ['Please Select', clientFirstName, spouseFirstName];
+                } else {
+                    optionsArr = ['Please Select', clientFirstName, spouseFirstName, 'Other'];
+                }
             } else {
-                // 2 or 3 owners
-                optionsArr = [ 'Please Select', clientFirstName, spouseFirstName, 'Other' ];
+                if (numOwners === 1) {
+                    optionsArr = ['Please Select', clientFirstName];
+                } else {
+                    optionsArr = ['Please Select', clientFirstName, 'Other'];
+                }
             }
+            optionsArr.forEach(optLabel => {
+                const opt = document.createElement('option');
+                opt.value = optLabel;
+                opt.textContent = optLabel;
+                nameSelect.appendChild(opt);
+            });
         } else {
-            // Not MFJ
-            if (numOwners === 1) {
-                optionsArr = [ 'Please Select', clientFirstName ];
-            } else {
-                // 2 or 3 owners
-                optionsArr = [ 'Please Select', clientFirstName, 'Other' ];
-            }
+            // For non-Schedule-C, initially add "Please Select" and all client names including "Other"
+            const initialOptions = ['Please Select', ...baseOptions];
+            initialOptions.forEach(optLabel => {
+                const opt = document.createElement('option');
+                opt.value = optLabel;
+                opt.textContent = optLabel;
+                nameSelect.appendChild(opt);
+            });
+            // Attach an event listener so that when a selection changes the dropdowns update.
+            nameSelect.addEventListener('change', function () {
+                updateBusinessOwnerDropdowns(businessIndex);
+            });
         }
-        optionsArr.forEach(optLabel => {
-            const opt = document.createElement('option');
-            opt.value = optLabel;
-            opt.textContent = optLabel;
-            nameSelect.appendChild(opt);
-        });
 
-        // ----- If S-Corp => Reasonable Comp field -----
+        // ----- (Optional) S-Corp Reasonable Compensation field -----
         if (businessTypeVal === 'S-Corp') {
             const compLabel = document.createElement('label');
             compLabel.textContent = `Reasonable Compensation ($) for Owner ${i}:`;
@@ -1111,7 +1132,7 @@ function createOwnerFields(businessIndex, numOwners) {
             compInput.id = `business${businessIndex}OwnerComp${i}`;
             compInput.name = `business${businessIndex}OwnerComp${i}`;
             compInput.classList.add('currency-field');
-            compInput.addEventListener('blur', function() {
+            compInput.addEventListener('blur', function () {
                 compInput.value = formatCurrency(compInput.value);
                 checkSCorpReasonableComp(businessIndex);
                 updateBusinessNet(businessIndex);
@@ -1135,12 +1156,10 @@ function createOwnerFields(businessIndex, numOwners) {
 
         // For non-Schedule-C owners (and for non-single-owner situations) add a red border until a value is entered.
         if (businessTypeVal !== 'Schedule-C' && numOwners !== 1) {
-            // Initially, if empty, mark the field red.
             if (percentInput.value.trim() === '') {
                 percentInput.style.border = '2px solid red';
             }
-            // Remove the red border as soon as the user types in a value.
-            percentInput.addEventListener('input', function() {
+            percentInput.addEventListener('input', function () {
                 if (this.value.trim() === '') {
                     this.style.border = '2px solid red';
                 } else {
@@ -1154,40 +1173,31 @@ function createOwnerFields(businessIndex, numOwners) {
             percentInput.value = '100.0000';
             percentInput.readOnly = true;
             percentInput.style.backgroundColor = '#f0f0f0';
-
-        // Two‐owner => attach an input listener that calls handleTwoOwnersInput
         } else if (numOwners === 2) {
             percentInput.value = '';
             percentInput.min = '0.0001';
             let typingTimer;
             percentInput.addEventListener('input', () => {
-              clearTimeout(typingTimer);
-              typingTimer = setTimeout(() => {
-                // After the user stops typing for ~1000ms:
-                handleTwoOwnersInput(businessIndex, i);
-                updateOwnerApportionment(businessIndex);
-              }, 1000);
+                clearTimeout(typingTimer);
+                typingTimer = setTimeout(() => {
+                    handleTwoOwnersInput(businessIndex, i);
+                    updateOwnerApportionment(businessIndex);
+                }, 1000);
             });
-
-        // Three‐owner => the first two are free‐entry, the third is read‐only
         } else if (numOwners === 3) {
-            // For the first two owners:
             if (i < 3) {
                 percentInput.value = '';
                 percentInput.min = '0.0001';
                 let typingTimer;
                 percentInput.addEventListener('input', () => {
-                  clearTimeout(typingTimer);
-                  typingTimer = setTimeout(() => {
-                    // After the user stops typing for ~1000ms:
-                    autoCalculateLastOwner(businessIndex, 3);
-                    updateOwnerApportionment(businessIndex);
-                  }, 1000);
+                    clearTimeout(typingTimer);
+                    typingTimer = setTimeout(() => {
+                        autoCalculateLastOwner(businessIndex, 3);
+                        updateOwnerApportionment(businessIndex);
+                    }, 1000);
                 });
-
-                // For the third owner, we keep it read‐only (auto‐calculated remainder)
             } else {
-                percentInput.value = ''; // autoCalculateLastOwner sets real value
+                percentInput.value = '';
                 percentInput.readOnly = true;
                 percentInput.style.backgroundColor = '#f0f0f0';
             }
@@ -1201,6 +1211,10 @@ function createOwnerFields(businessIndex, numOwners) {
         dynamicOwnerFieldsDiv.appendChild(ownerSection);
     }
 
+    // For non-Schedule-C businesses, update the dropdowns immediately to remove duplicate selections.
+    if (businessTypeVal !== 'Schedule-C') {
+        updateBusinessOwnerDropdowns(businessIndex);
+    }
     validateTotalOwnership(businessIndex, numOwners);
     updateOwnerApportionment(businessIndex);
 }
@@ -1742,6 +1756,64 @@ function checkSCorpReasonableComp(businessIndex, depWages = 0) {
         );
         compFields.forEach(f => f.classList.add('input-error'));
     }
+}
+
+function updateBusinessOwnerDropdowns(businessIndex) {
+    // Get all owner name selects for this business.
+    const ownerSelects = document.querySelectorAll(
+        `#dynamicOwnerFields${businessIndex} select[id^="business${businessIndex}OwnerName"]`
+    );
+    if (!ownerSelects) return;
+
+    // Determine the base options (including "Other").
+    const filingStatus = document.getElementById('filingStatus').value;
+    const clientFirstName = document.getElementById('firstName').value.trim() || 'Client1';
+    const spouseFirstName = document.getElementById('spouseFirstName').value.trim() || 'Client2';
+    let baseOptions = [];
+    if (filingStatus === 'Married Filing Jointly') {
+        baseOptions = [clientFirstName, spouseFirstName, 'Other'];
+    } else {
+        baseOptions = [clientFirstName, 'Other'];
+    }
+    // Collect the client names already selected from these dropdowns (ignoring "Please Select")
+    let selectedNames = [];
+    ownerSelects.forEach(select => {
+        const val = select.value;
+        if (baseOptions.includes(val)) {
+            selectedNames.push(val);
+        }
+    });
+
+    // Update each owner select’s options.
+    ownerSelects.forEach(select => {
+        const currentVal = select.value;
+        // Clear current options.
+        select.innerHTML = '';
+
+        // Always add the "Please Select" option.
+        const pleaseOption = document.createElement('option');
+        pleaseOption.value = 'Please Select';
+        pleaseOption.textContent = 'Please Select';
+        select.appendChild(pleaseOption);
+
+        // Add each client name from baseOptions if it has not been selected in another select
+        // or if it is already the current value in this select.
+        baseOptions.forEach(name => {
+            if (!selectedNames.includes(name) || currentVal === name) {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                select.appendChild(option);
+            }
+        });
+
+        // Restore the previously selected value if it still exists; otherwise default to "Please Select".
+        if ([...select.options].some(opt => opt.value === currentVal)) {
+            select.value = currentVal;
+        } else {
+            select.value = 'Please Select';
+        }
+    });
 }
 
 //---------------------------------------------------//
