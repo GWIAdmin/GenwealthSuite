@@ -96,6 +96,9 @@ document.getElementById('filingStatus').addEventListener('change', function() {
 
     // Update the blind dropdown options based on the new filing status
     updateBlindOptions();
+
+    // Also update the "How many 65 or older:" dropdown options
+    updateOlderThan65Options();
 });
 
 function showElement(element) {
@@ -148,6 +151,40 @@ function updateBlindOptions() {
         option.value = 'Two';
         option.textContent = '2';
         blindSelect.appendChild(option);
+    }
+}
+
+function updateOlderThan65Options() {
+    const filingStatus = document.getElementById('filingStatus').value;
+    const olderSelect = document.getElementById('olderthan65');
+    
+    // Clear all existing options
+    olderSelect.innerHTML = '';
+
+    // Create and append the "Please Select" option
+    let option = document.createElement('option');
+    option.value = 'Please Select';
+    option.textContent = 'Please Select';
+    olderSelect.appendChild(option);
+
+    // Always add option for 0
+    option = document.createElement('option');
+    option.value = '0';
+    option.textContent = '0';
+    olderSelect.appendChild(option);
+
+    // Always add option for 1
+    option = document.createElement('option');
+    option.value = '1';
+    option.textContent = '1';
+    olderSelect.appendChild(option);
+
+    // If filing status is "Married Filing Jointly", add option for 2
+    if (filingStatus === 'Married Filing Jointly') {
+        option = document.createElement('option');
+        option.value = '2';
+        option.textContent = '2';
+        olderSelect.appendChild(option);
     }
 }
 
@@ -2175,6 +2212,7 @@ document.addEventListener('DOMContentLoaded', function() {
     recalculateTotals();
     recalculateDeductions();
     updateBlindOptions();
+    updateOlderThan65Options();
     undoStack.push(getFormSnapshot());
 
     const allCurrencyFields = document.querySelectorAll('.currency-field');
