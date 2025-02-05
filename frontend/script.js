@@ -93,6 +93,9 @@ document.getElementById('filingStatus').addEventListener('change', function() {
     } else {
         hideElement(spouseSection);
     }
+
+    // Update the blind dropdown options based on the new filing status
+    updateBlindOptions();
 });
 
 function showElement(element) {
@@ -108,6 +111,44 @@ function hideElement(element) {
         element.style.display = 'none';
         element.style.backgroundColor = '';
     }, 500);
+}
+
+//-----------------------//
+// 3.1. HELPER FUNCTIONS //
+//-----------------------//
+
+function updateBlindOptions() {
+    const filingStatus = document.getElementById('filingStatus').value;
+    const blindSelect = document.getElementById('blind');
+    
+    // Clear all existing options
+    blindSelect.innerHTML = '';
+
+    // Create and append the "Please Select" option
+    let option = document.createElement('option');
+    option.value = 'please select';
+    option.textContent = 'Please Select';
+    blindSelect.appendChild(option);
+
+    // Always add option for 0 (displayed as "0" with value "Zero")
+    option = document.createElement('option');
+    option.value = 'Zero';
+    option.textContent = '0';
+    blindSelect.appendChild(option);
+
+    // Always add option for 1 (displayed as "1" with value "One")
+    option = document.createElement('option');
+    option.value = 'One';
+    option.textContent = '1';
+    blindSelect.appendChild(option);
+
+    // If filing status is "Married Filing Jointly", add option for 2 (value "Two")
+    if (filingStatus === 'Married Filing Jointly') {
+        option = document.createElement('option');
+        option.value = 'Two';
+        option.textContent = '2';
+        blindSelect.appendChild(option);
+    }
 }
 
 //--------------------------------//
@@ -2133,6 +2174,7 @@ document.addEventListener('blur', function(event) {
 document.addEventListener('DOMContentLoaded', function() {
     recalculateTotals();
     recalculateDeductions();
+    updateBlindOptions();
     undoStack.push(getFormSnapshot());
 
     const allCurrencyFields = document.querySelectorAll('.currency-field');
