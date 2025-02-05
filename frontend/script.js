@@ -243,22 +243,28 @@ document.getElementById('numberOfDependents').addEventListener('input', function
 function createDependentFields(container, index) {
     const dependentGroup = document.createElement('div');
     dependentGroup.classList.add('dependent-entry');
+
     createLabelAndInput(dependentGroup, `dependent${index}Name`, `Dependent ${index} Name:`, 'text');
     createLabelAndDropdown(dependentGroup, `dependent${index}DOBOrAge`, `Do You Know the Dependent's DOB or Current Age?`, ['Please Select', 'Yes', 'No']);
+
     const conditionalContainer = document.createElement('div');
     conditionalContainer.id = `conditionalContainer${index}`;
     dependentGroup.appendChild(conditionalContainer);
+
     createLabelAndDropdown(dependentGroup, `dependent${index}Employed`, `Is Dependent ${index} Currently Employed?`, ['Please Select', 'Yes', 'No']);
     const employmentConditionalContainer = document.createElement('div');
     employmentConditionalContainer.id = `employmentConditionalContainer${index}`;
     dependentGroup.appendChild(employmentConditionalContainer);
+
     container.appendChild(dependentGroup);
+
     const employedDropdown = document.getElementById(`dependent${index}Employed`);
     if (employedDropdown) {
         employedDropdown.addEventListener('change', function () {
             handleEmploymentStatusChange(index, this.value);
         });
     }
+
     createLabelAndDropdown(dependentGroup, `dependent${index}Credit`, 'Qualifies for Child/Dependent Credit?', ['Please Select', 'Yes', 'No']);
     const dobOrAgeDropdown = document.getElementById(`dependent${index}DOBOrAge`);
     if (dobOrAgeDropdown) {
@@ -301,9 +307,13 @@ function handleEmploymentStatusChange(index, value) {
     container.innerHTML = '';
 
     if (value === 'Yes') {
-        // Create the Income field for Dependent
-        createLabelAndCurrencyField(container, `dependent${index}Income`, `Dependent ${index} Income:`);
-
+        // For Dependent 1, enforce a minimum of $1. For others, no min is enforced.
+        if (index === 1) {
+            createLabelAndCurrencyField(container, `dependent${index}Income`, `Dependent ${index} Income:`, 1);
+        } else {
+            createLabelAndCurrencyField(container, `dependent${index}Income`, `Dependent ${index} Income:`);
+        }
+        
         // Add an event so if user changes the wage, we update the mapping.
         const incomeField = document.getElementById(`dependent${index}Income`);
         incomeField.addEventListener('blur', function() {
@@ -772,15 +782,13 @@ function formatCurrency(value) {
 }
 
 function unformatCurrency(value) {
-    // Detect parentheses. If string is enclosed by (...) we treat it as negative.
-    let isNegative = false;
-    // e.g. "( $1,234 )"
-    if (/\(.*\)/.test(value)) {
-        isNegative = true;
-    }
-
-    // Strip out everything except digits and decimal point
-    let numericValue = value.replace(/[^\d.]/g, '');
+    // Trim the value and check if it starts with a minus sign.
+    let trimmedValue = value.trim();
+    let isNegative = trimmedValue.charAt(0) === '-';
+    
+    // Remove all characters except digits and the decimal point.
+    // (The minus sign is handled separately.)
+    let numericValue = trimmedValue.replace(/[^0-9.]/g, '');
     let floatVal = parseFloat(numericValue);
     if (isNaN(floatVal)) {
         floatVal = 0;
@@ -801,7 +809,7 @@ function createLabelAndTextField(parent, id, labelText) {
     parent.appendChild(input);
 }
 
-function createLabelAndCurrencyField(parent, id, labelText) {
+function createLabelAndCurrencyField(parent, id, labelText, minValue) {
     const label = document.createElement('label');
     label.htmlFor = id;
     label.textContent = labelText;
@@ -814,8 +822,15 @@ function createLabelAndCurrencyField(parent, id, labelText) {
     input.classList.add('currency-field');
     parent.appendChild(input);
     input.addEventListener('blur', function() {
-        input.value = formatCurrency(input.value);
+        if (input.value.trim() !== "") {
+            let num = unformatCurrency(input.value);
+            if (minValue !== undefined && num < minValue) {
+                num = minValue;
+            }
+            input.value = formatCurrency(String(num));
+        }
     });
+    return input; // Return the newly created input element.
 }
 
 //------------------------------------------------------------//
@@ -1219,26 +1234,22 @@ function createOwnerFields(businessIndex, numOwners) {
             });
         }
 
-        // ----- (Optional) S-Corp Reasonable Compensation field -----
+        // ----- S-Corp Reasonable Compensation field -----
         if (businessTypeVal === 'S-Corp') {
-            const compLabel = document.createElement('label');
-            compLabel.textContent = `Reasonable Compensation ($) for Owner ${i}:`;
-            compLabel.setAttribute('for', `business${businessIndex}OwnerComp${i}`);
-            ownerSection.appendChild(compLabel);
-
-            const compInput = document.createElement('input');
-            compInput.type = 'text';
-            compInput.id = `business${businessIndex}OwnerComp${i}`;
-            compInput.name = `business${businessIndex}OwnerComp${i}`;
-            compInput.classList.add('currency-field');
+            // Use the helper with a minimum of 0 for Reasonable Compensation.
+            const compInput = createLabelAndCurrencyField(
+                ownerSection,
+                `business${businessIndex}OwnerComp${i}`,
+                `Reasonable Compensation ($) for Owner ${i}:`,
+                0
+            );
+            // Attach additional logic on blur.
             compInput.addEventListener('blur', function () {
-                compInput.value = formatCurrency(compInput.value);
-                checkSCorpReasonableComp(businessIndex);
-                updateBusinessNet(businessIndex);
+                 checkSCorpReasonableComp(businessIndex);
+                 updateBusinessNet(businessIndex);
             });
-            ownerSection.appendChild(compInput);
-        }
-
+        }  
+        
         // ----- Ownership % -----
         const percentLabel = document.createElement('label');
         percentLabel.textContent = `Owner ${i} Ownership %:`;
