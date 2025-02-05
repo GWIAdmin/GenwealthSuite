@@ -1061,9 +1061,8 @@ function handleBusinessTypeChange(index, businessType) {
         if (filingStatus !== 'Married Filing Jointly') {
             // For non‑MFJ: automatically force exactly 2 owners.
             // Clear the numOwnersSelect and hide it so the user cannot change the number.
-            numOwnersSelect.innerHTML = '';
+            numOwnersSelect.innerHTML = '<option value="2">2</option>';
             numOwnersSelect.style.display = 'none';
-            numOwnersSelect.value = '2';
     
             // Clear any existing dynamic owner fields and auto‑create 2 owner boxes.
             dynamicOwnerFieldsDiv.innerHTML = '';
@@ -1632,9 +1631,17 @@ function showApportionment(businessIndex, ownerIndex, portion) {
     // If portion is null (i.e. no percentage entered yet), do not display any apportionment.
     if (portion === null) return;
     
-    // Display the apportionment amount.
+    // Use a trimmed, case-insensitive comparison for the business type.
+    const businessType = (document.getElementById(`business${businessIndex}Type`)?.value || '').trim().toLowerCase();
+    let prefixText = '';
+    if (businessType === 'partnership') {
+      prefixText = `Apportionment of Self-Employment for Owner ${ownerIndex} is `;
+    } else {
+      prefixText = `Apportionment of Owner ${ownerIndex} is `;
+    }
+    
     const prefixSpan = document.createElement("span");
-    prefixSpan.textContent = `Apportionment of Owner ${ownerIndex} is `;
+    prefixSpan.textContent = prefixText;
     prefixSpan.classList.add("apportionment-text");
     apportionmentEl.appendChild(prefixSpan);
     
@@ -1671,8 +1678,10 @@ function showApportionment(businessIndex, ownerIndex, portion) {
       });
       apportionmentEl.appendChild(downBtn);
     }
+    console.log("Business type is:", businessType, "for owner", ownerIndex, "portion:", portion);
+
 }
-  
+   
 function incrementApportionment(businessIndex, ownerIndex) {
     const netStr = document.getElementById(`business${businessIndex}Net`)?.value || '0';
     const netVal = unformatCurrency(netStr);
