@@ -209,9 +209,7 @@ function populateDependentsData() {
         if (el) {
             el.value = dependentsStore[key];
 
-            // Trigger any relevant "change" listeners if needed. For example, 
-            // we need to re-show age fields if "Do You Know the DOB?" is "Yes," etc.
-            // We'll manually dispatch change if the field is a <select>.
+            // Trigger any relevant "change" listeners if needed.
             if (el.tagName.toLowerCase() === 'select') {
                 el.dispatchEvent(new Event('change'));
             }
@@ -285,12 +283,10 @@ function handleDOBOrAgeChange(index, value) {
         // Create the "Age" field:
         createLabelAndInput(container, `dependent${index}Age`, `Dependent ${index} Current Age:`, 'number');
 
-        // Existing listener to auto-calculate age from birthdate:
         document.getElementById(`dependent${index}Birthdate`).addEventListener('change', function() {
             calculateAge(this.value, `dependent${index}Age`);
         });
 
-        // NEW: If the user types into the Age field, clear the birthdate:
         document.getElementById(`dependent${index}Age`).addEventListener('input', function() {
             if (this.value.trim() !== '') {
                 document.getElementById(`dependent${index}Birthdate`).value = '';
@@ -307,18 +303,16 @@ function handleEmploymentStatusChange(index, value) {
     container.innerHTML = '';
 
     if (value === 'Yes') {
-        // For Dependent 1, enforce a minimum of $1. For others, no min is enforced.
+        // For Dependent 1, enforce a minimum of $1
         if (index === 1) {
             createLabelAndCurrencyField(container, `dependent${index}Income`, `Dependent ${index} Income:`, 1);
         } else {
             createLabelAndCurrencyField(container, `dependent${index}Income`, `Dependent ${index} Income:`);
         }
         
-        // Add an event so if user changes the wage, we update the mapping.
         const incomeField = document.getElementById(`dependent${index}Income`);
         incomeField.addEventListener('blur', function() {
             updateDependentBizMap(index);
-            // If we know which business the dependent belongs to, recalc that business net
             const depData = dependentBizMap[index];
             if (depData && depData.businessIndex) {
                 updateBusinessNet(depData.businessIndex);
@@ -326,10 +320,8 @@ function handleEmploymentStatusChange(index, value) {
             }
         });
 
-        // Create the "Is Dependent Employed in One of the Client's Businesses?" dropdown
         createLabelAndDropdown(container, `dependent${index}EmployedInBusiness`, `Is Dependent ${index} Employed in One of the Client's Businesses?`, ['Please Select', 'Yes', 'No']);
 
-        // Listen for user selecting "Yes" or "No"
         document.getElementById(`dependent${index}EmployedInBusiness`).addEventListener('change', function() {
             if (this.value === 'Yes') {
                 const numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
@@ -340,7 +332,6 @@ function handleEmploymentStatusChange(index, value) {
                 }
                 createLabelAndDropdown(container, `dependent${index}BusinessName`, `Which Business?`, ['Please Select', ...(businessNames.length > 0 ? businessNames : ['No businesses available'])]);
 
-                // Once "Which Business?" is created, attach a listener
                 const bizSelect = document.getElementById(`dependent${index}BusinessName`);
                 bizSelect.addEventListener('change', function() {
                     updateDependentBizMap(index);
@@ -351,7 +342,6 @@ function handleEmploymentStatusChange(index, value) {
                     }
                 });
             } else {
-                // "No" means not employed in a client business. Remove any prior mapping
                 const existingBizDropdown = document.getElementById(`dependent${index}BusinessName`);
                 if (existingBizDropdown) {
                     existingBizDropdown.parentNode.removeChild(existingBizDropdown.previousSibling);
@@ -363,7 +353,6 @@ function handleEmploymentStatusChange(index, value) {
         });
 
     } else if (value === 'No') {
-        // If Dependent is not employed at all, show "Willing to Hire?" etc.
         createLabelAndDropdown(container, `dependent${index}WillingToHire`, `Is the Client Willing to Hire Dependent ${index}?`, ['Please Select', 'Yes', 'No']);
         const willingDropdown = document.getElementById(`dependent${index}WillingToHire`);
         if (willingDropdown) {
@@ -388,26 +377,19 @@ function handleEmploymentStatusChange(index, value) {
                 }
             });
         }
-        // Also remove any prior business assignment
         delete dependentBizMap[index];
         recalculateTotals();
     }
 }
 
 function updateDependentBizMap(dependentIndex) {
-    // 1) Read the dependent's wage
     const wageStr = document.getElementById(`dependent${dependentIndex}Income`)?.value || '0';
     const wageVal = unformatCurrency(wageStr);
-
-    // 2) Check "Is Dependent Employed in One of the Client's Businesses?"
     const employedVal = document.getElementById(`dependent${dependentIndex}EmployedInBusiness`)?.value || 'No';
     if (employedVal !== 'Yes') {
-        // Not employed in a business, remove from map
         delete dependentBizMap[dependentIndex];
         return;
     }
-
-    // 3) Identify which business they picked
     const businessName = document.getElementById(`dependent${dependentIndex}BusinessName`)?.value || '';
     let matchedBusinessIndex = null;
     const numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
@@ -418,14 +400,10 @@ function updateDependentBizMap(dependentIndex) {
             break;
         }
     }
-
-    // If user didn't select any real business, remove from map
     if (!matchedBusinessIndex) {
         delete dependentBizMap[dependentIndex];
         return;
     }
-
-    // 4) Store the assignment
     dependentBizMap[dependentIndex] = {
         businessIndex: matchedBusinessIndex,
         wage: wageVal
@@ -494,7 +472,6 @@ function calculateAge(birthdateValue, ageInputId) {
         age--;
     }
 
-    // Birthdate validation
     if (birthdate > today) {
         displayErrorMessage(errorMessageId, 'Birthdate cannot be in the future.', ageInputId);
         document.getElementById(ageInputId).value = '';
@@ -507,7 +484,7 @@ function calculateAge(birthdateValue, ageInputId) {
         return;
     }
 
-    if (errorMessage) errorMessage.textContent = ''; // Clear error message if date is valid
+    if (errorMessage) errorMessage.textContent = '';
     document.getElementById(ageInputId).value = age;
 }
 
@@ -516,13 +493,12 @@ function validateAgeInput(input, index) {
     const errorMessageId = `ageErrorMessage${index}`;
     let errorMessage = document.getElementById(errorMessageId);
 
-    // Age validations
     if (isNaN(age) || age < 0) {
         displayErrorMessage(errorMessageId, 'Age cannot be less than 0.', input.id);
     } else if (age > 100) {
         displayErrorMessage(errorMessageId, 'Age cannot be greater than 100 years.', input.id);
     } else {
-        if (errorMessage) errorMessage.textContent = ''; // Clear error if age is valid
+        if (errorMessage) errorMessage.textContent = '';
     }
 }
 
@@ -538,13 +514,11 @@ function autoSet65Plus() {
     if (!isNaN(clientAgeVal) && clientAgeVal >= 65) client65Plus = true;
 
     let spouse65Plus = false;
-    // For Married Filing Jointly, the spouse's field is relevant
     if ((filingStatus === 'Married Filing Jointly') &&
         !isNaN(spouseAgeVal) && spouseAgeVal >= 65) {
         spouse65Plus = true;
     }
 
-    // Count how many are 65+
     const count65Plus = (client65Plus ? 1 : 0) + (spouse65Plus ? 1 : 0);
 
     const clientAgeIsValid = !isNaN(clientAgeVal);
@@ -569,7 +543,6 @@ document.getElementById('birthdate').addEventListener('change', function() {
 });
 
 document.getElementById('currentAge').addEventListener('input', function() {
-    // If the user manually enters something into 'currentAge', clear the birthdate
     if (this.value.trim() !== '') {
         document.getElementById('birthdate').value = '';
     }
@@ -604,22 +577,19 @@ document.getElementById('olderthan65').addEventListener('change', function() {
 document.getElementById('lastName').addEventListener('input', function() {
     const spouseLast = document.getElementById('spouseLastName');
     spouseLast.value = this.value;
-    spouseLast.classList.add('auto-copied'); // bright yellow border
-    // Optionally remove green if it was previously set:
+    spouseLast.classList.add('auto-copied');
     spouseLast.classList.remove('input-completed');
 });
 
 document.getElementById('spouseLastName').addEventListener('input', function() {
-    // If user typed anything at all, remove auto-copied
     if (this.classList.contains('auto-copied')) {
         this.classList.remove('auto-copied');
     }
-    // We do NOT add green class yet; see onblur:
 });
 
 document.getElementById('spouseLastName').addEventListener('blur', function() {
     if (this.value.trim() !== '') {
-        this.classList.add('input-completed'); // green border
+        this.classList.add('input-completed');
     } else {
         this.classList.remove('input-completed');
     }
@@ -651,7 +621,6 @@ document.getElementById('numOfBusinesses').addEventListener('input', function() 
     mainBizContainer.innerHTML = '';
     for (let i = 1; i <= newCount; i++) {
         createBusinessFields(mainBizContainer, i);
-        // 4. Now restore any data for that business
         populateBusinessDetailFields(i);
     }
 
@@ -736,6 +705,8 @@ function populateBusinessNameFields(index) {
     const nameFieldId = `business${index}Name`;
     const medicalCheckboxId = `business${index}Medical`;
     const realEstateCheckboxId = `business${index}RealEstate`;
+    const reportsCheckboxId = `business${index}Reports`;
+
     if (businessNameStore[nameFieldId]) {
         const nameField = document.getElementById(nameFieldId);
         if (nameField) {
@@ -752,6 +723,12 @@ function populateBusinessNameFields(index) {
         const reCheckbox = document.getElementById(realEstateCheckboxId);
         if (reCheckbox) {
             reCheckbox.checked = businessNameStore[realEstateCheckboxId];
+        }
+    }
+    if (businessNameStore[reportsCheckboxId] !== undefined) {
+        const repCheckbox = document.getElementById(reportsCheckboxId);
+        if (repCheckbox) {
+            repCheckbox.checked = businessNameStore[reportsCheckboxId];
         }
     }
 }
@@ -782,12 +759,8 @@ function formatCurrency(value) {
 }
 
 function unformatCurrency(value) {
-    // Trim the value and check if it starts with a minus sign.
     let trimmedValue = value.trim();
     let isNegative = trimmedValue.charAt(0) === '-';
-    
-    // Remove all characters except digits and the decimal point.
-    // (The minus sign is handled separately.)
     let numericValue = trimmedValue.replace(/[^0-9.]/g, '');
     let floatVal = parseFloat(numericValue);
     if (isNaN(floatVal)) {
@@ -830,7 +803,7 @@ function createLabelAndCurrencyField(parent, id, labelText, minValue) {
             input.value = formatCurrency(String(num));
         }
     });
-    return input; // Return the newly created input element.
+    return input;
 }
 
 //------------------------------------------------------------//
@@ -856,7 +829,7 @@ function renderDisclaimers(containerId) {
         return;
     }
     const ul = document.createElement('ul');
-    ul.classList.add('red-disclaimer'); 
+    ul.classList.add('red-disclaimer');
     keys.forEach(errorKey => {
         const li = document.createElement('li');
         li.textContent = disclaimersForThis[errorKey];
@@ -903,8 +876,6 @@ function createBusinessFields(container, index) {
 
     const businessDiv = document.createElement('div');
     businessDiv.classList.add('business-entry');
-
-    // NEW: give each business an id for disclaimers
     businessDiv.id = `businessEntry${index}`;
 
     const heading = document.createElement('h3');
@@ -919,6 +890,7 @@ function createBusinessFields(container, index) {
     }
     businessDiv.appendChild(heading);
 
+    // Business type
     const typeLabel = document.createElement('label');
     typeLabel.textContent = `Business ${index} Type:`;
     typeLabel.setAttribute('for', `business${index}Type`);
@@ -942,19 +914,19 @@ function createBusinessFields(container, index) {
     const incomeField = businessDiv.querySelector(`#business${index}Income`);
     const expensesField = businessDiv.querySelector(`#business${index}Expenses`);
 
-        incomeField.addEventListener('blur', function() {
-            blurredIncome[index] = true;
-            updateBusinessNet(index);
-            recalculateTotals();
-            checkSCorpReasonableComp(index);
-        });
+    incomeField.addEventListener('blur', function() {
+        blurredIncome[index] = true;
+        updateBusinessNet(index);
+        recalculateTotals();
+        checkSCorpReasonableComp(index);
+    });
 
-        expensesField.addEventListener('blur', function() {
-            blurredExpenses[index] = true;
-            updateBusinessNet(index);
-            recalculateTotals();
-            checkSCorpReasonableComp(index);
-        });
+    expensesField.addEventListener('blur', function() {
+        blurredExpenses[index] = true;
+        updateBusinessNet(index);
+        recalculateTotals();
+        checkSCorpReasonableComp(index);
+    });
 
     const netField = businessDiv.querySelector(`#business${index}Net`);
     if (netField) {
@@ -975,7 +947,7 @@ function createBusinessFields(container, index) {
     numOwnersSelect.id = `numOwnersSelect${index}`;
     numOwnersSelect.name = `numOwnersSelect${index}`;
     ownersContainer.appendChild(numOwnersSelect);
-    populateNumOwnersOptions(numOwnersSelect);
+    // We'll fill in the options once we know business type (below).
 
     const dynamicOwnerFieldsDiv = document.createElement('div');
     dynamicOwnerFieldsDiv.id = `dynamicOwnerFields${index}`;
@@ -988,7 +960,6 @@ function createBusinessFields(container, index) {
 
     numOwnersSelect.addEventListener('change', function(e) {
         saveBusinessDetailData();
-        // Re-create owners
         const selectedVal = parseInt(this.value, 10);
         createOwnerFields(index, selectedVal);
         populateBusinessDetailFields(index);
@@ -997,124 +968,107 @@ function createBusinessFields(container, index) {
     container.appendChild(businessDiv);
 }
 
-function populateNumOwnersOptions(selectEl) {
-    const filingStatus = document.getElementById('filingStatus').value;
+function populateNumOwnersOptionsForNonPartnership(selectEl, filingStatus) {
     selectEl.innerHTML = '';
     let possibleVals;
     if (filingStatus === 'Married Filing Jointly') {
+        // For S-Corp & C-Corp with MFJ, typically we let them pick 1,2,3
+        // but your existing code used [0,1,2,3]
         possibleVals = [0,1,2,3];
     } else {
+        // For single (or other statuses), let's let them pick 1 or 2
         possibleVals = [0,1,2];
     }
     possibleVals.forEach(v => {
         const opt = document.createElement('option');
         opt.value = v;
-        if (v === 0) {
-            opt.textContent = 'Please Select';
-        } else {
-            opt.textContent = String(v);
-        }
+        opt.textContent = v === 0 ? 'Please Select' : String(v);
         selectEl.appendChild(opt);
     });
 }
 
 function handleBusinessTypeChange(index, businessType) {
-    const ownersContainer = document.getElementById(`ownersContainer${index}`);
-    const numOwnersSelect = document.getElementById(`numOwnersSelect${index}`);
-    const dynamicOwnerFieldsDiv = document.getElementById(`dynamicOwnerFields${index}`);
-    // Remove any Schedule‑C question that might have been added previously.
+    const ownersContainer = document.getElementById('ownersContainer' + index);
+    const numOwnersSelect = document.getElementById('numOwnersSelect' + index);
+    const dynamicOwnerFieldsDiv = document.getElementById('dynamicOwnerFields' + index);
+    // Remove any previously added Schedule-C question if present.
     removeScheduleCQuestion(index);
 
-    // Retrieve the filing status
     const filingStatus = document.getElementById('filingStatus').value;
+    const clientFirstName = document.getElementById('firstName').value.trim() || 'Client1';
+    const spouseFirstName = document.getElementById('spouseFirstName').value.trim() || 'Client2';
 
     if (businessType === 'Schedule-C') {
-        // For Schedule‑C, follow existing logic.
+        // For Schedule-C, do not display the owner's box.
+        // Clear and hide any owner-related fields.
+        ownersContainer.style.display = 'none';
+        numOwnersSelect.innerHTML = '';
+        dynamicOwnerFieldsDiv.innerHTML = '';
+
+        // For MFJ, display the dedicated Schedule-C question.
         if (filingStatus === 'Married Filing Jointly') {
-            // For MFJ, let the user choose between Client1 or Spouse.
-            ownersContainer.style.display = 'none';
-            numOwnersSelect.value = '1';
             addScheduleCQuestion(index);
         } else {
-            // For non‑MFJ, automatically create a single owner using the actual client first name.
-            ownersContainer.style.display = 'block';
-            numOwnersSelect.value = '1';
-            dynamicOwnerFieldsDiv.innerHTML = '';
-            createOwnerFields(index, 1);
-            const clientFirstName = document.getElementById('firstName').value.trim() || 'Client1';
-            const nameField = document.getElementById(`business${index}OwnerName1`);
-            if (nameField) {
-                nameField.value = clientFirstName;
-                nameField.readOnly = true;
-                nameField.style.backgroundColor = '#f0f0f0';
-            }
+            // For non-MFJ, ensure no Schedule-C question is present.
+            removeScheduleCQuestion(index);
         }
-    } else if (businessType === 'Please Select') {
-        // If no valid business type is selected, clear the owner fields.
-        ownersContainer.style.display = 'none';
-        numOwnersSelect.value = '0';
-        dynamicOwnerFieldsDiv.innerHTML = '';
     } else if (businessType === 'Partnership') {
-        // For Partnership, display the owner container.
         ownersContainer.style.display = 'block';
-    
+        dynamicOwnerFieldsDiv.innerHTML = '';
+
+        // If not MFJ, force 2 owners with predetermined values.
         if (filingStatus !== 'Married Filing Jointly') {
-            // For non‑MFJ: automatically force exactly 2 owners.
-            // Clear the numOwnersSelect and hide it so the user cannot change the number.
-            numOwnersSelect.innerHTML = '<option value="2">2</option>';
-            numOwnersSelect.style.display = 'none';
-    
-            // Clear any existing dynamic owner fields and auto‑create 2 owner boxes.
-            dynamicOwnerFieldsDiv.innerHTML = '';
+            numOwnersSelect.innerHTML = '';
+            var opt2 = document.createElement('option');
+            opt2.value = '2';
+            opt2.textContent = '2';
+            numOwnersSelect.appendChild(opt2);
+            numOwnersSelect.value = '2';
+
             createOwnerFields(index, 2);
-    
-            // Get the actual first name from the "firstName" field (or default to "Client1")
-            const clientFirstName = document.getElementById('firstName').value.trim() || 'Client1';
-    
-            // Pre‑set the owner names: first as the actual client first name and second as "other"
-            const ownerName1 = document.getElementById(`business${index}OwnerName1`);
-            if (ownerName1) {
-                ownerName1.value = clientFirstName;
-                ownerName1.readOnly = true;
-                ownerName1.style.backgroundColor = '#f0f0f0';
+
+            var owner1Select = document.getElementById('business' + index + 'OwnerName1');
+            var owner2Select = document.getElementById('business' + index + 'OwnerName2');
+            if (owner1Select) {
+                owner1Select.value = clientFirstName;
+                owner1Select.disabled = true;
+                owner1Select.style.backgroundColor = '#f0f0f0';
             }
-            const ownerName2 = document.getElementById(`business${index}OwnerName2`);
-            if (ownerName2) {
-                ownerName2.value = 'Other';
-                ownerName2.readOnly = true;
-                ownerName2.style.backgroundColor = '#f0f0f0';
+            if (owner2Select) {
+                owner2Select.value = 'Other';
+                owner2Select.disabled = true;
+                owner2Select.style.backgroundColor = '#f0f0f0';
             }
         } else {
-            // For MFJ: allow the user to choose between 2 and 3 owners.
-            numOwnersSelect.style.display = 'block';
-            // Rebuild the numOwnersSelect with only these options.
-            while (numOwnersSelect.firstChild) {
-                numOwnersSelect.removeChild(numOwnersSelect.firstChild);
-            }
-            const pleaseOpt = document.createElement('option');
+            // For MFJ, allow the user to pick 2 or 3 owners.
+            numOwnersSelect.innerHTML = '';
+            var pleaseOpt = document.createElement('option');
             pleaseOpt.value = '0';
             pleaseOpt.textContent = 'Please Select';
             numOwnersSelect.appendChild(pleaseOpt);
-    
-            const twoOpt = document.createElement('option');
+
+            var twoOpt = document.createElement('option');
             twoOpt.value = '2';
             twoOpt.textContent = '2';
             numOwnersSelect.appendChild(twoOpt);
-    
-            const threeOpt = document.createElement('option');
+
+            var threeOpt = document.createElement('option');
             threeOpt.value = '3';
             threeOpt.textContent = '3';
             numOwnersSelect.appendChild(threeOpt);
-    
-            // Force the selection to "Please Select" so the user must choose.
+
             numOwnersSelect.value = '0';
-            dynamicOwnerFieldsDiv.innerHTML = '';
         }
-    
+    } else if (businessType === 'Please Select') {
+        ownersContainer.style.display = 'none';
+        numOwnersSelect.value = '0';
+        dynamicOwnerFieldsDiv.innerHTML = '';
     } else {
-        // For other business types (e.g. S-Corp, C-Corp), use the existing logic.
+        // For S-Corp or C-Corp fallback.
         ownersContainer.style.display = 'block';
-        numOwnersSelect.style.display = 'block';
+        dynamicOwnerFieldsDiv.innerHTML = '';
+        populateNumOwnersOptionsForNonPartnership(numOwnersSelect, filingStatus);
+        numOwnersSelect.value = '0';
     }
 }
 
@@ -1123,20 +1077,22 @@ function addScheduleCQuestion(businessIndex) {
     const myDiv = businessDivs[businessIndex - 1];
     if (!myDiv) return;
 
+    const filingStatus = document.getElementById('filingStatus').value;
+    const clientFirst = document.getElementById('firstName').value.trim() || 'Client1';
+    const spouseFirst = document.getElementById('spouseFirstName').value.trim() || 'Client2';
+    
+    if (filingStatus === 'Married Filing Jointly') {
     const label = document.createElement('label');
     label.id = `scheduleCLabel${businessIndex}`;
     label.style.marginTop = '12px';
     label.textContent = 'Which client owns this Schedule C?';
     myDiv.appendChild(label);
-
+}
     const scheduleCDropdown = document.createElement('select');
     scheduleCDropdown.id = `scheduleCOwner${businessIndex}`;
     scheduleCDropdown.name = `scheduleCOwner${businessIndex}`;
     myDiv.appendChild(scheduleCDropdown);
-
-    const clientFirst = document.getElementById('firstName').value.trim() || 'Client1';
-    const spouseFirst = document.getElementById('spouseFirstName').value.trim() || 'Client2';
-    const filingStatus = document.getElementById('filingStatus').value;
+    
     let optionsArr = ['Please Select', clientFirst];
     if (filingStatus === 'Married Filing Jointly') {
         optionsArr.push(spouseFirst);
@@ -1148,6 +1104,7 @@ function addScheduleCQuestion(businessIndex) {
         opt.textContent = optLabel;
         scheduleCDropdown.appendChild(opt);
     });
+
 }
 
 function removeScheduleCQuestion(businessIndex) {
@@ -1159,33 +1116,21 @@ function removeScheduleCQuestion(businessIndex) {
 
 function createOwnerFields(businessIndex, numOwners) {
     const dynamicOwnerFieldsDiv = document.getElementById(`dynamicOwnerFields${businessIndex}`);
-    dynamicOwnerFieldsDiv.innerHTML = ''; // Clear existing fields first
+    dynamicOwnerFieldsDiv.innerHTML = '';
 
-    // If user picks 0 or invalid, do nothing
     if (isNaN(numOwners) || numOwners < 1) return;
 
-    // Gather context
     const filingStatus = document.getElementById('filingStatus').value;
     const clientFirstName = document.getElementById('firstName').value.trim() || 'Client1';
     const spouseFirstName = document.getElementById('spouseFirstName').value.trim() || 'Client2';
     const businessTypeVal = document.getElementById(`business${businessIndex}Type`)?.value || '';
 
-    // For non–Schedule‑C businesses, build base options including "Other"
-    // For MFJ, options are: Client1, Client2, "Other"; otherwise, Client1, "Other"
-    let baseOptions = [];
-    if (filingStatus === 'Married Filing Jointly') {
-        baseOptions = [clientFirstName, spouseFirstName, 'Other'];
-    } else {
-        baseOptions = [clientFirstName, 'Other'];
-    }
-    
-    // Create the owner fields
+    // For each owner:
     for (let i = 1; i <= numOwners; i++) {
         const ownerSection = document.createElement('section');
         ownerSection.classList.add('owner-entry');
         ownerSection.id = `ownerContainer-${businessIndex}-${i}`;
 
-        // ----- Owner name select -----
         const nameLabel = document.createElement('label');
         nameLabel.textContent = `Owner ${i} (Select Who?):`;
         nameLabel.setAttribute('for', `business${businessIndex}OwnerName${i}`);
@@ -1196,21 +1141,17 @@ function createOwnerFields(businessIndex, numOwners) {
         nameSelect.name = `business${businessIndex}OwnerName${i}`;
         ownerSection.appendChild(nameSelect);
 
+        // If "Schedule-C", we already do special logic in addScheduleCQuestion() 
+        // but we also define an internal single owner field below.
         if (businessTypeVal === 'Schedule-C') {
-            // For Schedule-C, use the static dropdown logic (unchanged)
             let optionsArr;
-            if (filingStatus === 'Married Filing Jointly') {
-                if (numOwners === 1) {
-                    optionsArr = ['Please Select', clientFirstName, spouseFirstName];
-                } else {
-                    optionsArr = ['Please Select', clientFirstName, spouseFirstName, 'Other'];
-                }
+            const isMFJ = (filingStatus === 'Married Filing Jointly');
+            if (!isMFJ) {
+                // Single or other => 1 possible owner
+                optionsArr = ['Please Select', clientFirstName];
             } else {
-                if (numOwners === 1) {
-                    optionsArr = ['Please Select', clientFirstName];
-                } else {
-                    optionsArr = ['Please Select', clientFirstName, 'Other'];
-                }
+                // MFJ => user can choose client or spouse
+                optionsArr = ['Please Select', clientFirstName, spouseFirstName];
             }
             optionsArr.forEach(optLabel => {
                 const opt = document.createElement('option');
@@ -1219,37 +1160,45 @@ function createOwnerFields(businessIndex, numOwners) {
                 nameSelect.appendChild(opt);
             });
         } else {
-            // For non-Schedule-C, initially add "Please Select" and all client names including "Other"
-            const initialOptions = ['Please Select', ...baseOptions];
-            initialOptions.forEach(optLabel => {
+            // Non-Schedule-C => typical set: 'Please Select', plus [client, spouse, 'Other'] 
+            let baseOptions;
+            if (filingStatus === 'Married Filing Jointly') {
+                baseOptions = [clientFirstName, spouseFirstName, 'Other'];
+            } else {
+                baseOptions = [clientFirstName, 'Other'];
+            }
+            const pleaseOpt = document.createElement('option');
+            pleaseOpt.value = 'Please Select';
+            pleaseOpt.textContent = 'Please Select';
+            nameSelect.appendChild(pleaseOpt);
+
+            baseOptions.forEach(bOpt => {
                 const opt = document.createElement('option');
-                opt.value = optLabel;
-                opt.textContent = optLabel;
+                opt.value = bOpt;
+                opt.textContent = bOpt;
                 nameSelect.appendChild(opt);
             });
-            // Attach an event listener so that when a selection changes the dropdowns update.
+
             nameSelect.addEventListener('change', function () {
                 updateBusinessOwnerDropdowns(businessIndex);
             });
         }
 
-        // ----- S-Corp Reasonable Compensation field -----
+        // S-Corp only => Reasonable Comp
         if (businessTypeVal === 'S-Corp') {
-            // Use the helper with a minimum of 0 for Reasonable Compensation.
             const compInput = createLabelAndCurrencyField(
                 ownerSection,
                 `business${businessIndex}OwnerComp${i}`,
                 `Reasonable Compensation ($) for Owner ${i}:`,
                 0
             );
-            // Attach additional logic on blur.
             compInput.addEventListener('blur', function () {
-                 checkSCorpReasonableComp(businessIndex);
-                 updateBusinessNet(businessIndex);
+                checkSCorpReasonableComp(businessIndex);
+                updateBusinessNet(businessIndex);
             });
-        }  
-        
-        // ----- Ownership % -----
+        }
+
+        // Ownership %
         const percentLabel = document.createElement('label');
         percentLabel.textContent = `Owner ${i} Ownership %:`;
         percentLabel.setAttribute('for', `business${businessIndex}OwnerPercent${i}`);
@@ -1263,47 +1212,33 @@ function createOwnerFields(businessIndex, numOwners) {
         percentInput.name = `business${businessIndex}OwnerPercent${i}`;
         ownerSection.appendChild(percentInput);
 
-        // For non-Schedule-C owners (and for non-single-owner situations) add a red border until a value is entered.
-        if (businessTypeVal !== 'Schedule-C' && numOwners !== 1) {
-            if (percentInput.value.trim() === '') {
-                percentInput.style.border = '2px solid red';
-            }
-            percentInput.addEventListener('input', function () {
-                if (this.value.trim() === '') {
-                    this.style.border = '2px solid red';
-                } else {
-                    this.style.border = '';
-                }
-            });
-        }
-
-        // Single‑owner => lock at 100% read‑only
+        // Single‑owner => lock at 100%
         if (numOwners === 1) {
             percentInput.value = '100.0000';
             percentInput.readOnly = true;
             percentInput.style.backgroundColor = '#f0f0f0';
-        } else if (numOwners === 2) {
-            percentInput.value = '';
-            percentInput.min = '0.0001';
+        } 
+        else if (numOwners === 2) {
             let typingTimer;
             percentInput.addEventListener('input', () => {
                 clearTimeout(typingTimer);
                 typingTimer = setTimeout(() => {
                     handleTwoOwnersInput(businessIndex, i);
                     updateOwnerApportionment(businessIndex);
-                }, 1000);
+                }, 600);
             });
-        } else if (numOwners === 3) {
+        } 
+        else if (numOwners === 3) {
+            // For the first two owners we type freely,
+            // the third is automatically filled with remainder so total 100.
             if (i < 3) {
-                percentInput.value = '';
-                percentInput.min = '0.0001';
                 let typingTimer;
                 percentInput.addEventListener('input', () => {
                     clearTimeout(typingTimer);
                     typingTimer = setTimeout(() => {
                         autoCalculateLastOwner(businessIndex, 3);
                         updateOwnerApportionment(businessIndex);
-                    }, 1000);
+                    }, 600);
                 });
             } else {
                 percentInput.value = '';
@@ -1312,7 +1247,6 @@ function createOwnerFields(businessIndex, numOwners) {
             }
         }
 
-        // ----- Apportionment container (for Income or Loss) -----
         const apportionmentContainer = document.createElement('div');
         apportionmentContainer.id = `business${businessIndex}OwnerPercent${i}-apportionmentContainer`;
         ownerSection.appendChild(apportionmentContainer);
@@ -1320,8 +1254,11 @@ function createOwnerFields(businessIndex, numOwners) {
         dynamicOwnerFieldsDiv.appendChild(ownerSection);
     }
 
-    // Auto-fill logic for non‑MFJ S‑Corp and C‑Corp (existing block)
-    if (filingStatus !== 'Married Filing Jointly' && (businessTypeVal === 'S-Corp' || businessTypeVal === 'C-Corp')) {
+    // If S-Corp or C-Corp with Non-MFJ, fill default owners if needed
+    if (
+        filingStatus !== 'Married Filing Jointly' &&
+        (businessTypeVal === 'S-Corp' || businessTypeVal === 'C-Corp')
+    ) {
         if (numOwners === 1) {
             const ownerSelect = document.getElementById(`business${businessIndex}OwnerName1`);
             if (ownerSelect) {
@@ -1345,7 +1282,8 @@ function createOwnerFields(businessIndex, numOwners) {
         }
     }
 
-    // *** New block for Married Filing Jointly with 3 owners ***
+    // For MFJ with 3 owners (S-Corp, C-Corp, or Partnerships that the user picks 3),
+    // auto-fill #1 = client, #2 = spouse, #3 = Other (disabled).
     if (
         filingStatus === 'Married Filing Jointly' &&
         numOwners === 3 &&
@@ -1371,7 +1309,6 @@ function createOwnerFields(businessIndex, numOwners) {
         }
     }
 
-    // For non-Schedule-C businesses, update the dropdowns immediately to remove duplicate selections.
     if (businessTypeVal !== 'Schedule-C') {
         updateBusinessOwnerDropdowns(businessIndex);
     }
@@ -1383,12 +1320,15 @@ function handleTwoOwnersInput(businessIndex, ownerIndex) {
     const owner1Input = document.getElementById(`business${businessIndex}OwnerPercent1`);
     const owner2Input = document.getElementById(`business${businessIndex}OwnerPercent2`);
     if (!owner1Input || !owner2Input) return;
+
     const parsePct = (val) => {
         if (!val.trim()) return NaN;
         return parseFloat(val);
     };
+
     let val1 = parsePct(owner1Input.value);
     let val2 = parsePct(owner2Input.value);
+
     if (ownerIndex === 1) {
         if (isNaN(val1)) {
             owner2Input.value = '';
@@ -1415,8 +1355,10 @@ function autoCalculateLastOwner(businessIndex, numOwners) {
     const o2 = document.getElementById(`business${businessIndex}OwnerPercent2`);
     const o3 = document.getElementById(`business${businessIndex}OwnerPercent3`);
     if (!o1 || !o2 || !o3) return;
+
     const parsePct = (v) => (v.trim() ? parseFloat(v) : NaN);
     let val1 = parsePct(o1.value), val2 = parsePct(o2.value);
+
     if (isNaN(val1) && isNaN(val2)) {
         o3.value = '';
         validateTotalOwnership(businessIndex, 3);
@@ -1431,10 +1373,12 @@ function autoCalculateLastOwner(businessIndex, numOwners) {
     val2 = Math.min(Math.max(val2, 0), 100);
     o1.value = val1.toFixed(4);
     o2.value = val2.toFixed(4);
+
     let remain = 100 - (val1 + val2);
     if (remain < 0) remain = 0;
     if (remain > 100) remain = 100;
     o3.value = remain.toFixed(4);
+
     validateTotalOwnership(businessIndex, 3);
 }
 
@@ -1475,7 +1419,6 @@ function validateTotalOwnership(businessIndex, numOwners) {
             }
         }
     } else {
-        // Clear disclaimers if total is 100
         for (let i = 1; i <= numOwners; i++) {
             const ownerContainerId = `ownerContainer-${businessIndex}-${i}`;
             removeDisclaimer(ownerContainerId, 'OWNERSHIP_SUM');
@@ -1488,10 +1431,7 @@ function validateTotalOwnership(businessIndex, numOwners) {
 }
 
 function updateBusinessNet(index) {
-    // 1) If the user has not blurred both the Income AND the Expenses fields yet,
-    //    we skip disclaimers entirely. But still set the "Net" field value.
     if (!blurredIncome[index] || !blurredExpenses[index]) {
-        // Update the Net field even if disclaimers are skipped:
         const incomeVal = unformatCurrency(document.getElementById(`business${index}Income`)?.value || '0');
         const expensesVal = unformatCurrency(document.getElementById(`business${index}Expenses`)?.value || '0');
         const netVal = incomeVal - expensesVal;
@@ -1500,18 +1440,15 @@ function updateBusinessNet(index) {
             netField.value = formatCurrency(String(netVal));
             netField.style.color = netVal < 0 ? 'red' : 'black';
         }
-        return;  // Stop here; no disclaimers yet
+        return;
     }
 
-    // 2) Clear disclaimers for this business
     removeDisclaimer(`businessEntry${index}`, 'DEPENDENT_WAGE');
     removeDisclaimer(`dynamicOwnerFields${index}`, 'SCORP_COMP');
 
-    // 3) Grab the Income/Expenses
     const incomeVal = unformatCurrency(document.getElementById(`business${index}Income`)?.value || '0');
     const expensesVal = unformatCurrency(document.getElementById(`business${index}Expenses`)?.value || '0');
 
-    // 4) Compute Net, update the Net field
     const netVal = incomeVal - expensesVal;
     const netField = document.getElementById(`business${index}Net`);
     if (netField) {
@@ -1519,7 +1456,6 @@ function updateBusinessNet(index) {
         netField.style.color = netVal < 0 ? 'red' : 'black';
     }
 
-    // 5) Sum Dependent wages for this business
     let totalDependentWages = 0;
     let dependentStrings = [];
     for (let depIndex in dependentBizMap) {
@@ -1534,7 +1470,6 @@ function updateBusinessNet(index) {
         }
     }
 
-    // 6) For S-Corp, sum up Reasonable Compensation
     const businessTypeVal = document.getElementById(`business${index}Type`)?.value || '';
     let totalReasonableComp = 0;
     if (businessTypeVal === 'S-Corp') {
@@ -1548,13 +1483,11 @@ function updateBusinessNet(index) {
         }
     }
 
-    // 7) If truly nothing is entered, skip disclaimers
     const anythingEntered = (incomeVal !== 0 || expensesVal !== 0 || totalReasonableComp !== 0);
     if (!anythingEntered) {
         return;
     }
 
-    // 8) Check disclaimers for S-Corp vs. non-S-corp
     const sumDependentWagesPlusComp = totalDependentWages + totalReasonableComp;
     const wagesPlusCompString = [
         dependentStrings.length ? dependentStrings.join(" + ") : null,
@@ -1565,18 +1498,15 @@ function updateBusinessNet(index) {
 
     if (businessTypeVal === 'S-Corp') {
         if (sumDependentWagesPlusComp > expensesVal && wagesPlusCompString) {
-            // Show the "bigger" combined disclaimer
             addDisclaimer(
                 `businessEntry${index}`,
                 'DEPENDENT_WAGE',
                 `WARNING: ${wagesPlusCompString} exceed total Expenses (${formatCurrency(String(expensesVal))}).`
             );
         } else {
-            // Otherwise check simpler S-Corp Reasonable Compensation
             checkSCorpReasonableComp(index);
         }
     } else {
-        // Non-S-corp scenario
         if (totalDependentWages > expensesVal && dependentStrings.length > 0) {
             addDisclaimer(
                 `businessEntry${index}`,
@@ -1586,7 +1516,6 @@ function updateBusinessNet(index) {
         }
     }
 
-    // 9) Update owner apportionment after net changes
     updateOwnerApportionment(index);
 }
 
@@ -1597,188 +1526,112 @@ function updateOwnerApportionment(businessIndex) {
     const netVal = unformatCurrency(netStr);
     const numOwnersSelect = document.getElementById(`numOwnersSelect${businessIndex}`);
     if (!numOwnersSelect) return;
-
     const numOwners = parseInt(numOwnersSelect.value, 10) || 0;
     if (numOwners < 1) return;
-
-    // We'll rely on getCurrentPortions() to figure out final amounts,
-    // but it now merges overrides with the percent-based calculation.
     const portions = getCurrentPortions(businessIndex, netVal, numOwners);
 
-    // Render each owner's final portion
     for (let i = 1; i <= numOwners; i++) {
         showApportionment(businessIndex, i, portions[i - 1]);
     }
-
-    // Check disclaimers again
     checkSCorpReasonableComp(businessIndex);
     recalculateTotals();
 }
-  
+
 function showApportionment(businessIndex, ownerIndex, portion) {
+    const bizTypeSelect = document.getElementById(`business${businessIndex}Type`);
+    if (!bizTypeSelect) return;
+    const bizType = bizTypeSelect.value.trim();
+
+    // For Schedule‑C, skip apportionment statements
+    if (bizType === 'Schedule-C') {
+        return;
+    }
+
     const containerId = `business${businessIndex}OwnerPercent${ownerIndex}-apportionmentContainer`;
     let apportionmentEl = document.getElementById(`apportionment-${containerId}`);
     if (!apportionmentEl) {
-      apportionmentEl = document.createElement("div");
-      apportionmentEl.id = `apportionment-${containerId}`;
-      apportionmentEl.style.fontWeight = "bold";
-      apportionmentEl.style.marginTop = "8px";
-      const container = document.getElementById(containerId);
-      if (container) container.appendChild(apportionmentEl);
+        apportionmentEl = document.createElement("div");
+        apportionmentEl.id = `apportionment-${containerId}`;
+        apportionmentEl.style.fontWeight = "bold";
+        apportionmentEl.style.marginTop = "8px";
+        const container = document.getElementById(containerId);
+        if (container) container.appendChild(apportionmentEl);
     }
     apportionmentEl.innerHTML = "";
-    
-    // If portion is null (i.e. no percentage entered yet), do not display any apportionment.
+
     if (portion === null) return;
-    
-    // Use a trimmed, case-insensitive comparison for the business type.
+
     const businessType = (document.getElementById(`business${businessIndex}Type`)?.value || '').trim().toLowerCase();
     let prefixText = '';
     if (businessType === 'partnership') {
-      prefixText = `Apportionment of Self-Employment for Owner ${ownerIndex} is `;
+        prefixText = `Apportionment of Self-Employment for Owner ${ownerIndex} is `;
     } else {
-      prefixText = `Apportionment of Owner ${ownerIndex} is `;
+        prefixText = `Apportionment of Owner ${ownerIndex} is `;
     }
-    
+
     const prefixSpan = document.createElement("span");
     prefixSpan.textContent = prefixText;
     prefixSpan.classList.add("apportionment-text");
     apportionmentEl.appendChild(prefixSpan);
-    
+
     const amountSpan = document.createElement("span");
     const absolutePortion = Math.abs(portion);
     if (portion < 0) {
-      amountSpan.textContent = `${formatCurrency(String(absolutePortion))} (Loss)`;
-      amountSpan.style.color = "red";
+        amountSpan.textContent = `${formatCurrency(String(absolutePortion))} (Loss)`;
+        amountSpan.style.color = "red";
     } else {
-      amountSpan.textContent = `${formatCurrency(String(absolutePortion))} (Income)`;
-      amountSpan.style.color = "green";
+        amountSpan.textContent = `${formatCurrency(String(absolutePortion))} (Income)`;
+        amountSpan.style.color = "green";
     }
     apportionmentEl.appendChild(amountSpan);
-    
-    // Only add up/down arrow buttons if there is more than one owner.
+
     const numOwnersSelect = document.getElementById(`numOwnersSelect${businessIndex}`);
     const numOwners = numOwnersSelect ? parseInt(numOwnersSelect.value, 10) : 0;
     if (numOwners > 1) {
-      const upBtn = document.createElement("button");
-      upBtn.textContent = "▲";
-      upBtn.classList.add("arrow-btn");
-      upBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        incrementApportionment(businessIndex, ownerIndex);
-      });
-      apportionmentEl.appendChild(upBtn);
-      
-      const downBtn = document.createElement("button");
-      downBtn.textContent = "▼";
-      downBtn.classList.add("arrow-btn");
-      downBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        decrementApportionment(businessIndex, ownerIndex);
-      });
-      apportionmentEl.appendChild(downBtn);
-    }
-    console.log("Business type is:", businessType, "for owner", ownerIndex, "portion:", portion);
+        const upBtn = document.createElement("button");
+        upBtn.textContent = "▲";
+        upBtn.classList.add("arrow-btn");
+        upBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            incrementApportionment(businessIndex, ownerIndex);
+        });
+        apportionmentEl.appendChild(upBtn);
 
+        const downBtn = document.createElement("button");
+        downBtn.textContent = "▼";
+        downBtn.classList.add("arrow-btn");
+        downBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            decrementApportionment(businessIndex, ownerIndex);
+        });
+        apportionmentEl.appendChild(downBtn);
+    }
 }
-   
+
 function incrementApportionment(businessIndex, ownerIndex) {
     const netStr = document.getElementById(`business${businessIndex}Net`)?.value || '0';
     const netVal = unformatCurrency(netStr);
-
     const numOwnersSelect = document.getElementById(`numOwnersSelect${businessIndex}`);
     if (!numOwnersSelect) return;
     const numOwners = parseInt(numOwnersSelect.value, 10) || 0;
-    if (numOwners < 2) return; // If only 1 owner, no need to adjust
+    if (numOwners < 2) return;
 
-    // 1) Get the current portion array
     let portions = getCurrentPortions(businessIndex, netVal, numOwners);
-
-    // 2) Increase the chosen owner by $1
     portions[ownerIndex - 1] += 1;
 
-    // 3) For a 2-owner situation, we simply recalc the other so sum = netVal
     if (numOwners === 2) {
         const otherIdx = (ownerIndex === 1) ? 1 : 0;
         portions[otherIdx] = netVal - portions[ownerIndex - 1];
-        // Don’t let other become negative if netVal is positive
         if (netVal > 0 && portions[otherIdx] < 0) {
             portions[ownerIndex - 1] = netVal;
             portions[otherIdx] = 0;
         }
-    }
-    // For 3 owners, you could do partial distribution if you want:
-    else if (numOwners === 3) {
-        // Recompute leftover, then distribute among the other owners
-        let sumNow = portions.reduce((a, b) => a + b, 0);
-        let leftover = netVal - sumNow;
-        // Go in a small loop adjusting the other owners if leftover != 0
-        let i = 0;
-        while (leftover !== 0 && i < 3) {
-            if (i !== (ownerIndex - 1)) {
-                // Each time, push or pull $1 to/from the other owners
-                if (leftover > 0) {
-                    portions[i] += 1;
-                    leftover -= 1;
-                } else {
-                    // leftover < 0 => reduce that owner
-                    if (portions[i] > 0) {
-                        portions[i] -= 1;
-                        leftover += 1;
-                    }
-                }
-            }
-            i++;
-            if (i >= 3 && leftover !== 0) i = 0; // keep distributing if needed
-        }
-    }
-
-    // 4) Save these overrides, then update
-    for (let i = 1; i <= numOwners; i++) {
-        const overrideKey = `biz${businessIndex}-owner${i}`;
-        apportionmentOverrides[overrideKey] = portions[i - 1];
-    }
-    updateOwnerApportionment(businessIndex);
-}
-  
-function decrementApportionment(businessIndex, ownerIndex) {
-    const netStr = document.getElementById(`business${businessIndex}Net`)?.value || '0';
-    const netVal = unformatCurrency(netStr);
-
-    const numOwnersSelect = document.getElementById(`numOwnersSelect${businessIndex}`);
-    if (!numOwnersSelect) return;
-    const numOwners = parseInt(numOwnersSelect.value, 10) || 0;
-    if (numOwners < 2) return; // If only 1 owner, no need to adjust
-
-    // 1) Get the current portion array
-    let portions = getCurrentPortions(businessIndex, netVal, numOwners);
-
-    // 2) Decrease the chosen owner by $1 (but not below 0 if netVal is positive)
-    if (netVal > 0 && portions[ownerIndex - 1] > 0) {
-        portions[ownerIndex - 1] -= 1;
-    } else if (netVal <= 0) {
-        // If netVal is zero/negative, you can decide to let them go negative or not.
-        portions[ownerIndex - 1] -= 1;
-    }
-
-    // 3) For 2 owners, recalc the other so sum = netVal
-    if (numOwners === 2) {
-        const otherIdx = (ownerIndex === 1) ? 1 : 0;
-        portions[otherIdx] = netVal - portions[ownerIndex - 1];
-        // Don’t let other portion become negative if netVal is positive
-        if (netVal > 0 && portions[otherIdx] < 0) {
-            portions[ownerIndex - 1] = netVal;
-            portions[otherIdx] = 0;
-        }
-    }
-    // For 3 owners, do a small leftover distribution approach
-    else if (numOwners === 3) {
+    } else if (numOwners === 3) {
         let sumNow = portions.reduce((a, b) => a + b, 0);
         let leftover = netVal - sumNow;
         let i = 0;
         while (leftover !== 0 && i < 3) {
             if (i !== (ownerIndex - 1)) {
-                // Each time, push or pull $1 to/from the other owners
                 if (leftover > 0) {
                     portions[i] += 1;
                     leftover -= 1;
@@ -1794,7 +1647,56 @@ function decrementApportionment(businessIndex, ownerIndex) {
         }
     }
 
-    // 4) Save these overrides, then update
+    for (let i = 1; i <= numOwners; i++) {
+        const overrideKey = `biz${businessIndex}-owner${i}`;
+        apportionmentOverrides[overrideKey] = portions[i - 1];
+    }
+    updateOwnerApportionment(businessIndex);
+}
+
+function decrementApportionment(businessIndex, ownerIndex) {
+    const netStr = document.getElementById(`business${businessIndex}Net`)?.value || '0';
+    const netVal = unformatCurrency(netStr);
+    const numOwnersSelect = document.getElementById(`numOwnersSelect${businessIndex}`);
+    if (!numOwnersSelect) return;
+    const numOwners = parseInt(numOwnersSelect.value, 10) || 0;
+    if (numOwners < 2) return;
+
+    let portions = getCurrentPortions(businessIndex, netVal, numOwners);
+    if (netVal > 0 && portions[ownerIndex - 1] > 0) {
+        portions[ownerIndex - 1] -= 1;
+    } else if (netVal <= 0) {
+        portions[ownerIndex - 1] -= 1;
+    }
+
+    if (numOwners === 2) {
+        const otherIdx = (ownerIndex === 1) ? 1 : 0;
+        portions[otherIdx] = netVal - portions[ownerIndex - 1];
+        if (netVal > 0 && portions[otherIdx] < 0) {
+            portions[ownerIndex - 1] = netVal;
+            portions[otherIdx] = 0;
+        }
+    } else if (numOwners === 3) {
+        let sumNow = portions.reduce((a, b) => a + b, 0);
+        let leftover = netVal - sumNow;
+        let i = 0;
+        while (leftover !== 0 && i < 3) {
+            if (i !== (ownerIndex - 1)) {
+                if (leftover > 0) {
+                    portions[i] += 1;
+                    leftover -= 1;
+                } else {
+                    if (portions[i] > 0) {
+                        portions[i] -= 1;
+                        leftover += 1;
+                    }
+                }
+            }
+            i++;
+            if (i >= 3 && leftover !== 0) i = 0;
+        }
+    }
+
     for (let i = 1; i <= numOwners; i++) {
         const overrideKey = `biz${businessIndex}-owner${i}`;
         apportionmentOverrides[overrideKey] = portions[i - 1];
@@ -1803,7 +1705,6 @@ function decrementApportionment(businessIndex, ownerIndex) {
 }
 
 function getCurrentPortions(businessIndex, netVal, numOwners) {
-    // Step A: get the percent-based "default" portion
     let percentages = [];
     let totalEntered = 0;
     let blankCount = 0;
@@ -1826,17 +1727,13 @@ function getCurrentPortions(businessIndex, netVal, numOwners) {
         }
     }
 
-    // If no percentage is entered at all, your base portions = null
     if (blankCount === numOwners) {
-        // Everyone's portion would be 0 by default
         return new Array(numOwners).fill(0).map((_, i) => {
-            // But if there's an override for this owner, use it
-            const overrideKey = `biz${businessIndex}-owner${i + 1}`;
+            const overrideKey = `biz${businessIndex}-owner${i+1}`;
             return apportionmentOverrides[overrideKey] ?? 0;
         });
     }
 
-    // Step B: fill in blanks with an equal share of leftover
     const remaining = 100 - totalEntered;
     const equalShare = (blankCount > 0) ? remaining / blankCount : 0;
     for (let i = 0; i < numOwners; i++) {
@@ -1845,54 +1742,38 @@ function getCurrentPortions(businessIndex, netVal, numOwners) {
         }
     }
 
-    // Step C: turn % into portion of netVal, rounding to integer
     let basePortions = percentages.map(pct => Math.round(netVal * (pct / 100)));
-    // fix rounding difference
     const allocated = basePortions.reduce((a, b) => a + b, 0);
     const diff = netVal - allocated;
     if (diff !== 0 && basePortions.length) {
         basePortions[0] += diff;
     }
 
-    // Step D: merge with any manual overrides
-    // If an overrideKey exists, we treat that as final for that owner
-    // BUT we do not exceed netVal total. We'll handle any leftover or negative leftover
-    // by adjusting the *first* non-override or the first we find.
     let finalPortions = [...basePortions];
-    let totalManual = 0;
     for (let i = 1; i <= numOwners; i++) {
         const overrideKey = `biz${businessIndex}-owner${i}`;
         if (overrideKey in apportionmentOverrides) {
             finalPortions[i - 1] = apportionmentOverrides[overrideKey];
         }
     }
-    // Now see if the sum of finalPortions > netVal or < netVal
     let finalSum = finalPortions.reduce((a, b) => a + b, 0);
     let leftover = netVal - finalSum;
 
-    // If leftover != 0, push/pull it onto the first owner who doesn't have an override
     if (leftover !== 0) {
-        // find the first index that is not in apportionmentOverrides
-        // or if all are overridden, adjust the first one
         let idxToFix = finalPortions.findIndex((amt, idx) => {
-            const overrideKey = `biz${businessIndex}-owner${idx + 1}`;
+            const overrideKey = `biz${businessIndex}-owner${idx+1}`;
             return !(overrideKey in apportionmentOverrides);
         });
-        if (idxToFix === -1) idxToFix = 0; // if all owners are overridden, pick 0
+        if (idxToFix === -1) idxToFix = 0;
         finalPortions[idxToFix] += leftover;
     }
-
     return finalPortions;
 }
 
-function checkSCorpReasonableComp(businessIndex, depWages = 0) {
-    // If "dependent wages + comp" disclaimers already triggered, we skip
-    // We'll do that check by verifying disclaimers were not shown for 'DEPENDENT_WAGE'
+function checkSCorpReasonableComp(businessIndex) {
     if (DISCLAIMER_MAP[`businessEntry${businessIndex}`] && DISCLAIMER_MAP[`businessEntry${businessIndex}`]['DEPENDENT_WAGE']) {
-        // Means the bigger disclaimers has been triggered, so skip
         return;
     }
-
     const businessTypeVal = document.getElementById(`business${businessIndex}Type`)?.value || '';
     if (businessTypeVal !== 'S-Corp') return;
 
@@ -1916,8 +1797,6 @@ function checkSCorpReasonableComp(businessIndex, depWages = 0) {
     removeDisclaimer(`dynamicOwnerFields${businessIndex}`, 'SCORP_COMP');
     compFields.forEach(f => f.classList.remove('input-error'));
 
-    // If totalComp alone > expensesVal, disclaim
-    // (Only if we didn't disclaim for "dep wages + comp" above)
     if (totalComp > expensesVal) {
         addDisclaimer(
             `dynamicOwnerFields${businessIndex}`,
@@ -1929,13 +1808,11 @@ function checkSCorpReasonableComp(businessIndex, depWages = 0) {
 }
 
 function updateBusinessOwnerDropdowns(businessIndex) {
-    // Get all owner name selects for this business.
     const ownerSelects = document.querySelectorAll(
         `#dynamicOwnerFields${businessIndex} select[id^="business${businessIndex}OwnerName"]`
     );
     if (!ownerSelects) return;
 
-    // Determine the base options (including "Other").
     const filingStatus = document.getElementById('filingStatus').value;
     const clientFirstName = document.getElementById('firstName').value.trim() || 'Client1';
     const spouseFirstName = document.getElementById('spouseFirstName').value.trim() || 'Client2';
@@ -1945,7 +1822,6 @@ function updateBusinessOwnerDropdowns(businessIndex) {
     } else {
         baseOptions = [clientFirstName, 'Other'];
     }
-    // Collect the client names already selected from these dropdowns (ignoring "Please Select")
     let selectedNames = [];
     ownerSelects.forEach(select => {
         const val = select.value;
@@ -1954,20 +1830,15 @@ function updateBusinessOwnerDropdowns(businessIndex) {
         }
     });
 
-    // Update each owner select’s options.
     ownerSelects.forEach(select => {
         const currentVal = select.value;
-        // Clear current options.
         select.innerHTML = '';
 
-        // Always add the "Please Select" option.
         const pleaseOption = document.createElement('option');
         pleaseOption.value = 'Please Select';
         pleaseOption.textContent = 'Please Select';
         select.appendChild(pleaseOption);
 
-        // Add each client name from baseOptions if it has not been selected in another select
-        // or if it is already the current value in this select.
         baseOptions.forEach(name => {
             if (!selectedNames.includes(name) || currentVal === name) {
                 const option = document.createElement('option');
@@ -1977,7 +1848,6 @@ function updateBusinessOwnerDropdowns(businessIndex) {
             }
         });
 
-        // Restore the previously selected value if it still exists; otherwise default to "Please Select".
         if ([...select.options].some(opt => opt.value === currentVal)) {
             select.value = currentVal;
         } else {
@@ -2059,6 +1929,7 @@ function recalculateTotals() {
     const interestPrivateBonds = getFieldValue('interestPrivateBonds');
     const passiveActivityLossAdjustments = getFieldValue('passiveActivityLossAdjustments');
     const qualifiedBusinessDeduction = getFieldValue('qualifiedBusinessDeduction');
+
     let businessesNetTotal = 0;
     const numBusinessesVal = parseInt(document.getElementById('numOfBusinesses').value || '0', 10);
     for (let i = 1; i <= numBusinessesVal; i++) {
@@ -2066,6 +1937,7 @@ function recalculateTotals() {
         const netVal = unformatCurrency(netValStr);
         businessesNetTotal += netVal;
     }
+
     let scheduleEsNetTotal = 0;
     const numScheduleEsVal = parseInt(document.getElementById('numScheduleEs')?.value || '0', 10);
     for (let i = 1; i <= numScheduleEsVal; i++) {
@@ -2073,6 +1945,7 @@ function recalculateTotals() {
         const netVal = unformatCurrency(netValStr);
         scheduleEsNetTotal += netVal;
     }
+
     const totalIncomeVal =
         wages +
         reasonableCompensation +
@@ -2091,17 +1964,19 @@ function recalculateTotals() {
         interestPrivateBonds +
         passiveActivityLossAdjustments +
         qualifiedBusinessDeduction;
-        document.getElementById('totalIncome').value = 
+
+    document.getElementById('totalIncome').value = 
         isNaN(totalIncomeVal) 
             ? '' 
             : formatCurrency(String(parseInt(totalIncomeVal)));
-    
+
     const halfSETax = getFieldValue('halfSETax');
     const retirementDeduction = getFieldValue('retirementDeduction');
     const medicalReimbursementPlan = getFieldValue('medicalReimbursementPlan');
     const SEHealthInsurance = getFieldValue('SEHealthInsurance');
     const alimonyPaid = getFieldValue('alimonyPaid');
     const otherAdjustments = getFieldValue('otherAdjustments');
+
     const totalAdjustedGrossIncomeVal =
         totalIncomeVal -
         halfSETax -
@@ -2110,9 +1985,11 @@ function recalculateTotals() {
         SEHealthInsurance -
         alimonyPaid -
         otherAdjustments;
+
     document.getElementById('totalAdjustedGrossIncome').value = isNaN(totalAdjustedGrossIncomeVal)
         ? ''
         : parseInt(totalAdjustedGrossIncomeVal);
+
     updateTaxableIncome();
 }
 
@@ -2131,6 +2008,7 @@ function recalculateDeductions() {
     const casualtyAndTheftLosses = getFieldValue('casualtyAndTheftLosses');
     const miscellaneousDeductions = getFieldValue('miscellaneousDeductions');
     const standardOrItemizedDeduction = getFieldValue('standardOrItemizedDeduction');
+
     const totalDeductionsVal =
         medical +
         stateAndLocalTaxes +
@@ -2142,6 +2020,7 @@ function recalculateDeductions() {
         casualtyAndTheftLosses +
         miscellaneousDeductions +
         standardOrItemizedDeduction;
+
     document.getElementById('totalDeductions').value = isNaN(totalDeductionsVal) ? '' : parseInt(totalDeductionsVal);
     updateTaxableIncome();
 }
@@ -2261,24 +2140,19 @@ document.getElementById('taxForm').addEventListener('keydown', function (e) {
     if (e.key === 'Enter') {
       e.preventDefault();
   
-      // Grab all inputs, selects, and textareas
       let allElements = Array.from(this.elements).filter(el =>
         el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA'
       );
-  
-      // Filter out the ones that are hidden (display:none or offsetParent = null)
       let visibleElements = allElements.filter(el => el.offsetParent !== null);
-  
       let index = visibleElements.indexOf(document.activeElement);
   
       if (index > -1 && index < visibleElements.length - 1) {
         visibleElements[index + 1].focus();
       } else if (index === visibleElements.length - 1) {
-        // If we're at the very last visible field, loop back around
         visibleElements[0].focus();
       }
     }
-  });
+});
 
 //--------------------------//
 // 18. COLLAPSIBLE SECTIONS //
@@ -2300,7 +2174,6 @@ function showRedDisclaimer(message, containerId) {
     if (!disclaimer) {
       disclaimer = document.createElement('div');
       disclaimer.id = `disclaimer-${containerId}`;
-      // Add the red-disclaimer class so CSS controls the color
       disclaimer.classList.add('red-disclaimer');
       container.appendChild(disclaimer);
     }
@@ -2359,33 +2232,26 @@ boldBtn.addEventListener('click', () => {
 highlightBtn.addEventListener('click', () => {
     const currentSelection = window.getSelection();
     if (!currentSelection || currentSelection.isCollapsed) {
-      return; // No selection
+      return;
     }
-  
-    // Determine which highlight color to use based on dark mode
     const highlightColor = document.body.classList.contains('dark-mode')
-      ? 'fuchsia'  // A soft blue for dark mode; change as desired
-      : 'yellow';  // Default yellow for light mode
-  
+      ? 'fuchsia'
+      : 'yellow';
     let isHighlighted = false;
     if (currentSelection.rangeCount > 0) {
       const range = currentSelection.getRangeAt(0);
       const parent = range.commonAncestorContainer.parentNode;
-      // Check if the current highlight matches our chosen color
       if (parent && parent.style && parent.style.backgroundColor === highlightColor) {
         isHighlighted = true;
       }
     }
-  
     if (isHighlighted) {
-      // Remove highlight
       document.execCommand('hiliteColor', false, 'transparent');
     } else {
-      // Apply our chosen highlight color
       document.execCommand('hiliteColor', false, highlightColor);
     }
-  });
-   
+});
+
 //----------------------//
 // 21. UNDO/REDO BUTTON //
 //----------------------//
@@ -2405,7 +2271,6 @@ function restoreFormSnapshot(snapshot) {
     // (All your existing restore logic is unchanged)
     const dataObj = JSON.parse(snapshot);
 
-    // 1) Re-apply the “controller” fields to re-generate dynamic sections
     if (dataObj.filingStatus !== undefined) {
         const filingStatusEl = document.getElementById('filingStatus');
         filingStatusEl.value = dataObj.filingStatus;
@@ -2421,11 +2286,9 @@ function restoreFormSnapshot(snapshot) {
         document.getElementById('numberOfDependents').value = dataObj.numberOfDependents;
     }
 
-    // 2) Rebuild dynamic sections
-    //    (businessContainer, scheduleEsContainer, dependentsContainer)
-    //    ... (Your existing code that calls createBusinessNameFields(), createBusinessFields(), etc.)
-
-    // 3) Now set the values of each field to match the snapshot
+    // Rebuild dynamic sections
+    // (businessContainer, scheduleEsContainer, dependentsContainer)
+    // Then re-populate each field
     for (let key in dataObj) {
         const fields = document.getElementsByName(key);
         if (fields && fields.length > 0) {
@@ -2433,7 +2296,6 @@ function restoreFormSnapshot(snapshot) {
         }
     }
 
-    // 4) Trigger "change" on owners’ <select> to ensure owners fields re-render
     const numBiz = parseInt(document.getElementById('numOfBusinesses').value || '0', 10);
     for (let i = 1; i <= numBiz; i++) {
         const ownersSelect = document.getElementById(`numOwnersSelect${i}`);
@@ -2442,7 +2304,6 @@ function restoreFormSnapshot(snapshot) {
         }
     }
 
-    // 5) Recompute all net fields, disclaimers, etc.
     for (let i = 1; i <= numBiz; i++) {
         updateBusinessNet(i);
         checkSCorpReasonableComp(i);
@@ -2451,18 +2312,14 @@ function restoreFormSnapshot(snapshot) {
     for (let i = 1; i <= eCount; i++) {
         updateScheduleENet(i);
     }
-
-    // 6) Force final recalculations
     recalculateTotals();
     recalculateDeductions();
 }
 
 document.getElementById('undoButton').addEventListener('click', function() {
     if (undoStack.length > 1) {
-        // Pop current off undo, push onto redo
         const current = undoStack.pop();
         redoStack.push(current);
-        // The new top is the snapshot we want to revert to
         const previous = undoStack[undoStack.length - 1];
         restoreFormSnapshot(previous);
     }
@@ -2470,24 +2327,19 @@ document.getElementById('undoButton').addEventListener('click', function() {
 
 document.getElementById('redoButton').addEventListener('click', function() {
     if (redoStack.length > 0) {
-        // Pop from redo, push onto undo
         const snapshot = redoStack.pop();
         undoStack.push(snapshot);
-        // Then restore that snapshot
         restoreFormSnapshot(snapshot);
     }
 });
 
 (function() {
-    // For SELECT changes:
     document.getElementById('taxForm').addEventListener('change', function(e) {
         if (e.target.matches('select')) {
             undoStack.push(getFormSnapshot());
             redoStack = [];
         }
     });
-
-    // For INPUT/TEXTAREA blurs:
     document.getElementById('taxForm').addEventListener('blur', function(e) {
         if (e.target.matches('input, textarea')) {
             undoStack.push(getFormSnapshot());
@@ -2496,7 +2348,6 @@ document.getElementById('redoButton').addEventListener('click', function() {
     }, true);
 })();
 
-// Push the initial empty-state snapshot, so user can “Undo” back to it if needed
 document.addEventListener('DOMContentLoaded', function() {
     undoStack.push(getFormSnapshot());
 });
@@ -2508,8 +2359,6 @@ document.addEventListener('DOMContentLoaded', function() {
 function saveBusinessDetailData() {
     const container = document.getElementById('businessContainer');
     if (!container) return;
-
-    // Collect ALL inputs/selects for each business
     const inputs = container.querySelectorAll('input, select');
     inputs.forEach(input => {
         const fieldId = input.id;
@@ -2520,7 +2369,6 @@ function saveBusinessDetailData() {
 }
 
 function populateBusinessDetailFields(index) {
-    // Populate the standard fields for business #index
     const fields = [
         `business${index}Type`,
         `business${index}Income`,
@@ -2536,7 +2384,6 @@ function populateBusinessDetailFields(index) {
             const el = document.getElementById(f);
             if (el) {
                 el.value = businessDetailStore[f];
-
                 if (f === `business${index}Type`) {
                     el.dispatchEvent(new Event('change'));
                 }
@@ -2544,21 +2391,15 @@ function populateBusinessDetailFields(index) {
         }
     });
 
-    // 1) Retrieve the number of owners from the stored data:
     const numOwnersSelectEl = document.getElementById(`numOwnersSelect${index}`);
     if (numOwnersSelectEl) {
-        // If we have it in storage, this ensures the UI matches
         if (businessDetailStore[`numOwnersSelect${index}`]) {
             numOwnersSelectEl.value = businessDetailStore[`numOwnersSelect${index}`];
         }
-
-        // 2) Now actually CREATE the owner fields in the DOM:
         const numOwners = parseInt(numOwnersSelectEl.value, 10) || 0;
         createOwnerFields(index, numOwners);
 
-        // 3) Populate each new owner field with stored data:
         for (let i = 1; i <= numOwners; i++) {
-            // For example: "business1OwnerName1", "business1OwnerPercent1", "business1OwnerComp1" etc.
             const nameFieldId = `business${index}OwnerName${i}`;
             if (businessDetailStore[nameFieldId] !== undefined) {
                 const nameFieldEl = document.getElementById(nameFieldId);
@@ -2566,7 +2407,6 @@ function populateBusinessDetailFields(index) {
                     nameFieldEl.value = businessDetailStore[nameFieldId];
                 }
             }
-
             const pctFieldId = `business${index}OwnerPercent${i}`;
             if (businessDetailStore[pctFieldId] !== undefined) {
                 const pctFieldEl = document.getElementById(pctFieldId);
@@ -2574,7 +2414,6 @@ function populateBusinessDetailFields(index) {
                     pctFieldEl.value = businessDetailStore[pctFieldId];
                 }
             }
-
             const compFieldId = `business${index}OwnerComp${i}`;
             if (businessDetailStore[compFieldId] !== undefined) {
                 const compFieldEl = document.getElementById(compFieldId);
@@ -2584,16 +2423,9 @@ function populateBusinessDetailFields(index) {
             }
         }
     }
-
-    // After re-populating, recalc net, disclaimers, etc.
     updateBusinessNet(index);
     checkSCorpReasonableComp(index);
     validateTotalOwnership(index, parseInt(numOwnersSelectEl.value, 10) || 0);
-
-    // If owners exist, check that their total ownership = 100
-    if (numOwnersSelectEl) {
-        validateTotalOwnership(index, parseInt(numOwnersSelectEl.value, 10) || 0);
-    }
 }
 
 //----------------------//
@@ -2602,8 +2434,8 @@ function populateBusinessDetailFields(index) {
 
 const darkModeCheckbox = document.getElementById('darkModeToggle');
 
+
 document.addEventListener('DOMContentLoaded', () => {
-  // e.g. if localStorage says "dark" then set checkbox & add class
   const userPrefersDark = localStorage.getItem('preferred-theme') === 'dark';
   if (userPrefersDark) {
     darkModeCheckbox.checked = true;
