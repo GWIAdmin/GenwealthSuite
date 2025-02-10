@@ -789,7 +789,10 @@ function formatCurrency(value) {
 
 function unformatCurrency(value) {
     let trimmedValue = value.trim();
-    let isNegative = trimmedValue.charAt(0) === '-';
+    // Check if the value is negative by either a leading '-' or by being enclosed in parentheses.
+    let isNegative = trimmedValue.charAt(0) === '-' || 
+                     (trimmedValue.charAt(0) === '(' && trimmedValue.charAt(trimmedValue.length - 1) === ')');
+    // Remove any characters except digits and the decimal point.
     let numericValue = trimmedValue.replace(/[^0-9.]/g, '');
     let floatVal = parseFloat(numericValue);
     if (isNaN(floatVal)) {
@@ -1250,6 +1253,12 @@ function createOwnerFields(businessIndex, numOwners) {
         else if (numOwners === 2) {
             let typingTimer;
             percentInput.addEventListener('input', () => {
+                // Clear any overrides for this business
+                for (let key in apportionmentOverrides) {
+                    if (key.startsWith(`biz${businessIndex}-`)) {
+                        delete apportionmentOverrides[key];
+                    }
+                }
                 clearTimeout(typingTimer);
                 typingTimer = setTimeout(() => {
                     handleTwoOwnersInput(businessIndex, i);
@@ -1258,11 +1267,15 @@ function createOwnerFields(businessIndex, numOwners) {
             });
         } 
         else if (numOwners === 3) {
-            // For the first two owners we type freely,
-            // the third is automatically filled with remainder so total 100.
             if (i < 3) {
                 let typingTimer;
                 percentInput.addEventListener('input', () => {
+                    // Clear any overrides for this business
+                    for (let key in apportionmentOverrides) {
+                        if (key.startsWith(`biz${businessIndex}-`)) {
+                            delete apportionmentOverrides[key];
+                        }
+                    }
                     clearTimeout(typingTimer);
                     typingTimer = setTimeout(() => {
                         autoCalculateLastOwner(businessIndex, 3);
@@ -1275,7 +1288,7 @@ function createOwnerFields(businessIndex, numOwners) {
                 percentInput.style.backgroundColor = '#f0f0f0';
             }
         }
-
+        
         const apportionmentContainer = document.createElement('div');
         apportionmentContainer.id = `business${businessIndex}OwnerPercent${i}-apportionmentContainer`;
         ownerSection.appendChild(apportionmentContainer);
@@ -1460,31 +1473,29 @@ function validateTotalOwnership(businessIndex, numOwners) {
 }
 
 function updateBusinessNet(index) {
-    if (!blurredIncome[index] || !blurredExpenses[index]) {
-        const incomeVal = unformatCurrency(document.getElementById(`business${index}Income`)?.value || '0');
-        const expensesVal = unformatCurrency(document.getElementById(`business${index}Expenses`)?.value || '0');
-        const netVal = incomeVal - expensesVal;
-        const netField = document.getElementById(`business${index}Net`);
-        if (netField) {
-            netField.value = formatCurrency(String(netVal));
-            netField.style.color = netVal < 0 ? 'red' : 'black';
-        }
-        return;
-    }
-
-    removeDisclaimer(`businessEntry${index}`, 'DEPENDENT_WAGE');
-    removeDisclaimer(`dynamicOwnerFields${index}`, 'SCORP_COMP');
-
+    // Always calculate the net amount from income and expenses
     const incomeVal = unformatCurrency(document.getElementById(`business${index}Income`)?.value || '0');
     const expensesVal = unformatCurrency(document.getElementById(`business${index}Expenses`)?.value || '0');
-
     const netVal = incomeVal - expensesVal;
     const netField = document.getElementById(`business${index}Net`);
     if (netField) {
         netField.value = formatCurrency(String(netVal));
         netField.style.color = netVal < 0 ? 'red' : 'black';
     }
+    
+    // Clear any previously stored overrides so that fresh calculations are made
+    for (let key in apportionmentOverrides) {
+        delete apportionmentOverrides[key];
+    }
 
+    // Remove any dependent disclaimers before recalculating
+    removeDisclaimer(`businessEntry${index}`, 'DEPENDENT_WAGE');
+    removeDisclaimer(`dynamicOwnerFields${index}`, 'SCORP_COMP');
+    
+    // Refresh the owner apportionment with the current net value
+    updateOwnerApportionment(index);
+
+    // (Optional) Recalculate any dependent wages or related fields here…
     let totalDependentWages = 0;
     let dependentStrings = [];
     for (let depIndex in dependentBizMap) {
@@ -1498,9 +1509,11 @@ function updateBusinessNet(index) {
             }
         }
     }
-
-    const businessTypeVal = document.getElementById(`business${index}Type`)?.value || '';
+    
+    // (Optional) If you have additional logic (e.g., for S-Corp Reasonable Comp), include it here.
+    // For example, calculate totalReasonableComp and check against expenses...
     let totalReasonableComp = 0;
+    const businessTypeVal = document.getElementById(`business${index}Type`)?.value || '';
     if (businessTypeVal === 'S-Corp') {
         const numOwnersSelect = document.getElementById(`numOwnersSelect${index}`);
         if (numOwnersSelect) {
@@ -1511,40 +1524,14 @@ function updateBusinessNet(index) {
             }
         }
     }
-
+    
     const anythingEntered = (incomeVal !== 0 || expensesVal !== 0 || totalReasonableComp !== 0);
     if (!anythingEntered) {
-        return;
+        // You might want to still update the apportionment even if nothing is entered.
+        // For now, we continue.
     }
-
-    const sumDependentWagesPlusComp = totalDependentWages + totalReasonableComp;
-    const wagesPlusCompString = [
-        dependentStrings.length ? dependentStrings.join(" + ") : null,
-        (businessTypeVal === 'S-Corp' && totalReasonableComp > 0)
-            ? `Reasonable Compensation (${formatCurrency(String(totalReasonableComp))})`
-            : null
-    ].filter(Boolean).join(" + ");
-
-    if (businessTypeVal === 'S-Corp') {
-        if (sumDependentWagesPlusComp > expensesVal && wagesPlusCompString) {
-            addDisclaimer(
-                `businessEntry${index}`,
-                'DEPENDENT_WAGE',
-                `WARNING: ${wagesPlusCompString} exceed total Expenses (${formatCurrency(String(expensesVal))}).`
-            );
-        } else {
-            checkSCorpReasonableComp(index);
-        }
-    } else {
-        if (totalDependentWages > expensesVal && dependentStrings.length > 0) {
-            addDisclaimer(
-                `businessEntry${index}`,
-                'DEPENDENT_WAGE',
-                `WARNING: ${dependentStrings.join(" + ")} exceed total Expenses (${formatCurrency(String(expensesVal))}).`
-            );
-        }
-    }
-
+    
+    // **Always refresh the owner apportionment whenever net changes**
     updateOwnerApportionment(index);
 }
 
@@ -1571,11 +1558,20 @@ function showApportionment(businessIndex, ownerIndex, portion) {
     if (!bizTypeSelect) return;
     const bizType = bizTypeSelect.value.trim();
 
-    // For Schedule‑C, skip apportionment statements
+    // For Schedule‑C, skip apportionment statements.
     if (bizType === 'Schedule-C') {
         return;
     }
 
+    // Retrieve the net value of the business.
+    const netStr = document.getElementById(`business${businessIndex}Net`)?.value || '0';
+    const netVal = unformatCurrency(netStr);
+
+    // If the net amount is negative and the calculated portion is positive, force it negative.
+    if (netVal < 0 && portion > 0) {
+        portion = -portion;
+    }
+    
     const containerId = `business${businessIndex}OwnerPercent${ownerIndex}-apportionmentContainer`;
     let apportionmentEl = document.getElementById(`apportionment-${containerId}`);
     if (!apportionmentEl) {
@@ -1590,9 +1586,10 @@ function showApportionment(businessIndex, ownerIndex, portion) {
 
     if (portion === null) return;
 
-    const businessType = (document.getElementById(`business${businessIndex}Type`)?.value || '').trim().toLowerCase();
+    // Determine the prefix text based on business type.
+    const businessTypeLower = (document.getElementById(`business${businessIndex}Type`)?.value || '').trim().toLowerCase();
     let prefixText = '';
-    if (businessType === 'partnership') {
+    if (businessTypeLower === 'partnership') {
         prefixText = `Apportionment of Self-Employment for Owner ${ownerIndex} is `;
     } else {
         prefixText = `Apportionment of Owner ${ownerIndex} is `;
@@ -1604,12 +1601,12 @@ function showApportionment(businessIndex, ownerIndex, portion) {
     apportionmentEl.appendChild(prefixSpan);
 
     const amountSpan = document.createElement("span");
-    const absolutePortion = Math.abs(portion);
+    // Use formatCurrency to format the amount. Note that formatCurrency returns a parenthesized string for negatives.
     if (portion < 0) {
-        amountSpan.textContent = `${formatCurrency(String(absolutePortion))} (Loss)`;
+        amountSpan.textContent = `${formatCurrency(String(portion))} (Loss)`;
         amountSpan.style.color = "red";
     } else {
-        amountSpan.textContent = `${formatCurrency(String(absolutePortion))} (Income)`;
+        amountSpan.textContent = `${formatCurrency(String(portion))} (Income)`;
         amountSpan.style.color = "green";
     }
     apportionmentEl.appendChild(amountSpan);
