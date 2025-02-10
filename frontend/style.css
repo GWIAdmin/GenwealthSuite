@@ -32,6 +32,7 @@ body {
   --notesContainer-dark: #253245;
   --disclaimer-red-light: #ff0000;
   --disclaimer-red-dark: #ff4f4f;
+  --ScheduleE-dark: #253245;
 
   --accent: #FDB927;
   --accent-hover: #FFC107;
@@ -49,6 +50,7 @@ section,
 label,
 input,
 select,
+.schedule-e-entry,
 .dependent-entry,
 .spouseSection,
 .business-name-entry
@@ -117,6 +119,10 @@ body.dark-mode input:-webkit-autofill {
   border-color: var(--border-dark) !important;
 }
 
+.dark-mode .schedule-e-entry {
+  background-color: var(--ScheduleE-dark) !important;
+}
+
 .dark-mode label {
   color: var(--label-dark) !important;
 }
@@ -127,6 +133,10 @@ body.dark-mode input:-webkit-autofill {
 
 .dark-mode h2 {
   color: var(--h2-dark);
+}
+
+.dark-mode h3 {
+  color: var(--h3-dark);
 }
 
 body.dark-mode .dynamic-heading {
