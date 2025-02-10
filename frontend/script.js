@@ -448,9 +448,23 @@ function createLabelAndInput(container, id, labelText, type) {
 //----------------------//
 
 function calculateAge(birthdateValue, ageInputId) {
-    const birthdate = new Date(birthdateValue);
-    const errorMessageId = `${ageInputId}ErrorMessage`;
+    let errorMessageId;
+    // Use common error message IDs for client and spouse.
+    if (ageInputId === 'spouseCurrentAge') {
+        errorMessageId = 'spouseErrorMessage';
+    } else if (ageInputId === 'currentAge') {
+        errorMessageId = 'clientErrorMessage';
+    }
+    // For dependents, if the field is named like "dependent1Age", "dependent2Age", etc.
+    else if (/^dependent\d+Age$/.test(ageInputId)) {
+        // Remove the trailing "Age" and append "ErrorMessage"
+        errorMessageId = ageInputId.replace(/Age$/, '') + 'ErrorMessage';
+    } else {
+        errorMessageId = ageInputId + 'ErrorMessage';
+    }
+
     let errorMessage = document.getElementById(errorMessageId);
+    const birthdate = new Date(birthdateValue);
     const today = new Date();
 
     if (isNaN(birthdate.getTime())) {
@@ -484,14 +498,29 @@ function calculateAge(birthdateValue, ageInputId) {
         return;
     }
 
-    if (errorMessage) errorMessage.textContent = '';
+    if (errorMessage) {
+        errorMessage.textContent = '';
+    }
     document.getElementById(ageInputId).value = age;
 }
 
 function validateAgeInput(input, index) {
-    const age = parseInt(input.value, 10);
-    const errorMessageId = `ageErrorMessage${index}`;
+    let errorMessageId;
+    // Use common error message IDs for client and spouse.
+    if (index === 'spouse') {
+        errorMessageId = 'spouseErrorMessage';
+    } else if (index === 'current') {
+        errorMessageId = 'clientErrorMessage';
+    }
+    // For dependents, if the index is passed as "dependent1", "dependent2", etc.
+    else if (/^dependent\d+$/.test(index)) {
+        errorMessageId = index + 'ErrorMessage';
+    } else {
+        errorMessageId = 'ageErrorMessage' + index;
+    }
+    
     let errorMessage = document.getElementById(errorMessageId);
+    const age = parseInt(input.value, 10);
 
     if (isNaN(age) || age < 0) {
         displayErrorMessage(errorMessageId, 'Age cannot be less than 0.', input.id);
