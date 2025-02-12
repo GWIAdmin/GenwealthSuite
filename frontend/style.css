@@ -59,6 +59,7 @@ select,
 .navbar,
 .notes-editor,
 .notes-container,
+.ccorp-tax-due,
 input,
 select,
 textarea,
@@ -216,6 +217,24 @@ body.dark-mode .red-disclaimer {
 
 .dark-mode-toggle input[type="checkbox"]:checked + .dark-mode-label .toggle-ball {
   transform: translateX(45px);       /* Moves the ball to the right */
+}
+
+.ccorp-tax-due {
+  border: 2px solid #4CAF50; /* green border */
+  padding: 10px;
+  border-radius: 8px;
+  margin-top: 16px;
+  font-weight: bold;
+  
+  /* Default (light mode) background & text: */
+  background-color: #EFEEF2;
+  color: #4E4C5E; 
+}
+
+/* When in dark mode, override it: */
+body.dark-mode .ccorp-tax-due {
+  background-color: #3c385d; 
+  color: #F8F8F9; 
 }
 
 h1, h2 {
