@@ -1845,41 +1845,27 @@ function showCcorpTaxDue(businessIndex) {
 
     // Show container for C-Corp
     container.style.display = 'block';
-
     container.classList.add('ccorp-tax-due');
+    container.innerHTML = ''; // Clear previous content
 
-    container.innerHTML = ''; // Clear old
-    
-    // 1. Get net:
+    // 1. Get net value:
     const netVal = unformatCurrency(
         document.getElementById(`business${businessIndex}Net`)?.value || '0'
     );
-    // 2. If net <= 0 => taxDue = 0
-    // else => 21% * net * (client-owned fraction).
-    
-    let clientFractionOfNet = getClientOwnershipPortionForCcorp(businessIndex, netVal);
 
-    // If net <= 0, forcibly zero out the client portion to skip negative taxes:
+    // 2. Calculate tax due based on client's ownership fraction
+    let clientFractionOfNet = getClientOwnershipPortionForCcorp(businessIndex, netVal);
     if (netVal <= 0) {
         clientFractionOfNet = 0;
     }
-
-    let rawTaxDue = 0.21 * clientFractionOfNet;
-    // Round or truncate as you see fit:
-    rawTaxDue = Math.round(rawTaxDue);
-
-    // 3. Check for override:
+    let rawTaxDue = Math.round(0.21 * clientFractionOfNet);
     const overrideKey = `ccorpTaxDue-biz${businessIndex}`;
-    let finalTaxDue = rawTaxDue;
-    if (apportionmentOverrides[overrideKey] !== undefined) {
-        finalTaxDue = apportionmentOverrides[overrideKey];
-    }
+    let finalTaxDue = (apportionmentOverrides[overrideKey] !== undefined)
+        ? apportionmentOverrides[overrideKey]
+        : rawTaxDue;
 
-    // 4. Display
+    // 3. Display Tax Due information:
     const bizName = document.getElementById(`business${businessIndex}Name`)?.value || `Business ${businessIndex}`;
-
-    container.innerHTML = '';  // clear old
-
     const labelSpan = document.createElement('span');
     labelSpan.textContent = `Tax Due for ${bizName}: `;
     container.appendChild(labelSpan);
@@ -1890,7 +1876,7 @@ function showCcorpTaxDue(businessIndex) {
     amountSpan.style.color = '#4CAF50';
     container.appendChild(amountSpan);
 
-    // Up/down arrows:
+    // 4. Up/down arrow buttons:
     const upBtn = document.createElement('button');
     upBtn.textContent = '▲';
     upBtn.classList.add('arrow-btn');
@@ -1908,6 +1894,38 @@ function showCcorpTaxDue(businessIndex) {
         decrementCcorpTaxDue(businessIndex);
     });
     container.appendChild(downBtn);
+
+    // 5. Attach listeners to each owner field so that only Client 1 and Client 2 are included:
+    if (bizType === 'C-Corp') {
+        const numOwnersSelect = document.getElementById(`numOwnersSelect${businessIndex}`);
+        const numOwners = numOwnersSelect ? parseInt(numOwnersSelect.value, 10) || 0 : 0;
+
+        // Define update function using getClientOwnershipPortionForCcorp:
+        const updateCombinedClientAmount = () => {
+            const netVal = unformatCurrency(
+                document.getElementById(`business${businessIndex}Net`)?.value || '0'
+            );
+            const clientAmount = getClientOwnershipPortionForCcorp(businessIndex, netVal);
+            showBlueDisclaimer(
+                `Combined owners amount is ${formatCurrency(clientAmount.toString())}`,
+                `cCorpTaxDueContainer${businessIndex}`
+            );
+        };
+
+        // Attach 'input' listeners to all owner percentage inputs and 'change' listeners to the owner name selects.
+        for (let i = 1; i <= numOwners; i++) {
+            const ownerPctInput = document.getElementById(`business${businessIndex}OwnerPercent${i}`);
+            const ownerNameSelect = document.getElementById(`business${businessIndex}OwnerName${i}`);
+            if (ownerPctInput) {
+                ownerPctInput.addEventListener('input', updateCombinedClientAmount);
+            }
+            if (ownerNameSelect) {
+                ownerNameSelect.addEventListener('change', updateCombinedClientAmount);
+            }
+        }
+        // Call once immediately so the disclaimer shows up.
+        updateCombinedClientAmount();
+    }
 }
 
 function getClientOwnershipPortionForCcorp(businessIndex, netVal) {
