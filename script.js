@@ -569,7 +569,7 @@ function autoSet65Plus() {
         olderThan65Select.disabled = (clientAgeStr !== "");
     }
 }
-
+ 
 
 function displayErrorMessage(errorMessageId, message, inputId) {
     let errorMessage = document.getElementById(errorMessageId);
