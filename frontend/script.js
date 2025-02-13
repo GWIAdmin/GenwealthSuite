@@ -1864,6 +1864,38 @@ function showCcorpTaxDue(businessIndex) {
         ? apportionmentOverrides[overrideKey]
         : rawTaxDue;
 
+    // 5. Attach listeners to each owner field so that only Client 1 and Client 2 are included:
+    if (bizType === 'C-Corp') {
+        const numOwnersSelect = document.getElementById(`numOwnersSelect${businessIndex}`);
+        const numOwners = numOwnersSelect ? parseInt(numOwnersSelect.value, 10) || 0 : 0;
+
+        // Define update function using getClientOwnershipPortionForCcorp:
+        const updateCombinedClientAmount = () => {
+            const netVal = unformatCurrency(
+                document.getElementById(`business${businessIndex}Net`)?.value || '0'
+            );
+            const clientAmount = getClientOwnershipPortionForCcorp(businessIndex, netVal);
+            showBlueDisclaimer(
+                `Our client's apportionment of income: ${formatCurrency(clientAmount.toString())}`,
+                `cCorpTaxDueContainer${businessIndex}`
+            );
+        };
+
+        // Attach 'input' listeners to all owner percentage inputs and 'change' listeners to the owner name selects.
+        for (let i = 1; i <= numOwners; i++) {
+            const ownerPctInput = document.getElementById(`business${businessIndex}OwnerPercent${i}`);
+            const ownerNameSelect = document.getElementById(`business${businessIndex}OwnerName${i}`);
+            if (ownerPctInput) {
+                ownerPctInput.addEventListener('input', updateCombinedClientAmount);
+            }
+            if (ownerNameSelect) {
+                ownerNameSelect.addEventListener('change', updateCombinedClientAmount);
+            }
+        }
+        // Call once immediately so the disclaimer shows up.
+        updateCombinedClientAmount();
+    }
+
     // 3. Display Tax Due information:
     const bizName = document.getElementById(`business${businessIndex}Name`)?.value || `Business ${businessIndex}`;
     const labelSpan = document.createElement('span');
@@ -1873,7 +1905,7 @@ function showCcorpTaxDue(businessIndex) {
     const amountSpan = document.createElement('span');
     amountSpan.id = `ccorpTaxDueAmount-biz${businessIndex}`;
     amountSpan.textContent = formatCurrency(finalTaxDue.toString());
-    amountSpan.style.color = '#4CAF50';
+    amountSpan.style.color = '#ff0000';
     container.appendChild(amountSpan);
 
     // 4. Up/down arrow buttons:
@@ -1895,37 +1927,6 @@ function showCcorpTaxDue(businessIndex) {
     });
     container.appendChild(downBtn);
 
-    // 5. Attach listeners to each owner field so that only Client 1 and Client 2 are included:
-    if (bizType === 'C-Corp') {
-        const numOwnersSelect = document.getElementById(`numOwnersSelect${businessIndex}`);
-        const numOwners = numOwnersSelect ? parseInt(numOwnersSelect.value, 10) || 0 : 0;
-
-        // Define update function using getClientOwnershipPortionForCcorp:
-        const updateCombinedClientAmount = () => {
-            const netVal = unformatCurrency(
-                document.getElementById(`business${businessIndex}Net`)?.value || '0'
-            );
-            const clientAmount = getClientOwnershipPortionForCcorp(businessIndex, netVal);
-            showBlueDisclaimer(
-                `Combined owners amount is ${formatCurrency(clientAmount.toString())}`,
-                `cCorpTaxDueContainer${businessIndex}`
-            );
-        };
-
-        // Attach 'input' listeners to all owner percentage inputs and 'change' listeners to the owner name selects.
-        for (let i = 1; i <= numOwners; i++) {
-            const ownerPctInput = document.getElementById(`business${businessIndex}OwnerPercent${i}`);
-            const ownerNameSelect = document.getElementById(`business${businessIndex}OwnerName${i}`);
-            if (ownerPctInput) {
-                ownerPctInput.addEventListener('input', updateCombinedClientAmount);
-            }
-            if (ownerNameSelect) {
-                ownerNameSelect.addEventListener('change', updateCombinedClientAmount);
-            }
-        }
-        // Call once immediately so the disclaimer shows up.
-        updateCombinedClientAmount();
-    }
 }
 
 function getClientOwnershipPortionForCcorp(businessIndex, netVal) {
@@ -2521,7 +2522,7 @@ function showBlueDisclaimer(message, containerId) {
     if (!disclaimer) {
         disclaimer = document.createElement('div');
         disclaimer.id = `blue-disclaimer-${containerId}`;
-        disclaimer.style.color = 'blue';
+        disclaimer.style.color = 'Black';
         disclaimer.style.fontWeight = 'bold';
         disclaimer.style.marginTop = '12px';
         container.appendChild(disclaimer);
