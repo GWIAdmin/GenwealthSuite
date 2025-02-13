@@ -1875,7 +1875,7 @@ function showCcorpTaxDue(businessIndex) {
                 document.getElementById(`business${businessIndex}Net`)?.value || '0'
             );
             const clientAmount = getClientOwnershipPortionForCcorp(businessIndex, netVal);
-            showBlueDisclaimer(
+            showBlackDisclaimer(
                 `Our client's apportionment of income: ${formatCurrency(clientAmount.toString())}`,
                 `cCorpTaxDueContainer${businessIndex}`
             );
@@ -1905,7 +1905,9 @@ function showCcorpTaxDue(businessIndex) {
     const amountSpan = document.createElement('span');
     amountSpan.id = `ccorpTaxDueAmount-biz${businessIndex}`;
     amountSpan.textContent = formatCurrency(finalTaxDue.toString());
-    amountSpan.style.color = '#ff0000';
+    amountSpan.style.color = '#ff4f4f';
+    amountSpan.style.fontWeight = 'bold';
+    amountSpan.style.fontSize = '21px';
     container.appendChild(amountSpan);
 
     // 4. Up/down arrow buttons:
@@ -2515,23 +2517,23 @@ function showRedDisclaimer(message, containerId) {
     disclaimer.textContent = message;
 }
   
-function showBlueDisclaimer(message, containerId) {
+function showBlackDisclaimer(message, containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
-    let disclaimer = document.getElementById(`blue-disclaimer-${containerId}`);
+    let disclaimer = document.getElementById(`black-disclaimer-${containerId}`);
     if (!disclaimer) {
         disclaimer = document.createElement('div');
-        disclaimer.id = `blue-disclaimer-${containerId}`;
-        disclaimer.style.color = 'Black';
+        disclaimer.id = `black-disclaimer-${containerId}`;
+        disclaimer.classList.add('black-disclaimer');  // add our CSS class
         disclaimer.style.fontWeight = 'bold';
-        disclaimer.style.marginTop = '12px';
+        disclaimer.style.marginTop = '16px';
         container.appendChild(disclaimer);
     }
     disclaimer.textContent = message;
 }
 
-function removeBlueDisclaimer(containerId) {
-    const disclaimer = document.getElementById(`blue-disclaimer-${containerId}`);
+function removeBlackDisclaimer(containerId) {
+    const disclaimer = document.getElementById(`black-disclaimer-${containerId}`);
     if (disclaimer && disclaimer.parentNode) {
         disclaimer.parentNode.removeChild(disclaimer);
     }
