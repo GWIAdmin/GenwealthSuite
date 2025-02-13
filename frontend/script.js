@@ -1908,6 +1908,7 @@ function showCcorpTaxDue(businessIndex) {
     amountSpan.style.color = '#ff4f4f';
     amountSpan.style.fontWeight = 'bold';
     amountSpan.style.fontSize = '21px';
+    amountSpan.style.textDecoration = 'underline double';
     container.appendChild(amountSpan);
 
     // 4. Up/down arrow buttons:
