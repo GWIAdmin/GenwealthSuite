@@ -237,6 +237,14 @@ body.dark-mode .ccorp-tax-due {
   color: #F8F8F9; 
 }
 
+.black-disclaimer {
+  transition: color 0.5s ease;
+  color: black;
+}
+body.dark-mode .black-disclaimer {
+  color: white;
+}
+
 h1, h2 {
   font-family: 'Merriweather', serif;
   margin-bottom: 20px;
