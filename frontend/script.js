@@ -535,26 +535,41 @@ function autoSet65Plus() {
     if (userManuallyChanged65Plus) return;
 
     const filingStatus = document.getElementById('filingStatus').value;
+    const clientAgeInput = document.getElementById('currentAge');
+    const spouseAgeInput = document.getElementById('spouseCurrentAge');
+    const olderThan65Select = document.getElementById('olderthan65');
+    const olderThan65Hidden = document.getElementById('olderthan65_hidden');
 
-    const clientAgeVal = parseInt(document.getElementById('currentAge').value, 10);
-    const spouseAgeVal = parseInt(document.getElementById('spouseCurrentAge').value, 10);
+    const clientAgeStr = clientAgeInput.value.trim();
+    const spouseAgeStr = spouseAgeInput.value.trim();
 
-    let client65Plus = false;
-    if (!isNaN(clientAgeVal) && clientAgeVal >= 65) client65Plus = true;
-
-    let spouse65Plus = false;
-    if ((filingStatus === 'Married Filing Jointly') &&
-        !isNaN(spouseAgeVal) && spouseAgeVal >= 65) {
-        spouse65Plus = true;
+    let count65Plus = 0;
+    if (clientAgeStr !== "") {
+        const clientAge = parseInt(clientAgeStr, 10);
+        if (!isNaN(clientAge) && clientAge >= 65) {
+            count65Plus++;
+        }
     }
 
-    const count65Plus = (client65Plus ? 1 : 0) + (spouse65Plus ? 1 : 0);
+    if (filingStatus === 'Married Filing Jointly' && spouseAgeStr !== "") {
+        const spouseAge = parseInt(spouseAgeStr, 10);
+        if (!isNaN(spouseAge) && spouseAge >= 65) {
+            count65Plus++;
+        }
+    }
 
-    const clientAgeIsValid = !isNaN(clientAgeVal);
-    if (clientAgeIsValid) {
-        document.getElementById('olderthan65').value = count65Plus.toString();
+    const countStr = count65Plus.toString();
+    olderThan65Select.value = countStr;
+    olderThan65Hidden.value = countStr;
+
+    // For a select element, use "disabled" to prevent changes.
+    if (filingStatus === 'Married Filing Jointly') {
+        olderThan65Select.disabled = (clientAgeStr !== "" && spouseAgeStr !== "");
+    } else {
+        olderThan65Select.disabled = (clientAgeStr !== "");
     }
 }
+
 
 function displayErrorMessage(errorMessageId, message, inputId) {
     let errorMessage = document.getElementById(errorMessageId);
@@ -1899,7 +1914,7 @@ function showCcorpTaxDue(businessIndex) {
     // 3. Display Tax Due information:
     const bizName = document.getElementById(`business${businessIndex}Name`)?.value || `Business ${businessIndex}`;
     const labelSpan = document.createElement('span');
-    labelSpan.textContent = `Tax Due for ${bizName}: `;
+    labelSpan.textContent = `Tax Due for Client's portion of ${bizName}: `;
     container.appendChild(labelSpan);
 
     const amountSpan = document.createElement('span');
