@@ -1744,47 +1744,50 @@ function showApportionment(businessIndex, ownerIndex, portion) {
 
 function incrementApportionment(businessIndex, ownerIndex) {
     const netStr = document.getElementById(`business${businessIndex}Net`)?.value || '0';
-    const netVal = unformatCurrency(netStr);
+    const netVal = unformatCurrency(netStr);  // Could be positive, zero, or negative
     const numOwnersSelect = document.getElementById(`numOwnersSelect${businessIndex}`);
     if (!numOwnersSelect) return;
     const numOwners = parseInt(numOwnersSelect.value, 10) || 0;
-    if (numOwners < 2) return;
+    if (numOwners < 2) return;  // No increment if only 1 owner
 
+    // 1) Get the current portion array (or generate from ownership % + overrides).
     let portions = getCurrentPortions(businessIndex, netVal, numOwners);
+
+    // 2) Increase the chosen owner's portion by 1
     portions[ownerIndex - 1] += 1;
 
-    if (numOwners === 2) {
-        const otherIdx = (ownerIndex === 1) ? 1 : 0;
-        portions[otherIdx] = netVal - portions[ownerIndex - 1];
-        if (netVal > 0 && portions[otherIdx] < 0) {
-            portions[ownerIndex - 1] = netVal;
-            portions[otherIdx] = 0;
-        }
-    } else if (numOwners === 3) {
-        let sumNow = portions.reduce((a, b) => a + b, 0);
-        let leftover = netVal - sumNow;
-        let i = 0;
-        while (leftover !== 0 && i < 3) {
-            if (i !== (ownerIndex - 1)) {
-                if (leftover > 0) {
-                    portions[i] += 1;
-                    leftover -= 1;
-                } else {
-                    if (portions[i] > 0) {
-                        portions[i] -= 1;
-                        leftover += 1;
-                    }
-                }
+    // 3) Now the sum may exceed (or be greater/less) the net. Let's fix leftover:
+    let leftover = netVal - portions.reduce((a, b) => a + b, 0);
+
+    // 4) Redistribute leftover among other owners
+    //    - If leftover is positive, we add +1 to other owners until leftover = 0
+    //    - If leftover is negative, we subtract -1 from other owners until leftover = 0
+    //    (We do up to 100 passes to avoid infinite loops).
+    let maxPasses = 100;
+    outerLoop: while (leftover !== 0 && maxPasses > 0) {
+        for (let i = 0; i < numOwners; i++) {
+            if (i === (ownerIndex - 1)) continue; // skip the just-incremented owner
+            if (leftover === 0) break outerLoop;
+
+            if (leftover > 0) {
+                portions[i] += 1;
+                leftover--;
+            } else {
+                // leftover < 0
+                portions[i] -= 1;
+                leftover++;
             }
-            i++;
-            if (i >= 3 && leftover !== 0) i = 0;
         }
+        maxPasses--;
     }
 
+    // 5) Store these portions as overrides (so they persist).
     for (let i = 1; i <= numOwners; i++) {
         const overrideKey = `biz${businessIndex}-owner${i}`;
         apportionmentOverrides[overrideKey] = portions[i - 1];
     }
+
+    // 6) Now re-display with updated overrides
     updateOwnerApportionment(businessIndex);
 }
 
@@ -1797,44 +1800,36 @@ function decrementApportionment(businessIndex, ownerIndex) {
     if (numOwners < 2) return;
 
     let portions = getCurrentPortions(businessIndex, netVal, numOwners);
-    if (netVal > 0 && portions[ownerIndex - 1] > 0) {
-        portions[ownerIndex - 1] -= 1;
-    } else if (netVal <= 0) {
-        portions[ownerIndex - 1] -= 1;
-    }
 
-    if (numOwners === 2) {
-        const otherIdx = (ownerIndex === 1) ? 1 : 0;
-        portions[otherIdx] = netVal - portions[ownerIndex - 1];
-        if (netVal > 0 && portions[otherIdx] < 0) {
-            portions[ownerIndex - 1] = netVal;
-            portions[otherIdx] = 0;
-        }
-    } else if (numOwners === 3) {
-        let sumNow = portions.reduce((a, b) => a + b, 0);
-        let leftover = netVal - sumNow;
-        let i = 0;
-        while (leftover !== 0 && i < 3) {
-            if (i !== (ownerIndex - 1)) {
-                if (leftover > 0) {
-                    portions[i] += 1;
-                    leftover -= 1;
-                } else {
-                    if (portions[i] > 0) {
-                        portions[i] -= 1;
-                        leftover += 1;
-                    }
-                }
+    // 1) Decrease the chosen owner's portion by 1
+    portions[ownerIndex - 1] -= 1;
+
+    // 2) Fix leftover
+    let leftover = netVal - portions.reduce((a, b) => a + b, 0);
+
+    // 3) Redistribute leftover among other owners
+    let maxPasses = 100;
+    outerLoop: while (leftover !== 0 && maxPasses > 0) {
+        for (let i = 0; i < numOwners; i++) {
+            if (i === (ownerIndex - 1)) continue;
+            if (leftover === 0) break outerLoop;
+
+            if (leftover > 0) {
+                portions[i] += 1;
+                leftover--;
+            } else {
+                portions[i] -= 1;
+                leftover++;
             }
-            i++;
-            if (i >= 3 && leftover !== 0) i = 0;
         }
+        maxPasses--;
     }
 
     for (let i = 1; i <= numOwners; i++) {
         const overrideKey = `biz${businessIndex}-owner${i}`;
         apportionmentOverrides[overrideKey] = portions[i - 1];
     }
+
     updateOwnerApportionment(businessIndex);
 }
 
