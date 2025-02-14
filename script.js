@@ -2542,7 +2542,7 @@ function showBlackDisclaimer(message, containerId) {
         disclaimer.id = `black-disclaimer-${containerId}`;
         disclaimer.classList.add('black-disclaimer');  // add our CSS class
         disclaimer.style.fontWeight = 'bold';
-        disclaimer.style.marginTop = '16px';
+        disclaimer.style.marginTop = '0px';
         container.appendChild(disclaimer);
     }
     disclaimer.textContent = message;
