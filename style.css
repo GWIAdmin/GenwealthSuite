@@ -65,6 +65,8 @@ select,
 textarea,
 button,
 .dark-mode-label,
+
+/* Begin Dark Mode Section */
 .toggle-ball {
   transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease;
 }
@@ -179,12 +181,10 @@ body.dark-mode .red-disclaimer {
   height: 25px;
 }
 
-/* Hide the actual checkbox */
 .dark-mode-toggle input[type="checkbox"] {
   display: none;
 }
 
-/* Style the label as a rounded toggle background */
 .dark-mode-label {
   background-color: #552583;           /* Light grey for off-state */
   border-radius: 25px;
@@ -198,7 +198,6 @@ body.dark-mode .red-disclaimer {
   transition: background-color 0.3s ease;
 }
 
-/* The toggle ball */
 .toggle-ball {
   position: absolute;
   top: 2px;
@@ -210,7 +209,6 @@ body.dark-mode .red-disclaimer {
   transition: transform 0.5s ease, background-color 0.5s ease;
 }
 
-/* When dark mode is active (checkbox checked) */
 .dark-mode-toggle input[type="checkbox"]:checked + .dark-mode-label {
   background-color: var(--accent);  /* Uses your signature gold accent */
 }
@@ -231,7 +229,6 @@ body.dark-mode .red-disclaimer {
   color: #4E4C5E; 
 }
 
-/* When in dark mode, override it: */
 body.dark-mode .ccorp-tax-due {
   background-color: #3c385d; 
   color: #F8F8F9; 
@@ -241,9 +238,12 @@ body.dark-mode .ccorp-tax-due {
   transition: color 0.5s ease;
   color: black;
 }
+
 body.dark-mode .black-disclaimer {
   color: white;
 }
+
+/* End Dark Mode Section */
 
 h1, h2 {
   font-family: 'Merriweather', serif;
