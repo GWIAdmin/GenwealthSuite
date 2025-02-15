@@ -1047,35 +1047,48 @@ function handleBusinessTypeChange(index, businessType) {
     const ownersContainer = document.getElementById('ownersContainer' + index);
     const numOwnersSelect = document.getElementById('numOwnersSelect' + index);
     const dynamicOwnerFieldsDiv = document.getElementById('dynamicOwnerFields' + index);
-    // Remove any previously added Schedule-C question if present.
+
+    // Always clear out the dynamic area first
+    dynamicOwnerFieldsDiv.innerHTML = '';
+
+    // Remove any previously added Schedule-C question if present
     removeScheduleCQuestion(index);
 
+    // Show/hide the ownersContainer as appropriate
+    ownersContainer.style.display = 'block'; // we'll adjust below if it's hidden
+    
     const filingStatus = document.getElementById('filingStatus').value;
     const clientFirstName = document.getElementById('firstName').value.trim() || 'Client1';
     const spouseFirstName = document.getElementById('spouseFirstName').value.trim() || 'Client2';
 
-    if (businessType === 'Schedule-C') {
-        // For Schedule-C, do not display the owner's box.
-        // Clear and hide any owner-related fields.
+    // 1) Decide how to populate "numOwnersSelect" based on business type
+    if (businessType === 'Please Select') {
+        // Hide owners
+        ownersContainer.style.display = 'none';
+        numOwnersSelect.innerHTML = '';
+        return;  // done
+    }
+    else if (businessType === 'Schedule-C') {
+        // For Schedule-C, we usually say there's just 1 "owner" – or we skip owners entirely
+        // Hide the owners container
         ownersContainer.style.display = 'none';
         numOwnersSelect.innerHTML = '';
         dynamicOwnerFieldsDiv.innerHTML = '';
 
-        // For MFJ, display the dedicated Schedule-C question.
+        // But if MFJ, we ask "Which spouse owns this Schedule C?"
         if (filingStatus === 'Married Filing Jointly') {
             addScheduleCQuestion(index);
-        } else {
-            // For non-MFJ, ensure no Schedule-C question is present.
-            removeScheduleCQuestion(index);
         }
-    } else if (businessType === 'Partnership') {
+        return; // done
+    }
+    else if (businessType === 'Partnership') {
+        // Partnerships typically have at least 2 owners
         ownersContainer.style.display = 'block';
-        dynamicOwnerFieldsDiv.innerHTML = '';
+        numOwnersSelect.innerHTML = '';
 
-        // If not MFJ, force 2 owners with predetermined values.
+        // If NOT MFJ, force 2 owners: (Client, “Other”)
         if (filingStatus !== 'Married Filing Jointly') {
-            numOwnersSelect.innerHTML = '';
-            var opt2 = document.createElement('option');
+            const opt2 = document.createElement('option');
             opt2.value = '2';
             opt2.textContent = '2';
             numOwnersSelect.appendChild(opt2);
@@ -1083,8 +1096,9 @@ function handleBusinessTypeChange(index, businessType) {
 
             createOwnerFields(index, 2);
 
-            var owner1Select = document.getElementById('business' + index + 'OwnerName1');
-            var owner2Select = document.getElementById('business' + index + 'OwnerName2');
+            // Force #1 = client, #2 = "Other"
+            const owner1Select = document.getElementById(`business${index}OwnerName1`);
+            const owner2Select = document.getElementById(`business${index}OwnerName2`);
             if (owner1Select) {
                 owner1Select.value = clientFirstName;
                 owner1Select.disabled = true;
@@ -1095,88 +1109,91 @@ function handleBusinessTypeChange(index, businessType) {
                 owner2Select.disabled = true;
                 owner2Select.style.backgroundColor = '#f0f0f0';
             }
-
-        } else if (businessType === 'C-Corp') {
-            ownersContainer.style.display = 'block';
-            dynamicOwnerFieldsDiv.innerHTML = '';
-        
-            // For a C-Corp, if the filing status is MFJ, allow up to 3 owners;
-            // otherwise, only allow 1 or 2.
-            if (filingStatus === 'Married Filing Jointly') {
-                // We will allow user to pick 1, 2, or 3.
-                numOwnersSelect.innerHTML = '';
-                let optPlease = document.createElement('option');
-                optPlease.value = '0';
-                optPlease.textContent = 'Please Select';
-                numOwnersSelect.appendChild(optPlease);
-        
-                let opt1 = document.createElement('option');
-                opt1.value = '1';
-                opt1.textContent = '1';
-                numOwnersSelect.appendChild(opt1);
-        
-                let opt2 = document.createElement('option');
-                opt2.value = '2';
-                opt2.textContent = '2';
-                numOwnersSelect.appendChild(opt2);
-        
-                let opt3 = document.createElement('option');
-                opt3.value = '3';
-                opt3.textContent = '3';
-                numOwnersSelect.appendChild(opt3);
-        
-                numOwnersSelect.value = '0';
-            } else {
-                // Non-MFJ => only 1 or 2 owners
-                numOwnersSelect.innerHTML = '';
-                let optPlease = document.createElement('option');
-                optPlease.value = '0';
-                optPlease.textContent = 'Please Select';
-                numOwnersSelect.appendChild(optPlease);
-        
-                let opt1 = document.createElement('option');
-                opt1.value = '1';
-                opt1.textContent = '1';
-                numOwnersSelect.appendChild(opt1);
-        
-                let opt2 = document.createElement('option');
-                opt2.value = '2';
-                opt2.textContent = '2';
-                numOwnersSelect.appendChild(opt2);
-        
-                numOwnersSelect.value = '0';
-            }
-        } else {
-            // For MFJ, allow the user to pick 2 or 3 owners.
+        }
+        else {
+            // MFJ Partnerships can have 2 or 3 owners. Let's let user choose
             numOwnersSelect.innerHTML = '';
-            var pleaseOpt = document.createElement('option');
+            let pleaseOpt = document.createElement('option');
             pleaseOpt.value = '0';
             pleaseOpt.textContent = 'Please Select';
             numOwnersSelect.appendChild(pleaseOpt);
 
-            var twoOpt = document.createElement('option');
+            let twoOpt = document.createElement('option');
             twoOpt.value = '2';
             twoOpt.textContent = '2';
             numOwnersSelect.appendChild(twoOpt);
 
-            var threeOpt = document.createElement('option');
+            let threeOpt = document.createElement('option');
             threeOpt.value = '3';
             threeOpt.textContent = '3';
             numOwnersSelect.appendChild(threeOpt);
 
             numOwnersSelect.value = '0';
         }
-    } else if (businessType === 'Please Select') {
-        ownersContainer.style.display = 'none';
-        numOwnersSelect.value = '0';
-        dynamicOwnerFieldsDiv.innerHTML = '';
-    } else {
-        // For S-Corp or C-Corp fallback.
+    }
+    else if (businessType === 'S-Corp') {
+        // Let user pick 1,2,3 owners (or more, if you want)
         ownersContainer.style.display = 'block';
         dynamicOwnerFieldsDiv.innerHTML = '';
         populateNumOwnersOptionsForNonPartnership(numOwnersSelect, filingStatus);
         numOwnersSelect.value = '0';
     }
+    else if (businessType === 'C-Corp') {
+        // Similarly, let user pick 1,2,3 owners depending on MFJ vs not
+        ownersContainer.style.display = 'block';
+        dynamicOwnerFieldsDiv.innerHTML = '';
+
+        if (filingStatus === 'Married Filing Jointly') {
+            // 1,2,3 possible
+            numOwnersSelect.innerHTML = '';
+            let opt0 = document.createElement('option');
+            opt0.value = '0';
+            opt0.textContent = 'Please Select';
+            numOwnersSelect.appendChild(opt0);
+
+            let opt1 = document.createElement('option');
+            opt1.value = '1';
+            opt1.textContent = '1';
+            numOwnersSelect.appendChild(opt1);
+
+            let opt2 = document.createElement('option');
+            opt2.value = '2';
+            opt2.textContent = '2';
+            numOwnersSelect.appendChild(opt2);
+
+            let opt3 = document.createElement('option');
+            opt3.value = '3';
+            opt3.textContent = '3';
+            numOwnersSelect.appendChild(opt3);
+
+            numOwnersSelect.value = '0';
+        }
+        else {
+            // Non-MFJ => 1 or 2
+            numOwnersSelect.innerHTML = '';
+            let opt0 = document.createElement('option');
+            opt0.value = '0';
+            opt0.textContent = 'Please Select';
+            numOwnersSelect.appendChild(opt0);
+
+            let opt1 = document.createElement('option');
+            opt1.value = '1';
+            opt1.textContent = '1';
+            numOwnersSelect.appendChild(opt1);
+
+            let opt2 = document.createElement('option');
+            opt2.value = '2';
+            opt2.textContent = '2';
+            numOwnersSelect.appendChild(opt2);
+
+            numOwnersSelect.value = '0';
+        }
+    }
+
+    // If we need special post-processing after we set numOwnersSelect
+    // (like we do with Partnerships in your existing code),
+    // you can do it here. E.g. createOwnerFields(index, parseInt(numOwnersSelect.value, 10))
+
 }
 
 function addScheduleCQuestion(businessIndex) {
@@ -1223,6 +1240,8 @@ function removeScheduleCQuestion(businessIndex) {
 
 function createOwnerFields(businessIndex, numOwners) {
     const dynamicOwnerFieldsDiv = document.getElementById(`dynamicOwnerFields${businessIndex}`);
+    if (!dynamicOwnerFieldsDiv) return;
+
     // Clear any previously rendered owner fields
     dynamicOwnerFieldsDiv.innerHTML = '';
 
@@ -1232,227 +1251,346 @@ function createOwnerFields(businessIndex, numOwners) {
     const filingStatus = document.getElementById('filingStatus').value;
     const clientFirstName = document.getElementById('firstName').value.trim() || 'Client1';
     const spouseFirstName = document.getElementById('spouseFirstName').value.trim() || 'Client2';
+    
+    // (Optional) If your code still needs the business type:
     const businessTypeVal = document.getElementById(`business${businessIndex}Type`)?.value || '';
 
-    // For each owner, create fields
-    for (let i = 1; i <= numOwners; i++) {
-        const ownerSection = document.createElement('section');
-        ownerSection.classList.add('owner-entry');
-        ownerSection.id = `ownerContainer-${businessIndex}-${i}`;
+    // Decide how to handle auto-fill vs user choice:
 
-        // 1) Create label/select for "Owner i (Select Who?)"
-        const nameLabel = document.createElement('label');
-        nameLabel.textContent = `Owner ${i} (Select Who?):`;
-        nameLabel.setAttribute('for', `business${businessIndex}OwnerName${i}`);
-        ownerSection.appendChild(nameLabel);
+    // --- Non-MFJ logic (Single, MFS, HOH, QW) ---
+    if (filingStatus !== 'Married Filing Jointly') {
+        // If user tries to set 3 owners in Non-MFJ, do nothing
+        if (numOwners === 3) {
+            console.warn("Three owners is not supported for Non-MFJ. Doing nothing...");
+            return;
+        }
+        else if (numOwners === 1) {
+            // Auto-fill with client’s name
+            for (let i = 1; i <= numOwners; i++) {
+                const ownerSection = document.createElement('section');
+                ownerSection.classList.add('owner-entry');
+                ownerSection.id = `ownerContainer-${businessIndex}-${i}`;
 
-        const nameSelect = document.createElement('select');
-        nameSelect.id = `business${businessIndex}OwnerName${i}`;
-        nameSelect.name = `business${businessIndex}OwnerName${i}`;
-        ownerSection.appendChild(nameSelect);
+                // Owner label
+                const nameLabel = document.createElement('label');
+                nameLabel.textContent = `Owner ${i} (Auto-Filled)`;
+                ownerSection.appendChild(nameLabel);
 
-        // If "Schedule-C," typically we skip multi-owner logic, but we handle minimal MFJ scenario
-        if (businessTypeVal === 'Schedule-C') {
-            let optionsArr;
-            const isMFJ = (filingStatus === 'Married Filing Jointly');
+                // Disabled select showing client’s name
+                const nameSelect = document.createElement('select');
+                nameSelect.id = `business${businessIndex}OwnerName${i}`;
+                nameSelect.name = `business${businessIndex}OwnerName${i}`;
+                ownerSection.appendChild(nameSelect);
 
-            // Single or MFS => only client
-            if (!isMFJ) {
-                optionsArr = ['Please Select', clientFirstName];
-            } else {
-                // MFJ => can choose client or spouse
-                optionsArr = ['Please Select', clientFirstName, spouseFirstName];
-            }
-            optionsArr.forEach(optLabel => {
                 const opt = document.createElement('option');
-                opt.value = optLabel;
-                opt.textContent = optLabel;
+                opt.value = clientFirstName;
+                opt.textContent = clientFirstName;
                 nameSelect.appendChild(opt);
-            });
-        }
-        // Otherwise (Partnership, S-Corp, C-Corp), we do the standard pattern:
-        else {
-            // Always start with a "Please Select" choice
-            const pleaseOpt = document.createElement('option');
-            pleaseOpt.value = 'Please Select';
-            pleaseOpt.textContent = 'Please Select';
-            nameSelect.appendChild(pleaseOpt);
 
-            let baseOptions = [];
-            if (filingStatus === 'Married Filing Jointly') {
-                // For MFJ => client name, spouse name, or "Other"
-                baseOptions = [clientFirstName, spouseFirstName, 'Other'];
-            } else {
-                // Non-MFJ => only client or "Other"
-                baseOptions = [clientFirstName, 'Other'];
+                nameSelect.disabled = true;
+                nameSelect.style.backgroundColor = '#f0f0f0';
+
+                // If S-Corp => add compensation field
+                if (businessTypeVal === 'S-Corp') {
+                    const compInput = createLabelAndCurrencyField(
+                        ownerSection,
+                        `business${businessIndex}OwnerComp${i}`,
+                        `Reasonable Compensation ($) for ${clientFirstName}:`,
+                        0
+                    );
+                    compInput.addEventListener('blur', function () {
+                        checkSCorpReasonableComp(businessIndex);
+                        updateBusinessNet(businessIndex);
+                    });
+                }
+
+                // Ownership % locked at 100 for single owner
+                const pctLabel = document.createElement('label');
+                pctLabel.textContent = 'Ownership %:';
+                ownerSection.appendChild(pctLabel);
+
+                const pctInput = document.createElement('input');
+                pctInput.type = 'number';
+                pctInput.value = '100.0000';
+                pctInput.readOnly = true;
+                pctInput.style.backgroundColor = '#f0f0f0';
+                pctInput.id = `business${businessIndex}OwnerPercent${i}`;
+                pctInput.name = `business${businessIndex}OwnerPercent${i}`;
+                ownerSection.appendChild(pctInput);
+
+                dynamicOwnerFieldsDiv.appendChild(ownerSection);
             }
-            baseOptions.forEach(bOpt => {
-                const opt = document.createElement('option');
-                opt.value = bOpt;
-                opt.textContent = bOpt;
-                nameSelect.appendChild(opt);
-            });
-
-            // If you disallow duplicate selections, you can update other dropdowns:
-            nameSelect.addEventListener('change', function () {
-                updateBusinessOwnerDropdowns(businessIndex);
-            });
-        }
-
-        // 2) If S-Corp => add "Reasonable Compensation" field for each owner
-        if (businessTypeVal === 'S-Corp') {
-            const compInput = createLabelAndCurrencyField(
-                ownerSection,
-                `business${businessIndex}OwnerComp${i}`,
-                `Reasonable Compensation ($) for Owner ${i}:`,
-                0
-            );
-            compInput.addEventListener('blur', function () {
-                checkSCorpReasonableComp(businessIndex);
-                updateBusinessNet(businessIndex);
-            });
-        }
-
-        // 3) Ownership percentage field
-        const percentLabel = document.createElement('label');
-        percentLabel.textContent = `Owner ${i} Ownership %:`;
-        percentLabel.setAttribute('for', `business${businessIndex}OwnerPercent${i}`);
-        ownerSection.appendChild(percentLabel);
-
-        const percentInput = document.createElement('input');
-        percentInput.type = 'number';
-        percentInput.step = '0.0001';
-        percentInput.min = '0.0001';
-        percentInput.id = `business${businessIndex}OwnerPercent${i}`;
-        percentInput.name = `business${businessIndex}OwnerPercent${i}`;
-        ownerSection.appendChild(percentInput);
-
-        // Special rules if only 1 owner => lock it to 100%
-        if (numOwners === 1) {
-            percentInput.value = '100.0000';
-            percentInput.readOnly = true;
-            percentInput.style.backgroundColor = '#f0f0f0';
         }
         else if (numOwners === 2) {
-            // For 2 owners, let the user fill in one side,
-            // then we auto-calc the other side in handleTwoOwnersInput
-            let typingTimer;
-            percentInput.addEventListener('input', () => {
-                // remove overrides for this business
-                for (let key in apportionmentOverrides) {
-                    if (key.startsWith(`biz${businessIndex}-`)) {
-                        delete apportionmentOverrides[key];
-                    }
+            // #1=client, #2="Other", both locked
+            for (let i = 1; i <= 2; i++) {
+                const ownerSection = document.createElement('section');
+                ownerSection.classList.add('owner-entry');
+                ownerSection.id = `ownerContainer-${businessIndex}-${i}`;
+
+                const nameLabel = document.createElement('label');
+                nameLabel.textContent = `Owner ${i}`;
+                ownerSection.appendChild(nameLabel);
+
+                const nameSelect = document.createElement('select');
+                nameSelect.id = `business${businessIndex}OwnerName${i}`;
+                nameSelect.name = `business${businessIndex}OwnerName${i}`;
+                ownerSection.appendChild(nameSelect);
+
+                let fillName = (i === 1) ? clientFirstName : 'Other';
+                const opt = document.createElement('option');
+                opt.value = fillName;
+                opt.textContent = fillName;
+                nameSelect.appendChild(opt);
+
+                nameSelect.disabled = true;
+                nameSelect.style.backgroundColor = '#f0f0f0';
+
+                // If S-Corp => add compensation
+                if (businessTypeVal === 'S-Corp') {
+                    const compInput = createLabelAndCurrencyField(
+                        ownerSection,
+                        `business${businessIndex}OwnerComp${i}`,
+                        `Reasonable Compensation ($) for Owner ${i}:`,
+                        0
+                    );
+                    compInput.addEventListener('blur', function () {
+                        checkSCorpReasonableComp(businessIndex);
+                        updateBusinessNet(businessIndex);
+                    });
                 }
-                clearTimeout(typingTimer);
-                typingTimer = setTimeout(() => {
-                    handleTwoOwnersInput(businessIndex, i);
-                    updateOwnerApportionment(businessIndex);
-                }, 600);
-            });
+
+                // We can let them choose ownership % or auto-split 50/50:
+                const pctLabel = document.createElement('label');
+                pctLabel.textContent = 'Ownership %:';
+                ownerSection.appendChild(pctLabel);
+
+                const pctInput = document.createElement('input');
+                pctInput.type = 'number';
+                pctInput.id = `business${businessIndex}OwnerPercent${i}`;
+                pctInput.name = `business${businessIndex}OwnerPercent${i}`;
+                ownerSection.appendChild(pctInput);
+
+                // If you want a strict 50/50, auto fill
+                if (i === 1) {
+                    pctInput.value = '50.0000';
+                } else {
+                    pctInput.value = '50.0000';
+                }
+                pctInput.readOnly = true;
+                pctInput.style.backgroundColor = '#f0f0f0';
+
+                dynamicOwnerFieldsDiv.appendChild(ownerSection);
+            }
+        }
+
+        // If the user typed any other # of owners, we do nothing
+        return; // done
+    }
+    else {
+        // --- MFJ logic (filingStatus === 'Married Filing Jointly') ---
+        if (numOwners === 1) {
+            // Let the user pick between client or spouse
+            for (let i = 1; i <= 1; i++) {
+                const ownerSection = document.createElement('section');
+                ownerSection.classList.add('owner-entry');
+                ownerSection.id = `ownerContainer-${businessIndex}-${i}`;
+
+                const nameLabel = document.createElement('label');
+                nameLabel.textContent = `Owner ${i} (Pick who)`;
+                ownerSection.appendChild(nameLabel);
+
+                const nameSelect = document.createElement('select');
+                nameSelect.id = `business${businessIndex}OwnerName${i}`;
+                nameSelect.name = `business${businessIndex}OwnerName${i}`;
+
+                // Add the 2 spouse options
+                const pleaseOpt = document.createElement('option');
+                pleaseOpt.value = 'Please Select';
+                pleaseOpt.textContent = 'Please Select';
+                nameSelect.appendChild(pleaseOpt);
+
+                const optClient = document.createElement('option');
+                optClient.value = clientFirstName;
+                optClient.textContent = clientFirstName;
+                nameSelect.appendChild(optClient);
+
+                const optSpouse = document.createElement('option');
+                optSpouse.value = spouseFirstName;
+                optSpouse.textContent = spouseFirstName;
+                nameSelect.appendChild(optSpouse);
+
+                ownerSection.appendChild(nameSelect);
+
+                if (businessTypeVal === 'S-Corp') {
+                    const compInput = createLabelAndCurrencyField(
+                        ownerSection,
+                        `business${businessIndex}OwnerComp${i}`,
+                        `Reasonable Compensation ($)`,
+                        0
+                    );
+                    compInput.addEventListener('blur', function () {
+                        checkSCorpReasonableComp(businessIndex);
+                        updateBusinessNet(businessIndex);
+                    });
+                }
+
+                const pctLabel = document.createElement('label');
+                pctLabel.textContent = 'Ownership %:';
+                ownerSection.appendChild(pctLabel);
+
+                const pctInput = document.createElement('input');
+                pctInput.type = 'number';
+                pctInput.value = '100.0000';
+                pctInput.readOnly = true;
+                pctInput.style.backgroundColor = '#f0f0f0';
+                pctInput.id = `business${businessIndex}OwnerPercent${i}`;
+                pctInput.name = `business${businessIndex}OwnerPercent${i}`;
+                ownerSection.appendChild(pctInput);
+
+                dynamicOwnerFieldsDiv.appendChild(ownerSection);
+            }
+        }
+        else if (numOwners === 2) {
+            // Let them pick for each of the 2 owners: client, spouse, or other
+            for (let i = 1; i <= 2; i++) {
+                const ownerSection = document.createElement('section');
+                ownerSection.classList.add('owner-entry');
+                ownerSection.id = `ownerContainer-${businessIndex}-${i}`;
+
+                const nameLabel = document.createElement('label');
+                nameLabel.textContent = `Owner ${i} (Pick who)`;
+                ownerSection.appendChild(nameLabel);
+
+                const nameSelect = document.createElement('select');
+                nameSelect.id = `business${businessIndex}OwnerName${i}`;
+                nameSelect.name = `business${businessIndex}OwnerName${i}`;
+
+                const pleaseOpt = document.createElement('option');
+                pleaseOpt.value = 'Please Select';
+                pleaseOpt.textContent = 'Please Select';
+                nameSelect.appendChild(pleaseOpt);
+
+                [clientFirstName, spouseFirstName, 'Other'].forEach(name => {
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.textContent = name;
+                    nameSelect.appendChild(opt);
+                });
+                ownerSection.appendChild(nameSelect);
+
+                // If S-Corp => comp field
+                if (businessTypeVal === 'S-Corp') {
+                    const compInput = createLabelAndCurrencyField(
+                        ownerSection,
+                        `business${businessIndex}OwnerComp${i}`,
+                        `Reasonable Compensation ($) for Owner ${i}:`,
+                        0
+                    );
+                    compInput.addEventListener('blur', function () {
+                        checkSCorpReasonableComp(businessIndex);
+                        updateBusinessNet(businessIndex);
+                    });
+                }
+
+                // Ownership % let them fill or do a 50/50 auto suggestion
+                const pctLabel = document.createElement('label');
+                pctLabel.textContent = 'Ownership %:';
+                ownerSection.appendChild(pctLabel);
+
+                const pctInput = document.createElement('input');
+                pctInput.type = 'number';
+                pctInput.id = `business${businessIndex}OwnerPercent${i}`;
+                pctInput.name = `business${businessIndex}OwnerPercent${i}`;
+                pctInput.value = (i === 1) ? '50.0000' : '50.0000';
+                ownerSection.appendChild(pctInput);
+
+                // You can keep your existing two-owners logic if you want
+                // handleTwoOwnersInput(...) for auto forcing sum=100 etc.
+
+                dynamicOwnerFieldsDiv.appendChild(ownerSection);
+            }
         }
         else if (numOwners === 3) {
-            // For 3 owners, we auto-fill the 3rd after user enters #1 and #2
-            if (i < 3) {
-                let typingTimer;
-                percentInput.addEventListener('input', () => {
-                    for (let key in apportionmentOverrides) {
-                        if (key.startsWith(`biz${businessIndex}-`)) {
-                            delete apportionmentOverrides[key];
-                        }
-                    }
-                    clearTimeout(typingTimer);
-                    typingTimer = setTimeout(() => {
-                        autoCalculateLastOwner(businessIndex, 3);
-                        updateOwnerApportionment(businessIndex);
-                    }, 600);
-                });
-            } else {
-                // The 3rd input is auto-calculated => readOnly
-                percentInput.value = '';
-                percentInput.readOnly = true;
-                percentInput.style.backgroundColor = '#f0f0f0';
+            // Must auto-fill: #1=client, #2=spouse, #3=Other
+            for (let i = 1; i <= 3; i++) {
+                const ownerSection = document.createElement('section');
+                ownerSection.classList.add('owner-entry');
+                ownerSection.id = `ownerContainer-${businessIndex}-${i}`;
+
+                const nameLabel = document.createElement('label');
+                nameLabel.textContent = `Owner ${i} (Auto-Filled)`;
+                ownerSection.appendChild(nameLabel);
+
+                const nameSelect = document.createElement('select');
+                nameSelect.id = `business${businessIndex}OwnerName${i}`;
+                nameSelect.name = `business${businessIndex}OwnerName${i}`;
+                ownerSection.appendChild(nameSelect);
+
+                let fillName;
+                if (i === 1) fillName = clientFirstName;
+                else if (i === 2) fillName = spouseFirstName;
+                else fillName = 'Other';
+
+                const opt = document.createElement('option');
+                opt.value = fillName;
+                opt.textContent = fillName;
+                nameSelect.appendChild(opt);
+
+                nameSelect.disabled = true;
+                nameSelect.style.backgroundColor = '#f0f0f0';
+
+                // If S-Corp => comp field
+                if (businessTypeVal === 'S-Corp') {
+                    const compInput = createLabelAndCurrencyField(
+                        ownerSection,
+                        `business${businessIndex}OwnerComp${i}`,
+                        `Reasonable Compensation ($)`,
+                        0
+                    );
+                    compInput.addEventListener('blur', function () {
+                        checkSCorpReasonableComp(businessIndex);
+                        updateBusinessNet(businessIndex);
+                    });
+                }
+
+                const pctLabel = document.createElement('label');
+                pctLabel.textContent = 'Ownership %:';
+                ownerSection.appendChild(pctLabel);
+
+                const pctInput = document.createElement('input');
+                pctInput.type = 'number';
+                pctInput.id = `business${businessIndex}OwnerPercent${i}`;
+                pctInput.name = `business${businessIndex}OwnerPercent${i}`;
+                ownerSection.appendChild(pctInput);
+
+                // If you want to force an auto 34/33/33 or something, set them here
+                if (i === 1) pctInput.value = '34.0000';
+                if (i === 2) pctInput.value = '33.0000';
+                if (i === 3) pctInput.value = '33.0000';
+
+                pctInput.readOnly = true;
+                pctInput.style.backgroundColor = '#f0f0f0';
+
+                dynamicOwnerFieldsDiv.appendChild(ownerSection);
             }
         }
-
-        // 4) Create a container where we display the "Apportionment" statements or up/down arrows
-        const apportionmentContainer = document.createElement('div');
-        apportionmentContainer.id = `business${businessIndex}OwnerPercent${i}-apportionmentContainer`;
-        ownerSection.appendChild(apportionmentContainer);
-
-        // Finally, append this entire "ownerSection" to the main DIV
-        dynamicOwnerFieldsDiv.appendChild(ownerSection);
     }
 
-    // --- Now do any "auto-fill" or "locking" logic, but ONLY as you desire --- //
-    // In a C-Corp, for MFJ with 2 owners, we do NOT forcibly set #1=Client, #2=Spouse.
-    // We'll ONLY set/lock for single-owner or 3-owner scenarios if you still want that.
+    const ownerSelects = dynamicOwnerFieldsDiv.querySelectorAll(
+        `select[id^="business${businessIndex}OwnerName"]`
+    );
+    ownerSelects.forEach(select => {
+        // On "change", re-run the function that disallows duplicates:
+        select.addEventListener('change', () => {
+            updateBusinessOwnerDropdowns(businessIndex);
+        });
+    });
 
-    if (businessTypeVal === 'C-Corp') {
-        if (filingStatus !== 'Married Filing Jointly') {
-            // Non-MFJ => If 1 owner => that owner is client, locked
-            //            If 2 owners => #1=client, #2=Other, locked
-            if (numOwners === 1) {
-                const ownerSelect = document.getElementById(`business${businessIndex}OwnerName1`);
-                if (ownerSelect) {
-                    ownerSelect.value = clientFirstName;
-                    ownerSelect.disabled = true;
-                    ownerSelect.style.backgroundColor = '#f0f0f0';
-                }
-            }
-            else if (numOwners === 2) {
-                const ownerSelect1 = document.getElementById(`business${businessIndex}OwnerName1`);
-                const ownerSelect2 = document.getElementById(`business${businessIndex}OwnerName2`);
-                if (ownerSelect1) {
-                    ownerSelect1.value = clientFirstName;
-                    ownerSelect1.disabled = true;
-                    ownerSelect1.style.backgroundColor = '#f0f0f0';
-                }
-                if (ownerSelect2) {
-                    ownerSelect2.value = 'Other';
-                    ownerSelect2.disabled = true;
-                    ownerSelect2.style.backgroundColor = '#f0f0f0';
-                }
-            }
-        }
-        else {
-            // MFJ => we keep 1 owner auto-locked for the client, 3 owners => client/spouse/other
-            // But 2 owners => do NOT auto-lock so the user can pick either spouse or "Other"
-            if (numOwners === 1) {
-                const ownerSelect = document.getElementById(`business${businessIndex}OwnerName1`);
-                if (ownerSelect) {
-                    ownerSelect.value = clientFirstName;
-                    ownerSelect.disabled = true;
-                    ownerSelect.style.backgroundColor = '#f0f0f0';
-                }
-            }
-            else if (numOwners === 3) {
-                // #1=client, #2=spouse, #3=Other
-                const ownerSelect1 = document.getElementById(`business${businessIndex}OwnerName1`);
-                const ownerSelect2 = document.getElementById(`business${businessIndex}OwnerName2`);
-                const ownerSelect3 = document.getElementById(`business${businessIndex}OwnerName3`);
-                if (ownerSelect1) {
-                    ownerSelect1.value = clientFirstName;
-                    ownerSelect1.disabled = true;
-                    ownerSelect1.style.backgroundColor = '#f0f0f0';
-                }
-                if (ownerSelect2) {
-                    ownerSelect2.value = spouseFirstName;
-                    ownerSelect2.disabled = true;
-                    ownerSelect2.style.backgroundColor = '#f0f0f0';
-                }
-                if (ownerSelect3) {
-                    ownerSelect3.value = 'Other';
-                    ownerSelect3.disabled = true;
-                    ownerSelect3.style.backgroundColor = '#f0f0f0';
-                }
-            }
-            // Note: if (numOwners === 2), we do NOT auto-lock in this block
-        }
-    }
-    // Partnerships or S-Corp might have similar auto-fill code in your existing logic.
+    // Then you might want to do an initial call once:
+    updateBusinessOwnerDropdowns(businessIndex);
 
-    // Validate total ownership and then recalc apportionments
+    // After creating, you may want to re-run your “validateTotalOwnership” or “updateOwnerApportionment”
     validateTotalOwnership(businessIndex, numOwners);
     updateOwnerApportionment(businessIndex);
 }
@@ -2114,50 +2252,70 @@ function checkSCorpReasonableComp(businessIndex) {
 }
 
 function updateBusinessOwnerDropdowns(businessIndex) {
+    // Grab all the selects like "businessXOwnerName1", "businessXOwnerName2", ...
     const ownerSelects = document.querySelectorAll(
         `#dynamicOwnerFields${businessIndex} select[id^="business${businessIndex}OwnerName"]`
     );
-    if (!ownerSelects) return;
+    if (!ownerSelects.length) return;
 
+    // Figure out which base options are valid (depends on filing status)
     const filingStatus = document.getElementById('filingStatus').value;
     const clientFirstName = document.getElementById('firstName').value.trim() || 'Client1';
     const spouseFirstName = document.getElementById('spouseFirstName').value.trim() || 'Client2';
-    let baseOptions = [];
+
+    let baseOptions;
     if (filingStatus === 'Married Filing Jointly') {
         baseOptions = [clientFirstName, spouseFirstName, 'Other'];
     } else {
         baseOptions = [clientFirstName, 'Other'];
     }
+
+    // 1) Gather "already chosen" names from all the selects:
     let selectedNames = [];
     ownerSelects.forEach(select => {
-        const val = select.value;
-        if (baseOptions.includes(val)) {
-            selectedNames.push(val);
+        if (select.value && baseOptions.includes(select.value)) {
+            selectedNames.push(select.value);
         }
     });
 
+    // 2) For each dropdown, rebuild the <option> list
     ownerSelects.forEach(select => {
-        const currentVal = select.value;
-        select.innerHTML = '';
+        const currentVal = select.value; // e.g. "Client1"
+        // We'll remove all old <option> elements
+        while (select.firstChild) {
+            select.removeChild(select.firstChild);
+        }
 
-        const pleaseOption = document.createElement('option');
-        pleaseOption.value = 'Please Select';
-        pleaseOption.textContent = 'Please Select';
-        select.appendChild(pleaseOption);
+        // Always add a "Please Select" top option
+        const pleaseOpt = document.createElement('option');
+        pleaseOpt.value = 'Please Select';
+        pleaseOpt.textContent = 'Please Select';
+        select.appendChild(pleaseOpt);
 
+        // Then add each name from baseOptions
+        // *except* if it's already chosen by a different Owner
         baseOptions.forEach(name => {
-            if (!selectedNames.includes(name) || currentVal === name) {
-                const option = document.createElement('option');
-                option.value = name;
-                option.textContent = name;
-                select.appendChild(option);
+            const isAlreadyChosen = selectedNames.includes(name);
+
+            // If "isAlreadyChosen" is true, we normally skip it...
+            // ...but if this select's "currentVal" is that same name,
+            // we keep it so we don't forcibly reset them to something else.
+            const keepThisName = (name === currentVal) || !isAlreadyChosen;
+
+            if (keepThisName) {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                select.appendChild(opt);
             }
         });
 
-        if ([...select.options].some(opt => opt.value === currentVal)) {
-            select.value = currentVal;
-        } else {
+        // Finally, if the select's "currentVal" was forcibly removed,
+        // re-set it to "Please Select":
+        if (![...select.options].some(opt => opt.value === currentVal)) {
             select.value = 'Please Select';
+        } else {
+            select.value = currentVal;
         }
     });
 }
