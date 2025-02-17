@@ -385,31 +385,38 @@ function handleEmploymentStatusChange(index, value) {
 function updateDependentBizMap(dependentIndex) {
     const wageStr = document.getElementById(`dependent${dependentIndex}Income`)?.value || '0';
     const wageVal = unformatCurrency(wageStr);
-    const employedVal = document.getElementById(`dependent${dependentIndex}EmployedInBusiness`)?.value || 'No';
+    const employedEl = document.getElementById(`dependent${dependentIndex}EmployedInBusiness`);
+    const employedVal = employedEl ? employedEl.value : 'No';
+  
     if (employedVal !== 'Yes') {
-        delete dependentBizMap[dependentIndex];
-        return;
+      delete dependentBizMap[dependentIndex];
+      return;
     }
-    const businessName = document.getElementById(`dependent${dependentIndex}BusinessName`)?.value || '';
+  
+    const businessNameEl = document.getElementById(`dependent${dependentIndex}BusinessName`);
+    const businessName = businessNameEl ? businessNameEl.value : '';
+
     let matchedBusinessIndex = null;
     const numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
     for (let i = 1; i <= numBusinesses; i++) {
-        const currentBizName = document.getElementById(`business${i}Name`)?.value || '';
-        if (currentBizName === businessName) {
-            matchedBusinessIndex = i;
-            break;
-        }
+      const currentBizName = document.getElementById(`business${i}Name`)?.value || '';
+      if (currentBizName === businessName) {
+        matchedBusinessIndex = i;
+        break;
+      }
     }
+  
     if (!matchedBusinessIndex) {
-        delete dependentBizMap[dependentIndex];
-        return;
+      delete dependentBizMap[dependentIndex];
+      return;
     }
+  
     dependentBizMap[dependentIndex] = {
-        businessIndex: matchedBusinessIndex,
-        wage: wageVal
+      businessIndex: matchedBusinessIndex,
+      wage: wageVal
     };
-}
-
+  }
+  
 function createLabelAndDropdown(container, id, labelText, options) {
     const label = document.createElement('label');
     label.setAttribute('for', id);
@@ -835,21 +842,25 @@ function createLabelAndCurrencyField(parent, id, labelText, minValue) {
     label.textContent = labelText;
     label.style.marginTop = '12px';
     parent.appendChild(label);
+
     const input = document.createElement('input');
     input.type = 'text';
     input.id = id;
     input.name = id;
     input.classList.add('currency-field');
     parent.appendChild(input);
+
     input.addEventListener('blur', function() {
         if (input.value.trim() !== "") {
             let num = unformatCurrency(input.value);
             if (minValue !== undefined && num < minValue) {
                 num = minValue;
             }
+            num = Math.abs(num);
             input.value = formatCurrency(String(num));
         }
     });
+
     return input;
 }
 
@@ -1710,45 +1721,39 @@ function validateTotalOwnership(businessIndex, numOwners) {
 }
 
 function updateBusinessNet(index) {
-    // Always calculate the net amount from income and expenses
-    const incomeVal = unformatCurrency(document.getElementById(`business${index}Income`)?.value || '0');
-    const expensesVal = unformatCurrency(document.getElementById(`business${index}Expenses`)?.value || '0');
+    // 1. Calculate Net (Income - Expenses)
+    const incomeField = document.getElementById(`business${index}Income`);
+    const expensesField = document.getElementById(`business${index}Expenses`);
+    const incomeVal = unformatCurrency(incomeField?.value || '0');
+    const expensesVal = unformatCurrency(expensesField?.value || '0');
     const netVal = incomeVal - expensesVal;
+
     const netField = document.getElementById(`business${index}Net`);
     if (netField) {
         netField.value = formatCurrency(String(netVal));
-        netField.style.color = netVal < 0 ? 'red' : 'black';
+        netField.style.color = (netVal < 0) ? 'red' : 'black';
     }
-    
-    // Clear any previously stored overrides so that fresh calculations are made
+
+    // 2. Clear any "overrides" from apportionment/disclaimers
     for (let key in apportionmentOverrides) {
         delete apportionmentOverrides[key];
     }
-
-    // Remove any dependent disclaimers before recalculating
     removeDisclaimer(`businessEntry${index}`, 'DEPENDENT_WAGE');
-    removeDisclaimer(`dynamicOwnerFields${index}`, 'SCORP_COMP');
+    removeDisclaimer(`businessEntry${index}`, 'SCORP_DEPENDENT_WAGE');
     
-    // Refresh the owner apportionment with the current net value
-    updateOwnerApportionment(index);
-
-    // (Optional) Recalculate any dependent wages or related fields here…
+    // 3. Compute total dependent wages for this business
     let totalDependentWages = 0;
-    let dependentStrings = [];
     for (let depIndex in dependentBizMap) {
-        if (dependentBizMap.hasOwnProperty(depIndex)) {
-            const entry = dependentBizMap[depIndex];
-            if (entry.businessIndex === index) {
-                totalDependentWages += entry.wage;
-                const depNameEl = document.getElementById(`dependent${depIndex}Name`);
-                const depName = depNameEl ? depNameEl.value.trim() || `Dependent${depIndex}` : `Dependent${depIndex}`;
-                dependentStrings.push(`${depName}'s wages (${formatCurrency(String(entry.wage))})`);
-            }
+        const entry = dependentBizMap[depIndex];
+        if (entry && entry.businessIndex === index) {
+            totalDependentWages += entry.wage;
         }
     }
     
-    // (Optional) If you have additional logic (e.g., for S-Corp Reasonable Comp), include it here.
-    // For example, calculate totalReasonableComp and check against expenses...
+    // Debug output:
+    console.log(`Business ${index} -> Expenses: ${expensesVal}, Total Dependent Wages: ${totalDependentWages}`);
+
+    // 4. For S‑Corp, compute total Reasonable Compensation
     let totalReasonableComp = 0;
     const businessTypeVal = document.getElementById(`business${index}Type`)?.value || '';
     if (businessTypeVal === 'S-Corp') {
@@ -1761,19 +1766,37 @@ function updateBusinessNet(index) {
             }
         }
     }
-    
-    const anythingEntered = (incomeVal !== 0 || expensesVal !== 0 || totalReasonableComp !== 0);
-    if (!anythingEntered) {
-        // You might want to still update the apportionment even if nothing is entered.
-        // For now, we continue.
+
+    // 5. If expenses field was blurred (and expenses > 0), check dependent wages vs. expenses
+    if (blurredExpenses[index] && expensesVal > 0) {
+        if (totalDependentWages > expensesVal) {
+            addDisclaimer(
+                `businessEntry${index}`,
+                'DEPENDENT_WAGE',
+                `Dependent Wages of (${formatCurrency(String(totalDependentWages))}) Exceeds Expenses`
+            );
+        }
     }
 
+    // 6. For S‑Corp: if (dependent wages + owner comp) > expenses, show combined disclaimer
+    if (businessTypeVal === 'S-Corp') {
+        const combined = totalDependentWages + totalReasonableComp;
+        if (totalReasonableComp > 0 && combined > expensesVal) {
+            addDisclaimer(
+                `businessEntry${index}`,
+                'SCORP_DEPENDENT_WAGE',
+                `Dependent Wages (${formatCurrency(String(totalDependentWages))}) + Reasonable Compensation (${formatCurrency(String(totalReasonableComp))}) exceeds this S-Corp's Expenses (${formatCurrency(String(expensesVal))}).`
+            );
+        }
+    }
+
+    // 7. Update apportionment and other totals
+    updateOwnerApportionment(index);
+    checkSCorpReasonableComp(index);
     if (businessTypeVal === 'C-Corp') {
         showCcorpTaxDue(index);
     }
-    
-    // **Always refresh the owner apportionment whenever net changes**
-    updateOwnerApportionment(index);
+    recalculateTotals();
 }
 
 const apportionmentOverrides = {};
