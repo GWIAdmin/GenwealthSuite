@@ -68,7 +68,7 @@ function scrollFunction() {
     } else {
         backToTopBtn.style.display = "none";
     }
-}
+} 
 
 document.getElementById('backToTopBtn').addEventListener('click', function() {
     window.scrollTo({
@@ -77,10 +77,10 @@ document.getElementById('backToTopBtn').addEventListener('click', function() {
     });
 });
 
-window.addEventListener('beforeunload', function (e) {
-    e.preventDefault();
-    e.returnValue = '';
-});
+// window.addEventListener('beforeunload', function (e) {
+//     e.preventDefault();
+//     e.returnValue = '';
+// });
 
 //-----------------------------//
 // 3. SPOUSE SECTION ANIMATION //
@@ -131,6 +131,8 @@ function updateBlindOptions() {
     let option = document.createElement('option');
     option.value = 'please select';
     option.textContent = 'Please Select';
+    option.disabled = true;
+    option.selected = true;
     blindSelect.appendChild(option);
 
     // Always add option for 0 (displayed as "0" with value "Zero")
@@ -165,6 +167,8 @@ function updateOlderThan65Options() {
     let option = document.createElement('option');
     option.value = 'Please Select';
     option.textContent = 'Please Select';
+    option.disabled = true;
+    option.selected = true;
     olderSelect.appendChild(option);
 
     // Always add option for 0
@@ -423,16 +427,19 @@ function createLabelAndDropdown(container, id, labelText, options) {
     label.textContent = labelText;
     label.style.marginTop = '12px';
     container.appendChild(label);
+
     const select = document.createElement('select');
     select.id = id;
     select.name = id;
     select.required = true;
+
     options.forEach(optionText => {
         const option = document.createElement('option');
         option.value = optionText;
         option.textContent = optionText;
         select.appendChild(option);
     });
+    
     container.appendChild(select);
 }
 
@@ -1127,6 +1134,8 @@ function handleBusinessTypeChange(index, businessType) {
             let pleaseOpt = document.createElement('option');
             pleaseOpt.value = '0';
             pleaseOpt.textContent = 'Please Select';
+            pleaseOpt.disabled = true;
+            pleaseOpt.selected = true;
             numOwnersSelect.appendChild(pleaseOpt);
 
             let twoOpt = document.createElement('option');
@@ -1160,6 +1169,8 @@ function handleBusinessTypeChange(index, businessType) {
             let opt0 = document.createElement('option');
             opt0.value = '0';
             opt0.textContent = 'Please Select';
+            opt0.disabled = true;
+            opt0.selected = true;
             numOwnersSelect.appendChild(opt0);
 
             let opt1 = document.createElement('option');
@@ -1185,6 +1196,8 @@ function handleBusinessTypeChange(index, businessType) {
             let opt0 = document.createElement('option');
             opt0.value = '0';
             opt0.textContent = 'Please Select';
+            opt0.disabled = true;
+            opt0.selected = true;
             numOwnersSelect.appendChild(opt0);
 
             let opt1 = document.createElement('option');
@@ -1419,6 +1432,8 @@ function createOwnerFields(businessIndex, numOwners) {
                 const pleaseOpt = document.createElement('option');
                 pleaseOpt.value = 'Please Select';
                 pleaseOpt.textContent = 'Please Select';
+                pleaseOpt.disabled = true;
+                pleaseOpt.selected = true;
                 nameSelect.appendChild(pleaseOpt);
 
                 const optClient = document.createElement('option');
@@ -1480,6 +1495,8 @@ function createOwnerFields(businessIndex, numOwners) {
                 const pleaseOpt = document.createElement('option');
                 pleaseOpt.value = 'Please Select';
                 pleaseOpt.textContent = 'Please Select';
+                pleaseOpt.disabled = true;
+                pleaseOpt.selected = true;
                 nameSelect.appendChild(pleaseOpt);
 
                 [clientFirstName, spouseFirstName, 'Other'].forEach(name => {
@@ -2313,6 +2330,8 @@ function updateBusinessOwnerDropdowns(businessIndex) {
         const pleaseOpt = document.createElement('option');
         pleaseOpt.value = 'Please Select';
         pleaseOpt.textContent = 'Please Select';
+        pleaseOpt.disabled = true;
+        pleaseOpt.selected = true;
         select.appendChild(pleaseOpt);
 
         // Then add each name from baseOptions
@@ -2337,6 +2356,8 @@ function updateBusinessOwnerDropdowns(businessIndex) {
         // re-set it to "Please Select":
         if (![...select.options].some(opt => opt.value === currentVal)) {
             select.value = 'Please Select';
+            select.disabled = true;
+            select.selected = true;
         } else {
             select.value = currentVal;
         }
