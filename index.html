@@ -267,6 +267,46 @@
         <h2 onclick="toggleCollapsible('incomeContent')">Income</h2>
         <div id="incomeContent" class="collapsible">
 
+        <section id="w2s">
+          <h2 onclick="toggleCollapsible('w2sContainer')">W-2</h2>
+          <div id="w2sContainer" class="collapsible">
+
+            <div class = "form-group">
+              <label for= "Title">W-2 Name:</label>
+              <input type="text" id="w2Name" name="w2Name" required>
+            </div>
+
+            <div class="form-group">
+              <label for="w2Wages">Wages, Salaries, Tips, and Other Compensation:</label>
+              <input type="text" id="w2Wages" name="w2Wages" class="currency-field" required>
+            </div>
+
+            <div class="form-group">
+              <label for="w2FederalTaxWithheld">Federal Income Tax Withheld:</label>
+              <input type="text" id="w2FederalTaxWithheld" name="w2FederalTaxWithheld" class="currency-field" required>
+            </div>
+
+            <div class="form-group">
+              <label for="w2MedicareWages">Medicare Wages and Tips:</label>
+              <input type="text" id="w2MedicareWages" name="w2MedicareWages" class="currency-field" required>
+            </div>
+
+            <div class="form-group">
+              <label for="w2MedicareTaxWithheld">Medicare Tax Withheld:</label>
+              <input type="text" id="w2MedicareTaxWithheld" name="w2MedicareTaxWithheld" class="currency-field" required>
+            </div>
+
+            <div class="form-group">
+              <label for="W2CodeNum"> How many Codes are there in Box 12 of W-2?:</label>
+              <input type="number" id="W2CodeNum" name="W2CodeNum" min="0" max="30" required>
+            </div>
+
+            <section id="W2CodeBoxes">
+            <div id="W2CodeBoxesContainer"></div>
+            </section>
+
+        </section>
+
         <section id="businesses">
           <div id="businessContainer"></div>
         </section>

@@ -3002,3 +3002,164 @@ darkModeCheckbox.addEventListener('change', () => {
     localStorage.setItem('preferred-theme', 'light');
   }
 });
+
+//-------------------//
+// 24. W2 CODE BOXES //
+//-------------------//
+
+// Define the available IRS code options
+const w2CodeOptions = [
+    { value: "A", text: "A - Uncollected Social Security tax or Railroad Retirement Tax Act (RRTA) tax on tips" },
+    { value: "B", text: "B - Uncollected Medicare tax on tips" },
+    { value: "C", text: "C - Taxable costs of group-term life insurance over $50,000" },
+    { value: "D", text: "D - Elective deferral under a Section 401(k) cash or arrangement plan" },
+    { value: "E", text: "E - Elective deferral under a Section 403(b) salary reduction agreement" },
+    { value: "F", text: "F - Elective deferral under a Section 408(k)(6) salary reduction SEP" },
+    { value: "G", text: "G - Elective deferrals and employer contributions (including nonelective deferrals) to a Section 457(b) deferred compensation plan" },
+    { value: "H", text: "H - Elective deferrals and employer contributions (including nonelective deferrals) to a Section 501(c)(18)(D) tax-exempt organization plan" },
+    { value: "J", text: "J - Nontaxable sick pay" },
+    { value: "K", text: "K - 20% excise tax on excess golden parachute payments" },
+    { value: "L", text: "L - Substantiated employee business expense reimbursements" },
+    { value: "M", text: "M - Uncollected Social Security or RRTA tax on taxable cost of group-term life insurance over $50,000 (former employees only)" },
+    { value: "N", text: "N - Uncollected Medicare tax on taxable cost of group-term life insurance over $50,000 (former employees only)" },
+    { value: "P", text: "P - Excludable moving expense reimbursements paid directly to a member of the U.S. Armed Forces" },
+    { value: "Q", text: "Q - Nontaxable combat pay for military personnel" },
+    { value: "R", text: "R - Employer contributions to an Archer medical savings account (MSA)" },
+    { value: "S", text: "S - Employee salary reduction contributions under a Section 408(p) SIMPLE plan" },
+    { value: "T", text: "T - Adoption benefits" },
+    { value: "V", text: "V - Income from exercise of nonstatutory stock option(s)" },
+    { value: "W", text: "W - Employer contributions (including amounts the employee elected to contribute using a Section 125 (cafeteria) plan) to an employee's health savings account (HSA)" },
+    { value: "Y", text: "Y - Deferrals under a Section 409A nonqualified deferred compensation plan" },
+    { value: "Z", text: "Z - Income under a nonqualified deferred compensation plan that fails to satisfy Section 409A" },
+    { value: "AA", text: "AA - Designated Roth contributions under a Section 401(k) plan" },
+    { value: "BB", text: "BB - Designated Roth contributions under a Section 403(b) plan" },
+    { value: "DD", text: "DD - Cost of employer-sponsored health coverage" },
+    { value: "EE", text: "EE - Designated Roth contributions under a governmental Section 457(b) plan" },
+    { value: "FF", text: "FF - Permitted benefits under a qualified small employer health reimbursement arrangement" },
+    { value: "GG", text: "GG - Income from qualified equity grants under Section 83(i)" },
+    { value: "HH", text: "HH - Aggregate deferrals under Section 83(i) elections as of the close of the calendar year" },
+    { value: "II", text: "II - Medicaid waiver payments excluded from gross income under Notice 2014-7" }
+];
+
+// Creates the dynamic code boxes inside the W2 container.
+function createW2CodeBoxes(numCodes) {
+    const container = document.getElementById("W2CodeBoxesContainer");
+    container.innerHTML = ""; // Clear any existing boxes
+  
+    for (let i = 0; i < numCodes; i++) {
+      // Create a wrapper div for each entire W2 code box
+      const boxDiv = document.createElement("div");
+      boxDiv.classList.add("w2-code-box");
+  
+      // ----- "Select Code" field group -----
+      const selectGroup = document.createElement("div");
+      selectGroup.classList.add("form-group");
+  
+      const codeLabel = document.createElement("label");
+      codeLabel.textContent = "Please Select Code from Dropdown:";
+      codeLabel.setAttribute("for", "W2Code_" + (i + 1));
+      selectGroup.appendChild(codeLabel);
+  
+      const dropdown = document.createElement("select");
+      dropdown.name = "W2Code_" + (i + 1);
+      dropdown.id = "W2Code_" + (i + 1);
+      dropdown.classList.add("w2-code-dropdown");
+      populateW2Dropdown(dropdown);
+      dropdown.addEventListener("change", updateW2CodeDropdowns);
+      selectGroup.appendChild(dropdown);
+  
+      boxDiv.appendChild(selectGroup);
+  
+      // ----- "Dollar Amount" field group -----
+      const amountGroup = document.createElement("div");
+      amountGroup.classList.add("form-group");
+  
+      const amountLabel = document.createElement("label");
+      amountLabel.textContent = "Enter Dollar ($) Amount:";
+      amountLabel.setAttribute("for", "W2CodeAmount_" + (i + 1));
+      amountGroup.appendChild(amountLabel);
+  
+      const amountInput = document.createElement("input");
+      amountInput.type = "text";
+      amountInput.name = "W2CodeAmount_" + (i + 1);
+      amountInput.id = "W2CodeAmount_" + (i + 1);
+      amountInput.classList.add("w2-code-amount");
+      amountInput.addEventListener("blur", () => {
+        amountInput.value = formatCurrency(amountInput.value);
+      });
+      amountGroup.appendChild(amountInput);
+  
+      boxDiv.appendChild(amountGroup);
+  
+      // Finally, append this code box to the container
+      container.appendChild(boxDiv);
+    }
+}
+
+// Helper function to populate a given dropdown with the available IRS code options.
+function populateW2Dropdown(dropdown) {
+    dropdown.innerHTML = "";
+  
+    // Add a default "Please Select" option
+    const defaultOpt = document.createElement("option");
+    defaultOpt.value = "";
+    defaultOpt.textContent = "Please Select";
+    defaultOpt.disabled = true;
+    defaultOpt.selected = true;
+    dropdown.appendChild(defaultOpt);
+  
+    w2CodeOptions.forEach(function(option) {
+      const opt = document.createElement("option");
+      opt.value = option.value;
+      opt.textContent = option.text;
+      dropdown.appendChild(opt);
+    });
+}
+
+// Update all dropdowns so that codes chosen in one are removed from the others.
+function updateW2CodeDropdowns() {
+    const dropdowns = document.querySelectorAll(".w2-code-dropdown");
+    const selectedCodes = [];
+  
+    // Gather selected values from each dropdown
+    dropdowns.forEach(function(dd) {
+      if (dd.value) {
+        selectedCodes.push(dd.value);
+      }
+    });
+  
+    // Update each dropdown's options based on other selections.
+    dropdowns.forEach(function(dd) {
+      const currentSelection = dd.value;
+      dd.innerHTML = "";
+  
+      // Add the default option first.
+      const defaultOpt = document.createElement("option");
+      defaultOpt.value = "";
+      defaultOpt.textContent = "Please Select";
+      defaultOpt.disabled = true;
+      defaultOpt.selected = (currentSelection === "");
+      dd.appendChild(defaultOpt);
+  
+      w2CodeOptions.forEach(function(option) {
+        // Skip this option if it's selected in another dropdown (unless it's the current selection)
+        if (selectedCodes.indexOf(option.value) > -1 && option.value !== currentSelection) {
+          return;
+        }
+  
+        const opt = document.createElement("option");
+        opt.value = option.value;
+        opt.textContent = option.text;
+        if (option.value === currentSelection) {
+          opt.selected = true;
+        }
+        dd.appendChild(opt);
+      });
+    });
+}
+
+// Listen for changes in the number field to create or update the boxes.
+document.getElementById("W2CodeNum").addEventListener("input", function () {
+    const num = parseInt(this.value, 10) || 0;
+    createW2CodeBoxes(num);
+});
