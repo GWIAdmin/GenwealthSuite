@@ -3207,6 +3207,7 @@ function addW2Block() {
   wagesInput.type = 'text';
   wagesInput.id = 'w2Wages_' + w2Counter;
   wagesInput.name = 'w2Wages_' + w2Counter;
+  wagesInput.classList.add('currency-field');
   wagesGroup.appendChild(wagesInput);
   w2Block.appendChild(wagesGroup);
 
@@ -3221,6 +3222,7 @@ function addW2Block() {
   federalTaxInput.type = 'text';
   federalTaxInput.id = 'w2FederalTaxWithheld_' + w2Counter;
   federalTaxInput.name = 'w2FederalTaxWithheld_' + w2Counter;
+  federalTaxInput.classList.add('currency-field');
   federalTaxGroup.appendChild(federalTaxInput);
   w2Block.appendChild(federalTaxGroup);
 
@@ -3235,6 +3237,7 @@ function addW2Block() {
   medicareWagesInput.type = 'text';
   medicareWagesInput.id = 'w2MedicareWages_' + w2Counter;
   medicareWagesInput.name = 'w2MedicareWages_' + w2Counter;
+  medicareWagesInput.classList.add('currency-field');
   medicareWagesGroup.appendChild(medicareWagesInput);
   w2Block.appendChild(medicareWagesGroup);
   
@@ -3249,6 +3252,7 @@ function addW2Block() {
   medicareTaxInput.type = 'text';
   medicareTaxInput.id = 'w2MedicareTaxWithheld_' + w2Counter;
   medicareTaxInput.name = 'w2MedicareTaxWithheld_' + w2Counter;
+  medicareTaxInput.classList.add('currency-field');
   medicareTaxGroup.appendChild(medicareTaxInput);
   w2Block.appendChild(medicareTaxGroup);
 
@@ -3291,5 +3295,11 @@ function addW2Block() {
 
   // Append the new W-2 block to the container
   document.getElementById('w2sContainer').appendChild(w2Block);
+
+  w2Block.querySelectorAll('.currency-field').forEach((field) => {
+        field.addEventListener('blur', function() {
+            this.value = formatCurrency(this.value);
+        });
+    });
   
 }
