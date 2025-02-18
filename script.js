@@ -3084,17 +3084,24 @@ function createW2CodeBoxes(numCodes) {
       amountInput.name = "W2CodeAmount_" + (i + 1);
       amountInput.id = "W2CodeAmount_" + (i + 1);
       amountInput.classList.add("w2-code-amount");
-      amountInput.addEventListener("blur", () => {
-        amountInput.value = formatCurrency(amountInput.value);
-      });
+
+    // On blur, format the input AND ensure it is >= 1
+    amountInput.addEventListener("blur", () => {
+        const rawValue = unformatCurrency(amountInput.value);
+        if (rawValue < 1) {
+          // Force the minimum to 1
+          amountInput.value = formatCurrency("1");
+        } else {
+          // Otherwise re-format as currency as you normally do
+          amountInput.value = formatCurrency(String(rawValue));
+        }
+
+        });
       amountGroup.appendChild(amountInput);
-  
       boxDiv.appendChild(amountGroup);
-  
-      // Finally, append this code box to the container
       container.appendChild(boxDiv);
     }
-}
+  }
 
 // Helper function to populate a given dropdown with the available IRS code options.
 function populateW2Dropdown(dropdown) {
