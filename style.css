@@ -461,12 +461,13 @@ h3{
 /* Collapsible Section */
 .collapsible {
   overflow: hidden;
-  transition: max-height 1.0s ease-in-out;
   max-height: 0;
+  transition: none;
 }
 
 .collapsible.active {
   max-height: 61200px;
+  transition: max-height 8s ease;
 }
 
 /* Section Styling */
