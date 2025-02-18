@@ -267,45 +267,17 @@
         <h2 onclick="toggleCollapsible('incomeContent')">Income</h2>
         <div id="incomeContent" class="collapsible">
 
-        <section id="w2s">
-          <h2 onclick="toggleCollapsible('w2sContainer')">W-2</h2>
-          <div id="w2sContainer" class="collapsible">
+      <!-- W-2 Section (replace the static W-2 block) -->
+      <section id="w2s">
+        <h2 onclick="toggleCollapsible('w2sContainer')">W-2</h2>
+        <div id="w2sContainer" class="collapsible">
+          <!-- Dynamically added W-2 blocks will appear here -->
+        </div>
+        <button type="button" id="addW2Btn" class="add-w2-btn">
+          Add a W-2? <span class="plus-symbol">+</span>
+        </button>
+      </section>
 
-            <div class ="form-group">
-              <label for= "W2Name">W-2 Name:</label>
-              <input type="text" id="w2Name" name="w2Name" required>
-            </div>
-
-            <div class="form-group">
-              <label for="w2Wages">Wages, Salaries, Tips, and Other Compensation:</label>
-              <input type="text" id="w2Wages" name="w2Wages" class="currency-field" required>
-            </div>
-
-            <div class="form-group">
-              <label for="w2FederalTaxWithheld">Federal Income Tax Withheld:</label>
-              <input type="text" id="w2FederalTaxWithheld" name="w2FederalTaxWithheld" class="currency-field" required>
-            </div>
-
-            <div class="form-group">
-              <label for="w2MedicareWages">Medicare Wages and Tips:</label>
-              <input type="text" id="w2MedicareWages" name="w2MedicareWages" class="currency-field" required>
-            </div>
-
-            <div class="form-group">
-              <label for="w2MedicareTaxWithheld">Medicare Tax Withheld:</label>
-              <input type="text" id="w2MedicareTaxWithheld" name="w2MedicareTaxWithheld" class="currency-field" required>
-            </div>
-
-            <div class="form-group">
-              <label for="W2CodeNum"> How many Codes are there in Box 12 of W-2?:</label>
-              <input type="number" id="W2CodeNum" name="W2CodeNum" min="0" max="30" required>
-            </div>
-
-            <section id="W2CodeBoxes">
-            <div id="W2CodeBoxesContainer"></div>
-            </section>
-
-        </section>
 
         <section id="businesses">
           <div id="businessContainer"></div>
@@ -398,49 +370,6 @@
       </div>
       </section>
 
-      <!-- Adjusted Gross Income -->
-      <section id="adjustedGrossIncome">
-        <h2 onclick="toggleCollapsible('adjustedGrossIncomeContent')">Adjusted Gross Income</h2>
-        <div id="adjustedGrossIncomeContent" class="collapsible">
-
-        <div class="form-group">
-          <label for="halfSETax">Half of Self-Employemnt Tax:</label>
-          <input type="text" id="halfSETax" name="halfSETax" class="currency-field" readonly>
-        </div>
-
-        <div class="form-group">
-          <label for="retirementDeduction">Retirement Deduction:</label>
-          <input type="text" id="retirementDeduction" name="retirementDeduction" class="currency-field">
-        </div>
-
-        <div class="form-group">
-          <label for="medicalReimbursementPlan">Medical Reimbursement Plan:</label>
-          <input type="text" id="medicalReimbursementPlan" name="medicalReimbursementPlan" class="currency-field">
-        </div>
-
-        <div class="form-group">
-          <label for="SEHealthInsurance">Self-Employed Health Insurance:</label>
-          <input type="text" id="SEHealthInsurance" name="SEHealthInsurance" class="currency-field">
-        </div>
-
-        <div class="form-group">
-          <label for="alimonyPaid">Alimony Paid:</label>
-          <input type="text" id="alimonyPaid" name="alimonyPaid" class="currency-field">
-        </div>
-
-        <div class="form-group">
-          <label for="otherAdjustments">Other Adjustments:</label>
-          <input type="text" id="otherAdjustments" name="otherAdjustments" class="currency-field">
-        </div>
-
-        <div class="form-group">
-          <label for="totalAdjustedGrossIncome">Total Adjusted Gross Income:</label>
-          <input type="text" id="totalAdjustedGrossIncome" name="totalAdjustedGrossIncome" class="currency-field" readonly >
-        </div>
-
-        </div>
-      </section>
-
       <!-- Deductions Section -->
       <section id="Deductions">
         <h2 onclick="toggleCollapsible('deductionsContent')">Deductions</h2>
@@ -501,6 +430,49 @@
           <input type="text" id="totalDeductions" name="totalDeductions" class="currency-field" readonly>
         </div>
         
+        </div>
+      </section>
+
+      <!-- Adjusted Gross Income -->
+      <section id="adjustedGrossIncome">
+        <h2 onclick="toggleCollapsible('adjustedGrossIncomeContent')">Adjusted Gross Income</h2>
+        <div id="adjustedGrossIncomeContent" class="collapsible">
+
+        <div class="form-group">
+          <label for="halfSETax">Half of Self-Employemnt Tax:</label>
+          <input type="text" id="halfSETax" name="halfSETax" class="currency-field" readonly>
+        </div>
+
+        <div class="form-group">
+          <label for="retirementDeduction">Retirement Deduction:</label>
+          <input type="text" id="retirementDeduction" name="retirementDeduction" class="currency-field">
+        </div>
+
+        <div class="form-group">
+          <label for="medicalReimbursementPlan">Medical Reimbursement Plan:</label>
+          <input type="text" id="medicalReimbursementPlan" name="medicalReimbursementPlan" class="currency-field">
+        </div>
+
+        <div class="form-group">
+          <label for="SEHealthInsurance">Self-Employed Health Insurance:</label>
+          <input type="text" id="SEHealthInsurance" name="SEHealthInsurance" class="currency-field">
+        </div>
+
+        <div class="form-group">
+          <label for="alimonyPaid">Alimony Paid:</label>
+          <input type="text" id="alimonyPaid" name="alimonyPaid" class="currency-field">
+        </div>
+
+        <div class="form-group">
+          <label for="otherAdjustments">Other Adjustments:</label>
+          <input type="text" id="otherAdjustments" name="otherAdjustments" class="currency-field">
+        </div>
+
+        <div class="form-group">
+          <label for="totalAdjustedGrossIncome">Total Adjusted Gross Income:</label>
+          <input type="text" id="totalAdjustedGrossIncome" name="totalAdjustedGrossIncome" class="currency-field" readonly >
+        </div>
+
         </div>
       </section>
 

@@ -49,6 +49,7 @@ let userManuallyChanged65Plus = false;
 let dependentBizMap = {};
 let dependentsStore = {};
 let lastManualAdjustment = {};
+let w2Counter = 0;
 
 window.blurredIncome = {};
 window.blurredExpenses = {};
@@ -2664,6 +2665,14 @@ document.addEventListener('DOMContentLoaded', function() {
     updateOlderThan65Options();
     undoStack.push(getFormSnapshot());
 
+    // Open the W-2 collapsible by adding the "active" class
+    const w2Container = document.getElementById('w2sContainer');
+    if (w2Container) {
+      w2Container.classList.add('active');
+    }
+
+    document.getElementById('addW2Btn').addEventListener('click', addW2Block);
+
     const allCurrencyFields = document.querySelectorAll('.currency-field');
     allCurrencyFields.forEach((field) => {
         field.addEventListener('blur', () => {
@@ -3042,66 +3051,62 @@ const w2CodeOptions = [
 ];
 
 // Creates the dynamic code boxes inside the W2 container.
-function createW2CodeBoxes(numCodes) {
-    const container = document.getElementById("W2CodeBoxesContainer");
-    container.innerHTML = ""; // Clear any existing boxes
-  
+function createW2CodeBoxes(numCodes, container) {
+    container.innerHTML = ""; // Clear any existing boxes in this container
     for (let i = 0; i < numCodes; i++) {
-      // Create a wrapper div for each entire W2 code box
+      // Create a wrapper div for each W-2 code box
       const boxDiv = document.createElement("div");
       boxDiv.classList.add("w2-code-box");
   
-      // ----- "Select Code" field group -----
+      // --- "Select Code" field group ---
       const selectGroup = document.createElement("div");
       selectGroup.classList.add("form-group");
   
       const codeLabel = document.createElement("label");
+      // Use a unique id that combines the container id and code index
+      codeLabel.setAttribute("for", "W2Code_" + container.id + "_" + (i + 1));
       codeLabel.textContent = "Please Select Code from Dropdown:";
-      codeLabel.setAttribute("for", "W2Code_" + (i + 1));
       selectGroup.appendChild(codeLabel);
   
       const dropdown = document.createElement("select");
-      dropdown.name = "W2Code_" + (i + 1);
-      dropdown.id = "W2Code_" + (i + 1);
+      dropdown.name = "W2Code_" + container.id + "_" + (i + 1);
+      dropdown.id = "W2Code_" + container.id + "_" + (i + 1);
       dropdown.classList.add("w2-code-dropdown");
       populateW2Dropdown(dropdown);
       dropdown.addEventListener("change", updateW2CodeDropdowns);
       selectGroup.appendChild(dropdown);
-  
       boxDiv.appendChild(selectGroup);
   
-      // ----- "Dollar Amount" field group -----
+      // --- "Enter Dollar ($) Amount" field group ---
       const amountGroup = document.createElement("div");
       amountGroup.classList.add("form-group");
   
       const amountLabel = document.createElement("label");
+      amountLabel.setAttribute("for", "W2CodeAmount_" + container.id + "_" + (i + 1));
       amountLabel.textContent = "Enter Dollar ($) Amount:";
-      amountLabel.setAttribute("for", "W2CodeAmount_" + (i + 1));
       amountGroup.appendChild(amountLabel);
   
       const amountInput = document.createElement("input");
       amountInput.type = "text";
-      amountInput.name = "W2CodeAmount_" + (i + 1);
-      amountInput.id = "W2CodeAmount_" + (i + 1);
+      amountInput.name = "W2CodeAmount_" + container.id + "_" + (i + 1);
+      amountInput.id = "W2CodeAmount_" + container.id + "_" + (i + 1);
       amountInput.classList.add("w2-code-amount");
-
-    // On blur, format the input AND ensure it is >= 1
-    amountInput.addEventListener("blur", () => {
+  
+      // On blur, format the input and enforce a minimum value of 1
+      amountInput.addEventListener("blur", function() {
         const rawValue = unformatCurrency(amountInput.value);
         if (rawValue < 1) {
-          // Force the minimum to 1
           amountInput.value = formatCurrency("1");
         } else {
-          // Otherwise re-format as currency as you normally do
           amountInput.value = formatCurrency(String(rawValue));
         }
-
-        });
+      });
       amountGroup.appendChild(amountInput);
       boxDiv.appendChild(amountGroup);
+  
       container.appendChild(boxDiv);
     }
-  }
+}
 
 // Helper function to populate a given dropdown with the available IRS code options.
 function populateW2Dropdown(dropdown) {
@@ -3165,8 +3170,126 @@ function updateW2CodeDropdowns() {
     });
 }
 
-// Listen for changes in the number field to create or update the boxes.
-document.getElementById("W2CodeNum").addEventListener("input", function () {
+function addW2Block() {
+  w2Counter++;
+  // Create container for one W-2 block
+  const w2Block = document.createElement('div');
+  w2Block.classList.add('w2-block');
+  w2Block.id = 'w2Block_' + w2Counter;
+
+  // Header for this W-2
+  const header = document.createElement('h3');
+  header.textContent = 'W-2 #' + w2Counter;
+  w2Block.appendChild(header);
+
+  // --- W-2 Name ---
+  const nameGroup = document.createElement('div');
+  nameGroup.classList.add('form-group');
+  const nameLabel = document.createElement('label');
+  nameLabel.setAttribute('for', 'w2Name_' + w2Counter);
+  nameLabel.textContent = 'W-2 Name:';
+  nameGroup.appendChild(nameLabel);
+  const nameInput = document.createElement('input');
+  nameInput.type = 'text';
+  nameInput.id = 'w2Name_' + w2Counter;
+  nameInput.name = 'w2Name_' + w2Counter;
+  nameGroup.appendChild(nameInput);
+  w2Block.appendChild(nameGroup);
+
+  // --- Wages, Salaries, Tips, and Other Compensation ---
+  const wagesGroup = document.createElement('div');
+  wagesGroup.classList.add('form-group');
+  const wagesLabel = document.createElement('label');
+  wagesLabel.setAttribute('for', 'w2Wages_' + w2Counter);
+  wagesLabel.textContent = 'Wages, Salaries, Tips, and Other Compensation:';
+  wagesGroup.appendChild(wagesLabel);
+  const wagesInput = document.createElement('input');
+  wagesInput.type = 'text';
+  wagesInput.id = 'w2Wages_' + w2Counter;
+  wagesInput.name = 'w2Wages_' + w2Counter;
+  wagesGroup.appendChild(wagesInput);
+  w2Block.appendChild(wagesGroup);
+
+  // --- Federal Income Tax Withheld ---
+  const federalTaxGroup = document.createElement('div');
+  federalTaxGroup.classList.add('form-group');
+  const federalTaxLabel = document.createElement('label');
+  federalTaxLabel.setAttribute('for', 'w2FederalTaxWithheld_' + w2Counter);
+  federalTaxLabel.textContent = 'Federal Income Tax Withheld:';
+  federalTaxGroup.appendChild(federalTaxLabel);
+  const federalTaxInput = document.createElement('input');
+  federalTaxInput.type = 'text';
+  federalTaxInput.id = 'w2FederalTaxWithheld_' + w2Counter;
+  federalTaxInput.name = 'w2FederalTaxWithheld_' + w2Counter;
+  federalTaxGroup.appendChild(federalTaxInput);
+  w2Block.appendChild(federalTaxGroup);
+
+  // --- Medicare Wages and Tips ---
+  const medicareWagesGroup = document.createElement('div');
+  medicareWagesGroup.classList.add('form-group');
+  const medicareWagesLabel = document.createElement('label');
+  medicareWagesLabel.setAttribute('for', 'w2MedicareWages_' + w2Counter);
+  medicareWagesLabel.textContent = 'Medicare Wages and Tips:';
+  medicareWagesGroup.appendChild(medicareWagesLabel);
+  const medicareWagesInput = document.createElement('input');
+  medicareWagesInput.type = 'text';
+  medicareWagesInput.id = 'w2MedicareWages_' + w2Counter;
+  medicareWagesInput.name = 'w2MedicareWages_' + w2Counter;
+  medicareWagesGroup.appendChild(medicareWagesInput);
+  w2Block.appendChild(medicareWagesGroup);
+  
+  // --- Medicare Tax Withheld ---
+  const medicareTaxGroup = document.createElement('div');
+  medicareTaxGroup.classList.add('form-group');
+  const medicareTaxLabel = document.createElement('label');
+  medicareTaxLabel.setAttribute('for', 'w2MedicareTaxWithheld_' + w2Counter);
+  medicareTaxLabel.textContent = 'Medicare Tax Withheld:';
+  medicareTaxGroup.appendChild(medicareTaxLabel);
+  const medicareTaxInput = document.createElement('input');
+  medicareTaxInput.type = 'text';
+  medicareTaxInput.id = 'w2MedicareTaxWithheld_' + w2Counter;
+  medicareTaxInput.name = 'w2MedicareTaxWithheld_' + w2Counter;
+  medicareTaxGroup.appendChild(medicareTaxInput);
+  w2Block.appendChild(medicareTaxGroup);
+
+  // --- How many Codes are there in Box 12 of W-2? ---
+  const codeNumGroup = document.createElement('div');
+  codeNumGroup.classList.add('form-group');
+  const codeNumLabel = document.createElement('label');
+  codeNumLabel.setAttribute('for', 'W2CodeNum_' + w2Counter);
+  codeNumLabel.textContent = 'How many Codes are there in Box 12 of W-2?:';
+  codeNumGroup.appendChild(codeNumLabel);
+  const codeNumInput = document.createElement('input');
+  codeNumInput.type = 'number';
+  codeNumInput.id = 'W2CodeNum_' + w2Counter;
+  codeNumInput.name = 'W2CodeNum_' + w2Counter;
+  codeNumInput.min = '0';
+  codeNumInput.max = '30';
+  codeNumGroup.appendChild(codeNumInput);
+  w2Block.appendChild(codeNumGroup);
+
+  // --- Container for W-2 Code Boxes for this block ---
+  const codeBoxesContainer = document.createElement('div');
+  codeBoxesContainer.id = 'W2CodeBoxesContainer_' + w2Counter;
+  w2Block.appendChild(codeBoxesContainer);
+
+  // When the code number input changes, generate the code boxes for this block.
+  codeNumInput.addEventListener('input', function() {
     const num = parseInt(this.value, 10) || 0;
-    createW2CodeBoxes(num);
-});
+    createW2CodeBoxes(num, codeBoxesContainer);
+  });
+
+  // --- Remove this W-2? Button ---
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.textContent = 'Remove this W-2?';
+  removeBtn.classList.add('remove-w2-btn');
+  removeBtn.addEventListener('click', function() {
+    w2Block.remove();
+  });
+  w2Block.appendChild(removeBtn);
+
+  // Append the new W-2 block to the container
+  document.getElementById('w2sContainer').appendChild(w2Block);
+  
+}
