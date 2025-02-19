@@ -3180,7 +3180,13 @@ function addW2Block() {
     // Header for this W-2
     const header = document.createElement('h3');
     header.textContent = 'W-2 #' + w2Counter;
-    w2Block.appendChild(header);    
+    header.style.cursor = 'pointer';
+    w2Block.appendChild(header);  
+    
+    // Create a container for the collapsible content
+    const collapsibleContent = document.createElement('div');
+    collapsibleContent.classList.add('collapsible-content');
+    w2Block.appendChild(collapsibleContent);
 
     // --- W-2 Name ---
     const nameGroup = document.createElement('div');
@@ -3194,7 +3200,7 @@ function addW2Block() {
     nameInput.id = 'w2Name_' + w2Counter;
     nameInput.name = 'w2Name_' + w2Counter;
     nameGroup.appendChild(nameInput);
-    w2Block.appendChild(nameGroup); 
+    collapsibleContent.appendChild(nameGroup);
 
     // --- Wages, Salaries, Tips, and Other Compensation ---
     const wagesGroup = document.createElement('div');
@@ -3209,7 +3215,7 @@ function addW2Block() {
     wagesInput.name = 'w2Wages_' + w2Counter;
     wagesInput.classList.add('currency-field');
     wagesGroup.appendChild(wagesInput);
-    w2Block.appendChild(wagesGroup);    
+    collapsibleContent.appendChild(wagesGroup);    
 
     // --- Federal Income Tax Withheld ---
     const federalTaxGroup = document.createElement('div');
@@ -3224,7 +3230,7 @@ function addW2Block() {
     federalTaxInput.name = 'w2FederalTaxWithheld_' + w2Counter;
     federalTaxInput.classList.add('currency-field');
     federalTaxGroup.appendChild(federalTaxInput);
-    w2Block.appendChild(federalTaxGroup);   
+    collapsibleContent.appendChild(federalTaxGroup);   
     
     // --- Medicare Wages and Tips ---
     const medicareWagesGroup = document.createElement('div');
@@ -3239,7 +3245,7 @@ function addW2Block() {
     medicareWagesInput.name = 'w2MedicareWages_' + w2Counter;
     medicareWagesInput.classList.add('currency-field');
     medicareWagesGroup.appendChild(medicareWagesInput);
-    w2Block.appendChild(medicareWagesGroup);
+    collapsibleContent.appendChild(medicareWagesGroup);
 
     // --- Medicare Tax Withheld ---
     const medicareTaxGroup = document.createElement('div');
@@ -3254,7 +3260,7 @@ function addW2Block() {
     medicareTaxInput.name = 'w2MedicareTaxWithheld_' + w2Counter;
     medicareTaxInput.classList.add('currency-field');
     medicareTaxGroup.appendChild(medicareTaxInput);
-    w2Block.appendChild(medicareTaxGroup);  
+    collapsibleContent.appendChild(medicareTaxGroup);  
 
     // --- State Wages, Tips, etc. ---
     const stateWagesGroup = document.createElement('div');
@@ -3269,7 +3275,7 @@ function addW2Block() {
     stateWagesInput.name = 'w2StateWages_' + w2Counter;
     stateWagesInput.classList.add('currency-field');
     stateWagesGroup.appendChild(stateWagesInput);
-    w2Block.appendChild(stateWagesGroup);   
+    collapsibleContent.appendChild(stateWagesGroup);   
     
     // --- State Income Tax ---
     const stateTaxGroup = document.createElement('div');
@@ -3284,7 +3290,7 @@ function addW2Block() {
     stateTaxInput.name = 'w2StateTaxWithheld_' + w2Counter;
     stateTaxInput.classList.add('currency-field');
     stateTaxGroup.appendChild(stateTaxInput);
-    w2Block.appendChild(stateTaxGroup);
+    collapsibleContent.appendChild(stateTaxGroup);
 
     // --- How many Codes are there in Box 12 of W-2? ---
     const codeNumGroup = document.createElement('div');
@@ -3300,12 +3306,12 @@ function addW2Block() {
     codeNumInput.min = '0';
     codeNumInput.max = '30';
     codeNumGroup.appendChild(codeNumInput);
-    w2Block.appendChild(codeNumGroup);  
+    collapsibleContent.appendChild(codeNumGroup);  
 
     // --- Container for W-2 Code Boxes for this block ---
     const codeBoxesContainer = document.createElement('div');
     codeBoxesContainer.id = 'W2CodeBoxesContainer_' + w2Counter;
-    w2Block.appendChild(codeBoxesContainer);  
+    collapsibleContent.appendChild(codeBoxesContainer);  
 
     // When the code number input changes, generate the code boxes for this block.
     codeNumInput.addEventListener('input', function() {
@@ -3321,7 +3327,7 @@ function addW2Block() {
     removeBtn.addEventListener('click', function() {
       w2Block.remove();
     });
-    w2Block.appendChild(removeBtn); 
+    collapsibleContent.appendChild(removeBtn); 
 
     // Append the new W-2 block to the container
     document.getElementById('w2sContainer').appendChild(w2Block);   
@@ -3330,5 +3336,10 @@ function addW2Block() {
               this.value = formatCurrency(this.value);
           });
       });
+
+    // Add an event listener to toggle the collapsible content
+    header.addEventListener('click', () => {
+        collapsibleContent.classList.toggle('active');
+    });
 
 }
