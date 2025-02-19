@@ -3202,6 +3202,15 @@ function addW2Block() {
     nameGroup.appendChild(nameInput);
     collapsibleContent.appendChild(nameGroup);
 
+    // Update the header text as the user types in the name field
+    nameInput.addEventListener('blur', function() {
+        if (this.value.trim() === '') {
+            header.textContent = 'W-2 #' + w2Counter;
+        } else {
+            header.textContent = this.value;
+        }
+    });
+
     // --- Wages, Salaries, Tips, and Other Compensation ---
     const wagesGroup = document.createElement('div');
     wagesGroup.classList.add('form-group');
