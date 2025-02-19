@@ -3176,10 +3176,12 @@ function addW2Block() {
     const w2Block = document.createElement('div');
     w2Block.classList.add('w2-block');
     w2Block.id = 'w2Block_' + w2Counter;    
+
     // Header for this W-2
     const header = document.createElement('h3');
     header.textContent = 'W-2 #' + w2Counter;
     w2Block.appendChild(header);    
+
     // --- W-2 Name ---
     const nameGroup = document.createElement('div');
     nameGroup.classList.add('form-group');
@@ -3193,6 +3195,7 @@ function addW2Block() {
     nameInput.name = 'w2Name_' + w2Counter;
     nameGroup.appendChild(nameInput);
     w2Block.appendChild(nameGroup); 
+
     // --- Wages, Salaries, Tips, and Other Compensation ---
     const wagesGroup = document.createElement('div');
     wagesGroup.classList.add('form-group');
@@ -3207,6 +3210,7 @@ function addW2Block() {
     wagesInput.classList.add('currency-field');
     wagesGroup.appendChild(wagesInput);
     w2Block.appendChild(wagesGroup);    
+
     // --- Federal Income Tax Withheld ---
     const federalTaxGroup = document.createElement('div');
     federalTaxGroup.classList.add('form-group');
@@ -3221,6 +3225,7 @@ function addW2Block() {
     federalTaxInput.classList.add('currency-field');
     federalTaxGroup.appendChild(federalTaxInput);
     w2Block.appendChild(federalTaxGroup);   
+    
     // --- Medicare Wages and Tips ---
     const medicareWagesGroup = document.createElement('div');
     medicareWagesGroup.classList.add('form-group');
@@ -3317,7 +3322,7 @@ function addW2Block() {
       w2Block.remove();
     });
     w2Block.appendChild(removeBtn); 
-    
+
     // Append the new W-2 block to the container
     document.getElementById('w2sContainer').appendChild(w2Block);   
     w2Block.querySelectorAll('.currency-field').forEach((field) => {

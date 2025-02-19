@@ -749,3 +749,10 @@ body.dark-mode .w2-code-box {
   background-color: var(--business-entry);
   border-color: var(--border-dark);
 }
+
+.logo {
+  padding: 0px;
+  margin-right: 535px;
+  width: 200px;
+  display: block;
+}
