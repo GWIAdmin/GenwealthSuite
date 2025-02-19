@@ -3211,6 +3211,45 @@ function addW2Block() {
         }
     });
 
+    // If filing status is "Married Filing Jointly", add the dropdown for "Whose W-2 is this?"
+    if (document.getElementById('filingStatus').value === 'Married Filing Jointly') {
+        const whoseW2Group = document.createElement('div');
+        whoseW2Group.classList.add('form-group');
+        
+        const whoseW2Label = document.createElement('label');
+        whoseW2Label.setAttribute('for', 'w2WhoseW2_' + w2Counter);
+        whoseW2Label.textContent = 'Whose W-2 is this?:';
+        whoseW2Group.appendChild(whoseW2Label);
+        
+        const whoseW2Select = document.createElement('select');
+        whoseW2Select.id = 'w2WhoseW2_' + w2Counter;
+        whoseW2Select.name = 'w2WhoseW2_' + w2Counter;
+        whoseW2Select.required = true;
+        
+        const pleaseSelectOption = document.createElement('option');
+        pleaseSelectOption.value = '';
+        pleaseSelectOption.textContent = 'Please Select';
+        pleaseSelectOption.disabled = true;
+        pleaseSelectOption.selected = true;
+        whoseW2Select.appendChild(pleaseSelectOption);
+        
+        const clientFirstName = document.getElementById('firstName').value.trim() || 'Client';
+        const spouseFirstName = document.getElementById('spouseFirstName').value.trim() || 'Spouse';
+        
+        const clientOption = document.createElement('option');
+        clientOption.value = clientFirstName;
+        clientOption.textContent = clientFirstName;
+        whoseW2Select.appendChild(clientOption);
+        
+        const spouseOption = document.createElement('option');
+        spouseOption.value = spouseFirstName;
+        spouseOption.textContent = spouseFirstName;
+        whoseW2Select.appendChild(spouseOption);
+        
+        whoseW2Group.appendChild(whoseW2Select);
+        collapsibleContent.appendChild(whoseW2Group);
+    }
+
     // --- Wages, Salaries, Tips, and Other Compensation ---
     const wagesGroup = document.createElement('div');
     wagesGroup.classList.add('form-group');
