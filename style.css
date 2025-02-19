@@ -262,10 +262,12 @@ h2 {
   padding-bottom: 10px;
   color: #4E4C5E; 
   text-align: center;
+  background-color: #dcd6f6;
+  border-radius: 20px;
 }
 
 h2:hover {
-  background-color: #d3c9fb;
+  background-color: #bbabfc;
   cursor: pointer;
   border-radius: 40px;
 }
@@ -273,6 +275,15 @@ h2:hover {
 h3{
   color: #4E4C5E;
   text-align: center;
+  border-bottom: 4px solid #552583;
+  background-color: #dcd6f6;
+
+}
+
+h3:hover {
+  background-color: #bbabfc;
+  cursor: pointer;
+  border-radius: 40px;
 }
 
 /* NOTES FEATURE */
@@ -468,6 +479,17 @@ h3{
 .collapsible.active {
   max-height: 61200px;
   transition: max-height 8s ease;
+}
+
+.collapsible-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.5s ease;
+}
+
+.collapsible-content.active {
+  max-height: 3000px; /* Adjust as needed */
+  transition: max-height 1s ease;
 }
 
 /* Section Styling */
@@ -755,4 +777,22 @@ body.dark-mode .w2-code-box {
   margin-right: 535px;
   width: 200px;
   display: block;
+}
+
+/* Dark Mode Overrides for h2 and h3 */
+body.dark-mode h2,
+body.dark-mode h3 {
+  background-color: transparent;
+  border: none;
+  padding-bottom: 0;
+  border-radius: 0;
+  border-bottom: 4px solid #552583;
+}
+
+/* Dark Mode Hover Effects for h2 and h3 */
+body.dark-mode h2:hover,
+body.dark-mode h3:hover {
+  background-color: var(--accent-hover); /* Subtle highlight for dark mode */
+  border-radius: 20px;
+  cursor: pointer;
 }
