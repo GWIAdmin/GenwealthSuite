@@ -584,7 +584,6 @@ function autoSet65Plus() {
         olderThan65Select.disabled = (clientAgeStr !== "");
     }
 }
- 
 
 function displayErrorMessage(errorMessageId, message, inputId) {
     let errorMessage = document.getElementById(errorMessageId);
@@ -932,7 +931,7 @@ document.getElementById('numOfBusinesses').addEventListener('input', function() 
 });
 
 function createBusinessFields(container, index) {
-
+    // Initialize tracking variables if not already set.
     if (blurredIncome[index] === undefined) {
         blurredIncome[index] = false;
     }
@@ -940,27 +939,35 @@ function createBusinessFields(container, index) {
         blurredExpenses[index] = false;
     }
 
+    // Create the main container for this business entry.
     const businessDiv = document.createElement('div');
     businessDiv.classList.add('business-entry');
     businessDiv.id = `businessEntry${index}`;
 
-    const heading = document.createElement('h3');
-    heading.id = `businessNameHeading${index}`;
-    heading.classList.add('dynamic-heading');
+    // Create the header for the business block.
+    const header = document.createElement('h3');
+    header.id = `businessNameHeading${index}`;
+    header.classList.add('dynamic-heading');
+    // Get the business name from an input if available; otherwise use a default.
     const bNameInput = document.getElementById(`business${index}Name`);
-    heading.textContent = bNameInput ? bNameInput.value : `Business ${index}`;
+    header.textContent = bNameInput ? bNameInput.value : `Business ${index}`;
+    header.style.cursor = 'pointer';
     if (bNameInput) {
         bNameInput.addEventListener('input', function() {
-            heading.textContent = bNameInput.value;
+            header.textContent = bNameInput.value;
         });
     }
-    businessDiv.appendChild(heading);
+    businessDiv.appendChild(header);
 
-    // Business type
+    // Create a container for all business details that can be collapsed.
+    const collapsibleContent = document.createElement('div');
+    collapsibleContent.classList.add('collapsible-content', 'active');
+
+    // --- Business Type Field ---
     const typeLabel = document.createElement('label');
     typeLabel.textContent = `Business ${index} Type:`;
     typeLabel.setAttribute('for', `business${index}Type`);
-    businessDiv.appendChild(typeLabel);
+    collapsibleContent.appendChild(typeLabel);
 
     const typeSelect = document.createElement('select');
     typeSelect.name = `business${index}Type`;
@@ -971,14 +978,15 @@ function createBusinessFields(container, index) {
         opt.textContent = t;
         typeSelect.appendChild(opt);
     });
-    businessDiv.appendChild(typeSelect);
+    collapsibleContent.appendChild(typeSelect);
 
-    createLabelAndCurrencyField(businessDiv, `business${index}Income`, `Income:`);
-    createLabelAndCurrencyField(businessDiv, `business${index}Expenses`, `Expenses:`);
-    createLabelAndTextField(businessDiv, `business${index}Net`, `Net (Income - Expenses):`);
+    // --- Income, Expenses, and Net Fields ---
+    createLabelAndCurrencyField(collapsibleContent, `business${index}Income`, `Income:`);
+    createLabelAndCurrencyField(collapsibleContent, `business${index}Expenses`, `Expenses:`);
+    createLabelAndTextField(collapsibleContent, `business${index}Net`, `Net (Income - Expenses):`);
 
-    const incomeField = businessDiv.querySelector(`#business${index}Income`);
-    const expensesField = businessDiv.querySelector(`#business${index}Expenses`);
+    const incomeField = collapsibleContent.querySelector(`#business${index}Income`);
+    const expensesField = collapsibleContent.querySelector(`#business${index}Expenses`);
 
     incomeField.addEventListener('blur', function() {
         blurredIncome[index] = true;
@@ -994,14 +1002,15 @@ function createBusinessFields(container, index) {
         checkSCorpReasonableComp(index);
     });
 
-    const netField = businessDiv.querySelector(`#business${index}Net`);
+    const netField = collapsibleContent.querySelector(`#business${index}Net`);
     if (netField) {
         netField.readOnly = true;
     }
 
+    // --- Owners Section ---
     const ownersContainer = document.createElement('div');
     ownersContainer.id = `ownersContainer${index}`;
-    businessDiv.appendChild(ownersContainer);
+    collapsibleContent.appendChild(ownersContainer);
 
     const numOwnersLabel = document.createElement('label');
     numOwnersLabel.textContent = `How many owners does Business ${index} have?`;
@@ -1013,22 +1022,22 @@ function createBusinessFields(container, index) {
     numOwnersSelect.id = `numOwnersSelect${index}`;
     numOwnersSelect.name = `numOwnersSelect${index}`;
     ownersContainer.appendChild(numOwnersSelect);
-    // We'll fill in the options once we know business type (below).
+    // Options for numOwnersSelect will be populated later based on business type.
 
     const dynamicOwnerFieldsDiv = document.createElement('div');
     dynamicOwnerFieldsDiv.id = `dynamicOwnerFields${index}`;
     dynamicOwnerFieldsDiv.style.marginTop = '12px';
     ownersContainer.appendChild(dynamicOwnerFieldsDiv);
 
+    // --- C-Corp Tax Due Container ---
     const cCorpTaxDueDiv = document.createElement('div');
     cCorpTaxDueDiv.id = `cCorpTaxDueContainer${index}`;
-
-    // We will style it similarly to the "apportionment" text:
     cCorpTaxDueDiv.style.marginTop = '16px';
     cCorpTaxDueDiv.style.fontWeight = 'bold';
-    cCorpTaxDueDiv.style.display = 'none'; 
-    businessDiv.appendChild(cCorpTaxDueDiv);
+    cCorpTaxDueDiv.style.display = 'none';
+    collapsibleContent.appendChild(cCorpTaxDueDiv);
 
+    // --- Event Listeners for Dynamic Behavior ---
     typeSelect.addEventListener('change', function() {
         handleBusinessTypeChange(index, typeSelect.value);
     });
@@ -1040,7 +1049,16 @@ function createBusinessFields(container, index) {
         populateBusinessDetailFields(index);
     });
 
+    // Append the collapsible content to the main businessDiv.
+    businessDiv.appendChild(collapsibleContent);
+
+    // Append the complete business entry to the container.
     container.appendChild(businessDiv);
+
+    // Toggle the business details when the header is clicked.
+    header.addEventListener('click', function() {
+        collapsibleContent.classList.toggle('active');
+    });
 }
 
 function populateNumOwnersOptionsForNonPartnership(selectEl, filingStatus) {
