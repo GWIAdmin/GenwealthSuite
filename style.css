@@ -259,6 +259,10 @@ h1 {
 h2 {
   font-size: 1.8rem;
   border-bottom: 4px solid #552583;
+  border-top: 4px solid #552583;
+  border-right: 4px solid #552583;
+  border-left: 4px solid #552583;
+  padding-top: 10px;
   padding-bottom: 10px;
   color: #4E4C5E; 
   text-align: center;
@@ -275,7 +279,13 @@ h2:hover {
 h3{
   color: #4E4C5E;
   text-align: center;
+  padding-top: 10px;
+  padding-bottom: 10px;
   border-bottom: 4px solid #552583;
+  border-top: 4px solid #552583;
+  border-right: 4px solid #552583;
+  border-left: 4px solid #552583;
+  border-radius: 20px;
   background-color: #dcd6f6;
 
 }
@@ -498,7 +508,7 @@ section {
   padding: 20px;
   background-color: #EFEAF8;
   border: 4px solid #552583;
-  border-radius: 40px;
+  border-radius: 20px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
 }
 
