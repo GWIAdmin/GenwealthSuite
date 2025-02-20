@@ -3202,14 +3202,27 @@ function addW2Block() {
     nameGroup.appendChild(nameInput);
     collapsibleContent.appendChild(nameGroup);
 
-    // Update the header text as the user types in the name field
-    nameInput.addEventListener('blur', function() {
-        if (this.value.trim() === '') {
-            header.textContent = 'W-2 #' + w2Counter;
-        } else {
-            header.textContent = this.value;
+    // Function to update header text based on W-2 Name and dropdown selection
+    function updateHeader() {
+        let companyName = nameInput.value.trim();
+        if (companyName === '') {
+            companyName = 'W-2 #' + w2Counter;
         }
-    });
+        if (document.getElementById('filingStatus').value === 'Married Filing Jointly' && whoseW2Select) {
+            const selectedName = whoseW2Select.value;
+            if (selectedName) {
+                header.textContent = companyName + ' - ' + selectedName;
+                return;
+            }
+        }
+        header.textContent = companyName;
+    }
+
+    // Update header when name input loses focus
+    nameInput.addEventListener('blur', updateHeader);
+
+    // Declare dropdown variable so it can be used in updateHeader
+    let whoseW2Select = null;
 
     // If filing status is "Married Filing Jointly", add the dropdown for "Whose W-2 is this?"
     if (document.getElementById('filingStatus').value === 'Married Filing Jointly') {
@@ -3221,7 +3234,7 @@ function addW2Block() {
         whoseW2Label.textContent = 'Whose W-2 is this?:';
         whoseW2Group.appendChild(whoseW2Label);
 
-        const whoseW2Select = document.createElement('select');
+        whoseW2Select = document.createElement('select');
         whoseW2Select.id = 'w2WhoseW2_' + w2Counter;
         whoseW2Select.name = 'w2WhoseW2_' + w2Counter;
         whoseW2Select.required = true;
@@ -3248,6 +3261,9 @@ function addW2Block() {
 
         whoseW2Group.appendChild(whoseW2Select);
         collapsibleContent.appendChild(whoseW2Group);
+
+        // Update header when dropdown selection changes
+        whoseW2Select.addEventListener('change', updateHeader);
     }
 
     // --- Wages, Salaries, Tips, and Other Compensation ---
