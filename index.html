@@ -280,11 +280,6 @@
         </button>
       </section>
 
-
-        <section id="businesses">
-          <div id="businessContainer"></div>
-        </section>
-
         <div class="form-group">
           <label for="wages">Wages, Salaries, Tips:</label>
           <input type="text" id="wages" name="wages" min="0" class="currency-field" required>
@@ -365,11 +360,18 @@
         </div>
 
         <div class="form-group">
-          <label for="totalIncome">Total Income:</label>
+          <label for="totalIncome">Total Personal Income:</label>
           <input type="text" id="totalIncome" name="totalIncome" class="currency-field" readonly>
         </div>
 
       </div>
+      </section>
+
+      <!-- Businesses Section -->
+      <section id="businesses">
+        <h2 onclick="toggleCollapsible('businessContent')">Business</h2>
+        <div id="businessContent" class="collapsible">
+        <div id="businessContainer"></div>
       </section>
 
       <!-- Deductions Section -->

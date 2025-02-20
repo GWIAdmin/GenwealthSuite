@@ -3185,7 +3185,7 @@ function addW2Block() {
     
     // Create a container for the collapsible content
     const collapsibleContent = document.createElement('div');
-    collapsibleContent.classList.add('collapsible-content');
+    collapsibleContent.classList.add('collapsible-content', 'active');
     w2Block.appendChild(collapsibleContent);
 
     // --- W-2 Name ---
@@ -3215,37 +3215,37 @@ function addW2Block() {
     if (document.getElementById('filingStatus').value === 'Married Filing Jointly') {
         const whoseW2Group = document.createElement('div');
         whoseW2Group.classList.add('form-group');
-        
+
         const whoseW2Label = document.createElement('label');
         whoseW2Label.setAttribute('for', 'w2WhoseW2_' + w2Counter);
         whoseW2Label.textContent = 'Whose W-2 is this?:';
         whoseW2Group.appendChild(whoseW2Label);
-        
+
         const whoseW2Select = document.createElement('select');
         whoseW2Select.id = 'w2WhoseW2_' + w2Counter;
         whoseW2Select.name = 'w2WhoseW2_' + w2Counter;
         whoseW2Select.required = true;
-        
+
         const pleaseSelectOption = document.createElement('option');
         pleaseSelectOption.value = '';
         pleaseSelectOption.textContent = 'Please Select';
         pleaseSelectOption.disabled = true;
         pleaseSelectOption.selected = true;
         whoseW2Select.appendChild(pleaseSelectOption);
-        
+
         const clientFirstName = document.getElementById('firstName').value.trim() || 'Client';
         const spouseFirstName = document.getElementById('spouseFirstName').value.trim() || 'Spouse';
-        
+
         const clientOption = document.createElement('option');
         clientOption.value = clientFirstName;
         clientOption.textContent = clientFirstName;
         whoseW2Select.appendChild(clientOption);
-        
+
         const spouseOption = document.createElement('option');
         spouseOption.value = spouseFirstName;
         spouseOption.textContent = spouseFirstName;
         whoseW2Select.appendChild(spouseOption);
-        
+
         whoseW2Group.appendChild(whoseW2Select);
         collapsibleContent.appendChild(whoseW2Group);
     }
@@ -3330,7 +3330,7 @@ function addW2Block() {
     stateTaxGroup.classList.add('form-group');
     const stateTaxLabel = document.createElement('label');
     stateTaxLabel.setAttribute('for', 'w2StateTaxWithheld_' + w2Counter);
-    stateTaxLabel.textContent = 'State Income Tax:';
+    stateTaxLabel.textContent = 'State Income Tax Withheld:';
     stateTaxGroup.appendChild(stateTaxLabel);
     const stateTaxInput = document.createElement('input');
     stateTaxInput.type = 'text';
