@@ -708,6 +708,22 @@ function createBusinessNameFields(container, index) {
 
     businessNameDiv.appendChild(checkboxContainerReports);
 
+    const checkboxContainerPassive = document.createElement('div');
+    checkboxContainerPassive.classList.add('checkbox-container');
+
+    const checkboxLabelPassive = document.createElement('label');
+    checkboxLabelPassive.setAttribute('for', `business${index}Passive`);
+    checkboxLabelPassive.textContent = 'Is this a Passive Income/Loss Business?';
+
+    const checkboxInputPassive = document.createElement('input');
+    checkboxInputPassive.type = 'checkbox';
+    checkboxInputPassive.id = `business${index}Passive`;
+    checkboxInputPassive.name = `business${index}Passive`;
+    checkboxContainerPassive.appendChild(checkboxInputPassive);
+    checkboxContainerPassive.appendChild(checkboxLabelPassive);
+
+    businessNameDiv.appendChild(checkboxContainerPassive);
+
     const checkboxContainerMedical = document.createElement('div');
     checkboxContainerMedical.classList.add('checkbox-container');
  
@@ -2505,6 +2521,12 @@ function recalculateTotals() {
         const netValStr = document.getElementById(`business${i}Net`)?.value || '0';
         const netVal = unformatCurrency(netValStr);
         businessesNetTotal += netVal;
+    }
+
+    // Update the new "Net Total of All Businesses" field
+    const netTotalBusinessesInput = document.getElementById('netTotalBusinesses');
+    if (netTotalBusinessesInput) {
+        netTotalBusinessesInput.value = formatCurrency(String(businessesNetTotal));
     }
 
     let scheduleEsNetTotal = 0;
