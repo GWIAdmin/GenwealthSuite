@@ -1095,14 +1095,16 @@ function createBusinessFields(container, index) {
     removeBtn.type = 'button';
     removeBtn.textContent = 'Remove this business?';
     removeBtn.classList.add('remove-business-btn'); // or reuse 'remove-w2-btn'
+
     removeBtn.addEventListener('click', function() {
-        // 1) Remove the DOM block
+        // 1) Remove the DOM block for business details.
         businessDiv.remove();
-        // 2) Update the # of businesses to match what's currently in the DOM
+        // 2) Update the number of businesses to match what's currently in the DOM.
         const currentBlocks = document.querySelectorAll('.business-entry');
         const countRemaining = currentBlocks.length;
         document.getElementById('numOfBusinesses').value = countRemaining;
-
+        // 3) Trigger the input event so that both business name and detail containers are rebuilt.
+        document.getElementById('numOfBusinesses').dispatchEvent(new Event('input'));
         recalculateTotals();
     });
 
