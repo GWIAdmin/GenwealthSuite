@@ -2550,7 +2550,12 @@ function sumW2Wages() {
 }
 
 function recalculateTotals() {
-    const wages = sumW2Wages();
+
+    // Sum up all W‑2 wages from dynamic blocks.
+    const w2Wages = sumW2Wages();
+    // Update the read‑only "Wages, Salaries, Tips:" field with that sum.
+    document.getElementById('wages').value = formatCurrency(String(parseInt(w2Wages)));
+
     const reasonableCompensation = getFieldValue('reasonableCompensation');
     const taxExemptInterest = getFieldValue('taxExemptInterest');
     const taxableInterest = getFieldValue('taxableInterest');
@@ -2603,8 +2608,8 @@ function recalculateTotals() {
         scheduleEsNetTotal += netVal;
     }
 
-    const totalIncomeVal =
-        wages +
+    const totalIncomeVal = 
+        w2Wages +
         reasonableCompensation +
         taxExemptInterest +
         taxableInterest +
@@ -3384,8 +3389,15 @@ function addW2Block() {
     wagesInput.id = 'w2Wages_' + w2Counter;
     wagesInput.name = 'w2Wages_' + w2Counter;
     wagesInput.classList.add('currency-field');
+    wagesInput.addEventListener('blur', function() {
+        let value = unformatCurrency(wagesInput.value);
+        if (value < 0) {
+            value = 0;
+        }
+        wagesInput.value = formatCurrency(String(value));
+    });
     wagesGroup.appendChild(wagesInput);
-    collapsibleContent.appendChild(wagesGroup);    
+    collapsibleContent.appendChild(wagesGroup);
 
     // --- Federal Income Tax Withheld ---
     const federalTaxGroup = document.createElement('div');
@@ -3504,6 +3516,7 @@ function addW2Block() {
     w2Block.querySelectorAll('.currency-field').forEach((field) => {
           field.addEventListener('blur', function() {
               this.value = formatCurrency(this.value);
+              recalculateTotals();
           });
       });
 
