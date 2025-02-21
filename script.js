@@ -1450,7 +1450,6 @@ function buildTwoOwnerEntry({
     businessIndex, 
     ownerIndex, 
     defaultName, 
-    businessTypeVal, 
     isMfjDropdown = false,
     clientName = 'Client1',
     spouseName = 'Client2'
@@ -1511,12 +1510,22 @@ function buildTwoOwnerEntry({
     // (a) update the two-owner calculation (which auto-adjusts the other field),
     // (b) update the apportionment display immediately.
     pctInput.addEventListener('input', function() {
-        for (let i = 1; i <= 2; i++) {
-            delete apportionmentOverrides[`biz${businessIndex}-owner${i}`];
+        const value = parseFloat(this.value);
+        const errorId = this.id + '-error';
+        if (!isNaN(value) && (value < 0 || value > 100)) {
+            displayErrorMessage(errorId, 'Ownership percentage must be between 0 and 100.', this.id);
+        } else {
+            // Clear the C-Corp tax due override so that tax is recalculated
+            delete apportionmentOverrides[`ccorpTaxDue-biz${businessIndex}`];
+            // Also clear any manual overrides for the owners’ percentages
+            for (let i = 1; i <= 2; i++) {
+                delete apportionmentOverrides[`biz${businessIndex}-owner${i}`];
+            }
+            handleTwoOwnersInput(businessIndex, ownerIndex);
+            updateOwnerApportionment(businessIndex);
         }
-        handleTwoOwnersInput(businessIndex, ownerIndex);
-        updateOwnerApportionment(businessIndex);
     });
+    
     pctInput.addEventListener('change', function() {
         for (let i = 1; i <= 2; i++) {
             delete apportionmentOverrides[`biz${businessIndex}-owner${i}`];
@@ -1642,14 +1651,23 @@ function buildThreeOwnerEntry({ businessIndex, ownerIndex, clientName, spouseNam
         pctInput.readOnly = false;
         pctInput.style.backgroundColor = '';
         pctInput.addEventListener('input', function() {
-            // Clear any manual overrides for all three owners of this business
-            for (let i = 1; i <= 3; i++) {
-                delete apportionmentOverrides[`biz${businessIndex}-owner${i}`];
+            const value = parseFloat(this.value);
+            const errorId = this.id + '-error';
+            if (!isNaN(value) && (value < 0 || value > 100)) {
+                displayErrorMessage(errorId, 'Ownership percentage must be between 0 and 100.', this.id);
+            } else {
+                // Clear the C‑Corp tax due override so tax is recalculated
+                delete apportionmentOverrides[`ccorpTaxDue-biz${businessIndex}`];
+                // Clear manual overrides for all three owners
+                for (let i = 1; i <= 3; i++) {
+                    delete apportionmentOverrides[`biz${businessIndex}-owner${i}`];
+                }
+                autoCalculateLastOwner(businessIndex);
+                updateOwnerApportionment(businessIndex);
             }
-            autoCalculateLastOwner(businessIndex);
-            updateOwnerApportionment(businessIndex);
         });
         pctInput.addEventListener('change', function() {
+            // (Optionally, add similar logic on change if desired)
             for (let i = 1; i <= 3; i++) {
                 delete apportionmentOverrides[`biz${businessIndex}-owner${i}`];
             }
@@ -1660,6 +1678,8 @@ function buildThreeOwnerEntry({ businessIndex, ownerIndex, clientName, spouseNam
         pctInput.readOnly = true;
         pctInput.style.backgroundColor = '#f0f0f0';
     }
+    
+    
     pctInput.addEventListener('blur', function() {
         let value = parseFloat(pctInput.value);
         if (!isNaN(value)) {
@@ -2553,18 +2573,21 @@ function recalculateTotals() {
         const netVal = unformatCurrency(netValStr);
         const businessTypeEl = document.getElementById(`business${i}Type`);
         if (businessTypeEl && businessTypeEl.value.trim() === 'C-Corp') {
-            // For C‑Corp, add the full net value.
-            businessesNetTotal += netVal;
-        } else {
-            // For non–C-Corp, if owner fields exist, add only the client portion.
-            if (document.getElementById(`numOwnersSelect${i}`)) {
+            // For C‑Corp, do not include this business in the total.
+            continue;
+        }  else {
+            // For Schedule‑C, add the full net value.
+            if (businessTypeEl && businessTypeEl.value.trim() === 'Schedule-C') {
+                businessesNetTotal += netVal;
+            } else if (document.getElementById(`numOwnersSelect${i}`)) {
                 businessesNetTotal += getClientOwnershipPortion(i, netVal);
             } else {
-                // If no owner fields exist, assume full net belongs to the client.
+                // Otherwise, assume the full net belongs to the client.
                 businessesNetTotal += netVal;
             }
         }
-    }    
+    }
+      
 
     // Update the new "Net Total of All Businesses" field
     const netTotalBusinessesInput = document.getElementById('netTotalBusinesses');
