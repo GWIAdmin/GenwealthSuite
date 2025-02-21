@@ -769,6 +769,23 @@ body.dark-mode .w2-code-box {
   background-color: #ff0000;
 }
 
+.remove-business-btn {
+  background-color: #ff4f4f;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  border-radius: 20px;
+  margin-top: 15px;
+  margin-bottom: 5px;
+  transition: background-color 0.3s ease;
+}
+
+.remove-business-btn:hover {
+  background-color: #ff0000;
+}
+
 /* Dark mode for dynamic W-2 block container */
 body.dark-mode .w2-block {
   background-color: var(--business-entry); /* or another dark color */

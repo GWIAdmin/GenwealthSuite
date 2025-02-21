@@ -50,6 +50,7 @@ let dependentBizMap = {};
 let dependentsStore = {};
 let lastManualAdjustment = {};
 let w2Counter = 0;
+let businessCounter = 0;
 
 window.blurredIncome = {};
 window.blurredExpenses = {};
@@ -675,14 +676,14 @@ document.getElementById('numOfBusinesses').addEventListener('input', function() 
     }
 
     // 3. Clear + rebuild "Business Detail" fields
-    const mainBizContainer = document.getElementById('businessContainer');
-    mainBizContainer.innerHTML = '';
+    const detailContainer = document.getElementById('businessContainer');
+    detailContainer.innerHTML = '';
     for (let i = 1; i <= newCount; i++) {
-        createBusinessFields(mainBizContainer, i);
+        createBusinessFields(detailContainer, i);
         populateBusinessDetailFields(i);
     }
 
-    // Finally, recalc
+    // 4. Finally, recalc
     recalculateTotals();
 });
 
@@ -934,18 +935,6 @@ function removeDisclaimer(containerId, errorKey) {
     }
 }
 
-document.getElementById('numOfBusinesses').addEventListener('input', function() {
-    saveBusinessDetailData();
-    const container = document.getElementById('businessContainer');
-    container.innerHTML = '';
-    const newCount = parseInt(this.value, 10) || 0;
-    for (let i = 1; i <= newCount; i++) {
-        createBusinessFields(container, i);
-        populateBusinessDetailFields(i);
-    }
-    recalculateTotals();
-});
-
 // Returns a formatted header string for a business block
 function updateBusinessHeader(businessIndex) {
     const bNameInput = document.getElementById(`business${businessIndex}Name`);
@@ -1095,16 +1084,44 @@ function createBusinessFields(container, index) {
         populateBusinessDetailFields(index);
     });
 
-    // Append the collapsible content to the main businessDiv.
-    businessDiv.appendChild(collapsibleContent);
-
-    // Append the complete business entry to the container.
-    container.appendChild(businessDiv);
 
     // Toggle the business details when the header is clicked.
     header.addEventListener('click', function() {
         collapsibleContent.classList.toggle('active');
     });
+
+    // Add a "Remove this business?" button at the bottom
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.textContent = 'Remove this business?';
+    removeBtn.classList.add('remove-business-btn'); // or reuse 'remove-w2-btn'
+    removeBtn.addEventListener('click', function() {
+        // 1) Remove the DOM block
+        businessDiv.remove();
+        // 2) Update the # of businesses to match what's currently in the DOM
+        const currentBlocks = document.querySelectorAll('.business-entry');
+        const countRemaining = currentBlocks.length;
+        document.getElementById('numOfBusinesses').value = countRemaining;
+
+        recalculateTotals();
+    });
+
+    collapsibleContent.appendChild(removeBtn);
+
+    // Append the collapsible content to the main businessDiv.
+    businessDiv.appendChild(collapsibleContent);
+
+    // Append the complete business entry to the container.
+    container.appendChild(businessDiv);
+}
+
+function handleAddBusinessClick() {
+    const numEl = document.getElementById('numOfBusinesses');
+    let currentVal = parseInt(numEl.value, 10) || 0;
+    currentVal++;
+    numEl.value = currentVal;
+    // Force the same logic that runs when the user manually edits "numOfBusinesses"
+    numEl.dispatchEvent(new Event('input'));
 }
 
 function populateNumOwnersOptionsForNonPartnership(selectEl, filingStatus) {
@@ -2783,6 +2800,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     document.getElementById('addW2Btn').addEventListener('click', addW2Block);
+
+    const addBizBtn = document.getElementById('addBusinessBtn');
+    if (addBizBtn) {
+        addBizBtn.addEventListener('click', handleAddBusinessClick);
+    }
 
     const allCurrencyFields = document.querySelectorAll('.currency-field');
     allCurrencyFields.forEach((field) => {
