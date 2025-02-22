@@ -51,6 +51,7 @@ let dependentsStore = {};
 let lastManualAdjustment = {};
 let w2Counter = 0;
 let businessCounter = 0;
+let businessUniqueId = 1;
 
 window.blurredIncome = {};
 window.blurredExpenses = {};
@@ -666,44 +667,51 @@ document.getElementById('numOfBusinesses').addEventListener('input', function() 
     saveBusinessNameData();
     saveBusinessDetailData();
 
+    businessUniqueId = 1;
+
     // 2. Clear + rebuild "Business Name" fields
     const newCount = parseInt(this.value, 10) || 0;
     const nameContainer = document.getElementById('numOfBusinessesContainer');
     nameContainer.innerHTML = '';
     for (let i = 1; i <= newCount; i++) {
-        createBusinessNameFields(nameContainer, i);
-        populateBusinessNameFields(i);
+      createBusinessNameFields(nameContainer, businessUniqueId);
+      populateBusinessNameFields(businessUniqueId);
+      businessUniqueId++;
     }
 
     // 3. Clear + rebuild "Business Detail" fields
+    businessUniqueId = 1;
     const detailContainer = document.getElementById('businessContainer');
     detailContainer.innerHTML = '';
     for (let i = 1; i <= newCount; i++) {
-        createBusinessFields(detailContainer, i);
-        populateBusinessDetailFields(i);
+      createBusinessFields(detailContainer, businessUniqueId);
+      populateBusinessDetailFields(businessUniqueId);
+      businessUniqueId++;
     }
-
-    // 4. Finally, recalc
+  
     recalculateTotals();
 });
 
-function createBusinessNameFields(container, index) {
+function createBusinessNameFields(container, uniqueId) {
     const businessNameDiv = document.createElement('div');
     businessNameDiv.classList.add('business-name-entry');
 
-    createLabelAndInput(businessNameDiv, `business${index}Name`, `Business ${index} Name:`, 'text');
+    businessNameDiv.id = `businessNameEntry_${uniqueId}`;
+    businessNameDiv.dataset.uniqueId = uniqueId;
+
+    createLabelAndInput(businessNameDiv, `businessName_${uniqueId}`, `Business ${uniqueId} Name:`, 'text');
     
     const checkboxContainerReports = document.createElement('div');
     checkboxContainerReports.classList.add('checkbox-container');
 
     const checkboxLabelReports = document.createElement('label');
-    checkboxLabelReports.setAttribute('for', `business${index}Reports`);
+    checkboxLabelReports.setAttribute('for', `business${uniqueId}Reports`);
     checkboxLabelReports.textContent = 'Do you have the financial reports for this business?';
 
     const checkboxInputReports = document.createElement('input');
     checkboxInputReports.type = 'checkbox';
-    checkboxInputReports.id = `business${index}Reports`;
-    checkboxInputReports.name = `business${index}Reports`;
+    checkboxInputReports.id = `business${uniqueId}Reports`;
+    checkboxInputReports.name = `business${uniqueId}Reports`;
     checkboxContainerReports.appendChild(checkboxInputReports);
     checkboxContainerReports.appendChild(checkboxLabelReports);
 
@@ -713,13 +721,13 @@ function createBusinessNameFields(container, index) {
     checkboxContainerPassive.classList.add('checkbox-container');
 
     const checkboxLabelPassive = document.createElement('label');
-    checkboxLabelPassive.setAttribute('for', `business${index}Passive`);
+    checkboxLabelPassive.setAttribute('for', `business${uniqueId}Passive`);
     checkboxLabelPassive.textContent = 'Is this a Passive Income/Loss Business?';
 
     const checkboxInputPassive = document.createElement('input');
     checkboxInputPassive.type = 'checkbox';
-    checkboxInputPassive.id = `business${index}Passive`;
-    checkboxInputPassive.name = `business${index}Passive`;
+    checkboxInputPassive.id = `business${uniqueId}Passive`;
+    checkboxInputPassive.name = `business${uniqueId}Passive`;
     checkboxContainerPassive.appendChild(checkboxInputPassive);
     checkboxContainerPassive.appendChild(checkboxLabelPassive);
 
@@ -729,13 +737,13 @@ function createBusinessNameFields(container, index) {
     checkboxContainerMedical.classList.add('checkbox-container');
  
     const checkboxLabelMedical = document.createElement('label');
-    checkboxLabelMedical.setAttribute('for', `business${index}Medical`);
+    checkboxLabelMedical.setAttribute('for', `business${uniqueId}Medical`);
     checkboxLabelMedical.textContent = 'Is this a Medical/Professional Business?';
 
     const checkboxInputMedical = document.createElement('input');
     checkboxInputMedical.type = 'checkbox';
-    checkboxInputMedical.id = `business${index}Medical`;
-    checkboxInputMedical.name = `business${index}Medical`;
+    checkboxInputMedical.id = `business${uniqueId}Medical`;
+    checkboxInputMedical.name = `business${uniqueId}Medical`;
     checkboxContainerMedical.appendChild(checkboxInputMedical);
     checkboxContainerMedical.appendChild(checkboxLabelMedical);
 
@@ -745,13 +753,13 @@ function createBusinessNameFields(container, index) {
     checkboxContainerRealEstate.classList.add('checkbox-container');
 
     const checkboxLabelRealEstate = document.createElement('label');
-    checkboxLabelRealEstate.setAttribute('for', `business${index}RealEstate`);
+    checkboxLabelRealEstate.setAttribute('for', `business${uniqueId}RealEstate`);
     checkboxLabelRealEstate.textContent = 'Is this a Real Estate Business?';
 
     const checkboxInputRealEstate = document.createElement('input');
     checkboxInputRealEstate.type = 'checkbox';
-    checkboxInputRealEstate.id = `business${index}RealEstate`;
-    checkboxInputRealEstate.name = `business${index}RealEstate`;
+    checkboxInputRealEstate.id = `business${uniqueId}RealEstate`;
+    checkboxInputRealEstate.name = `business${uniqueId}RealEstate`;
     checkboxContainerRealEstate.appendChild(checkboxInputRealEstate);
     checkboxContainerRealEstate.appendChild(checkboxLabelRealEstate);
 
@@ -893,6 +901,7 @@ function createLabelAndCurrencyField(parent, id, labelText, minValue) {
 //------------------------------------------------------------//
 
 const DISCLAIMER_MAP = {};
+
 function renderDisclaimers(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -936,32 +945,42 @@ function removeDisclaimer(containerId, errorKey) {
 }
 
 // Returns a formatted header string for a business block
-function updateBusinessHeader(businessIndex) {
-    const bNameInput = document.getElementById(`business${businessIndex}Name`);
-    const bizName = (bNameInput && bNameInput.value.trim()) ? bNameInput.value.trim() : `Business ${businessIndex}`;
+function updateBusinessHeader(uniqueId) {
+    const inputId = `businessName_${uniqueId}`;
+    const bNameInput = document.getElementById(inputId);
     
-    const dynamicOwnerFieldsDiv = document.getElementById(`dynamicOwnerFields${businessIndex}`);
+    // Get the value from the input; if empty, use the stored value.
+    let valueFromInput = bNameInput ? bNameInput.value.trim() : '';
+    if (!valueFromInput && businessNameStore[inputId]) {
+      valueFromInput = businessNameStore[inputId];
+    }
+    // Default to "Business <uniqueId>" if no name is entered.
+    const bizName = valueFromInput || `Business ${uniqueId}`;
+    
+    // (If you have owner names to append, leave that logic unchanged.)
+    // For example:
     let ownerNames = [];
+    const dynamicOwnerFieldsDiv = document.getElementById(`dynamicOwnerFields${uniqueId}`);
     if (dynamicOwnerFieldsDiv) {
-        const ownerSelects = dynamicOwnerFieldsDiv.querySelectorAll(`select[id^="business${businessIndex}OwnerName"]`);
-        ownerSelects.forEach(select => {
-            if (select.value && select.value !== 'Please Select') {
-                ownerNames.push(select.value.trim());
-            }
-        });
+      const ownerSelects = dynamicOwnerFieldsDiv.querySelectorAll(`select[id^="business${uniqueId}OwnerName"]`);
+      ownerSelects.forEach(select => {
+        if (select.value && select.value !== 'Please Select') {
+          ownerNames.push(select.value.trim());
+        }
+      });
     }
     if (ownerNames.length === 0) {
-        return bizName;
+      return bizName;
     } else if (ownerNames.length === 1) {
-        return `${bizName} - ${ownerNames[0]}`;
+      return `${bizName} - ${ownerNames[0]}`;
     } else {
-        // If multiple owners, "Alice, Bob, and Other"
-        const last = ownerNames.pop();
-        return `${bizName} - ${ownerNames.join(', ')} and ${last}`;
+      const last = ownerNames.pop();
+      return `${bizName} - ${ownerNames.join(', ')} and ${last}`;
     }
 }
 
-function createBusinessFields(container, index) {
+function createBusinessFields(container, uniqueId) {
+    const index = uniqueId;
     // Initialize tracking variables if not already set.
     if (blurredIncome[index] === undefined) {
         blurredIncome[index] = false;
@@ -973,24 +992,26 @@ function createBusinessFields(container, index) {
     // Create the main container for this business entry.
     const businessDiv = document.createElement('div');
     businessDiv.classList.add('business-entry');
-    businessDiv.id = `businessEntry${index}`;
+    // Assign a permanent unique ID instead of a sequential index.
+    businessDiv.dataset.uniqueId = uniqueId;
 
     // Create the header for the business block.
     const header = document.createElement('h3');
-    header.id = `businessNameHeading${index}`;
+    // Use the unique ID in the header's id.
+    header.id = `businessNameHeading_${uniqueId}`;
     header.classList.add('dynamic-heading');
     header.style.cursor = 'pointer';
-
-    // Initially set the header text using our new helper function.
-    header.textContent = updateBusinessHeader(index);
+    // Set the header text using the unique ID.
+    header.textContent = updateBusinessHeader(uniqueId);
 
     businessDiv.appendChild(header);
 
+
     // If the business name input exists, update the header when its value changes.
-    const bNameInput = document.getElementById(`business${index}Name`);
+    const bNameInput = document.getElementById(`businessName_${uniqueId}`);
     if (bNameInput) {
         bNameInput.addEventListener('input', function() {
-            header.textContent = updateBusinessHeader(index);
+            header.textContent = updateBusinessHeader(uniqueId);
         });
     }
 
@@ -1097,16 +1118,28 @@ function createBusinessFields(container, index) {
     removeBtn.classList.add('remove-business-btn'); // or reuse 'remove-w2-btn'
 
     removeBtn.addEventListener('click', function() {
-        // 1) Remove the DOM block for business details.
+        // Get the unique ID of the business being removed.
+        const removedUniqueId = businessDiv.dataset.uniqueId;
+     
+        // (Optional) Remove the corresponding business-name block if you have one.
+        const nameBlock = document.getElementById(`businessNameEntry_${removedUniqueId}`);
+        if (nameBlock) {
+            nameBlock.remove();
+        }
+     
+        // Remove the detail block.
         businessDiv.remove();
-        // 2) Update the number of businesses to match what's currently in the DOM.
+     
+        // Update the "numOfBusinesses" field to reflect the remaining count.
         const currentBlocks = document.querySelectorAll('.business-entry');
-        const countRemaining = currentBlocks.length;
-        document.getElementById('numOfBusinesses').value = countRemaining;
-        // 3) Trigger the input event so that both business name and detail containers are rebuilt.
-        document.getElementById('numOfBusinesses').dispatchEvent(new Event('input'));
+        document.getElementById('numOfBusinesses').value = currentBlocks.length;
+     
+        // Instead of reindexing (which would change permanent IDs), simply update all headers.
+        updateAllBusinessHeaders();
+     
         recalculateTotals();
     });
+    
 
     collapsibleContent.appendChild(removeBtn);
 
@@ -1115,6 +1148,21 @@ function createBusinessFields(container, index) {
 
     // Append the complete business entry to the container.
     container.appendChild(businessDiv);
+
+    // // Increment the unique ID for the next business block.
+    // businessUniqueId++;
+}
+
+function updateAllBusinessHeaders() {
+    const businessEntries = document.querySelectorAll('.business-entry');
+    businessEntries.forEach(entry => {
+        // Use the stored permanent unique ID.
+        const uniqueId = entry.dataset.uniqueId;
+        const header = entry.querySelector('.dynamic-heading');
+        if (header) {
+            header.textContent = updateBusinessHeader(uniqueId);
+        }
+    });
 }
 
 function handleAddBusinessClick() {
@@ -3064,63 +3112,71 @@ function saveBusinessDetailData() {
 
 function populateBusinessDetailFields(index) {
     const fields = [
-        `business${index}Type`,
-        `business${index}Income`,
-        `business${index}Expenses`,
-        `business${index}Net`,
-        `numOwnersSelect${index}`,
-        `scheduleCLabel${index}`,
-        `scheduleCOwner${index}`
+      `business${index}Type`,
+      `business${index}Income`,
+      `business${index}Expenses`,
+      `business${index}Net`,
+      `numOwnersSelect${index}`,
+      `scheduleCLabel${index}`,
+      `scheduleCOwner${index}`
     ];
-
+  
     fields.forEach(f => {
-        if (businessDetailStore[f] !== undefined) {
-            const el = document.getElementById(f);
-            if (el) {
-                el.value = businessDetailStore[f];
-                if (f === `business${index}Type`) {
-                    el.dispatchEvent(new Event('change'));
-                }
-            }
+      if (businessDetailStore[f] !== undefined) {
+        const el = document.getElementById(f);
+        if (el) {
+          el.value = businessDetailStore[f];
+          if (f === `business${index}Type`) {
+            el.dispatchEvent(new Event('change'));
+          }
         }
+      }
     });
-
+  
     const numOwnersSelectEl = document.getElementById(`numOwnersSelect${index}`);
     if (numOwnersSelectEl) {
-        if (businessDetailStore[`numOwnersSelect${index}`]) {
-            numOwnersSelectEl.value = businessDetailStore[`numOwnersSelect${index}`];
+      if (businessDetailStore[`numOwnersSelect${index}`]) {
+        numOwnersSelectEl.value = businessDetailStore[`numOwnersSelect${index}`];
+      }
+      const numOwners = parseInt(numOwnersSelectEl.value, 10) || 0;
+      createOwnerFields(index, numOwners);
+  
+      for (let i = 1; i <= numOwners; i++) {
+        const nameFieldId = `business${index}OwnerName${i}`;
+        if (businessDetailStore[nameFieldId] !== undefined) {
+          const nameFieldEl = document.getElementById(nameFieldId);
+          if (nameFieldEl) {
+            nameFieldEl.value = businessDetailStore[nameFieldId];
+          }
         }
-        const numOwners = parseInt(numOwnersSelectEl.value, 10) || 0;
-        createOwnerFields(index, numOwners);
-
-        for (let i = 1; i <= numOwners; i++) {
-            const nameFieldId = `business${index}OwnerName${i}`;
-            if (businessDetailStore[nameFieldId] !== undefined) {
-                const nameFieldEl = document.getElementById(nameFieldId);
-                if (nameFieldEl) {
-                    nameFieldEl.value = businessDetailStore[nameFieldId];
-                }
-            }
-            const pctFieldId = `business${index}OwnerPercent${i}`;
-            if (businessDetailStore[pctFieldId] !== undefined) {
-                const pctFieldEl = document.getElementById(pctFieldId);
-                if (pctFieldEl) {
-                    pctFieldEl.value = businessDetailStore[pctFieldId];
-                }
-            }
-            const compFieldId = `business${index}OwnerComp${i}`;
-            if (businessDetailStore[compFieldId] !== undefined) {
-                const compFieldEl = document.getElementById(compFieldId);
-                if (compFieldEl) {
-                    compFieldEl.value = businessDetailStore[compFieldId];
-                }
-            }
+        const pctFieldId = `business${index}OwnerPercent${i}`;
+        if (businessDetailStore[pctFieldId] !== undefined) {
+          const pctFieldEl = document.getElementById(pctFieldId);
+          if (pctFieldEl) {
+            pctFieldEl.value = businessDetailStore[pctFieldId];
+          }
         }
+        const compFieldId = `business${index}OwnerComp${i}`;
+        if (businessDetailStore[compFieldId] !== undefined) {
+          const compFieldEl = document.getElementById(compFieldId);
+          if (compFieldEl) {
+            compFieldEl.value = businessDetailStore[compFieldId];
+          }
+        }
+        
+        // Validate total ownership for each owner if numOwnersSelectEl exists.
+        validateTotalOwnership(index, parseInt(numOwnersSelectEl.value, 10) || 0);
+      }
     }
+    
     updateBusinessNet(index);
     checkSCorpReasonableComp(index);
-    validateTotalOwnership(index, parseInt(numOwnersSelectEl.value, 10) || 0);
-}
+    // Alternatively, if you need to call validateTotalOwnership outside the loop,
+    // check that numOwnersSelectEl is not null:
+    if (numOwnersSelectEl) {
+      validateTotalOwnership(index, parseInt(numOwnersSelectEl.value, 10) || 0);
+    }
+}  
 
 //----------------------//
 // 23. DARK MODE TOGGLE //
@@ -3530,6 +3586,7 @@ function addW2Block() {
     removeBtn.type = 'button';
     removeBtn.textContent = 'Remove this W-2?';
     removeBtn.classList.add('remove-w2-btn');
+
     removeBtn.addEventListener('click', function() {
       w2Block.remove();
     });
