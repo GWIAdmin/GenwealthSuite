@@ -358,7 +358,6 @@ function handleEmploymentStatusChange(index, value) {
                 recalculateTotals();
             }
         });
-
     } else if (value === 'No') {
         createLabelAndDropdown(container, `dependent${index}WillingToHire`, `Is the Client Willing to Hire Dependent ${index}?`, ['Please Select', 'Yes', 'No']);
         const willingDropdown = document.getElementById(`dependent${index}WillingToHire`);
@@ -391,26 +390,34 @@ function handleEmploymentStatusChange(index, value) {
 
 function updateDependentBizMap(dependentIndex) {
     const wageStr = document.getElementById(`dependent${dependentIndex}Income`)?.value || '0';
+    console.log(`Dependent ${dependentIndex} income raw value:`, wageStr);
     const wageVal = unformatCurrency(wageStr);
+    console.log(`Parsed wage for Dependent ${dependentIndex}:`, wageVal);
     const employedEl = document.getElementById(`dependent${dependentIndex}EmployedInBusiness`);
     const employedVal = employedEl ? employedEl.value : 'No';
   
-    if (employedVal !== 'Yes') {
+    // Use a trimmed, case-insensitive check for "Yes"
+    if (employedVal.trim().toLowerCase() !== 'yes') {
       delete dependentBizMap[dependentIndex];
       return;
     }
   
     const businessNameEl = document.getElementById(`dependent${dependentIndex}BusinessName`);
-    const businessName = businessNameEl ? businessNameEl.value : '';
-
+    const businessName = businessNameEl ? businessNameEl.value.trim() : '';
+  
     let matchedBusinessIndex = null;
     const numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
     for (let i = 1; i <= numBusinesses; i++) {
-      const currentBizName = document.getElementById(`businessName_${i}`)?.value || '';
+      const currentBizName = document.getElementById(`businessName_${i}`)?.value.trim() || '';
       if (currentBizName === businessName) {
         matchedBusinessIndex = i;
         break;
       }
+    }
+  
+    // If no match was found and there is exactly one business, default to that business.
+    if (!matchedBusinessIndex && numBusinesses === 1) {
+        matchedBusinessIndex = 1;
     }
   
     if (!matchedBusinessIndex) {
@@ -422,7 +429,7 @@ function updateDependentBizMap(dependentIndex) {
       businessIndex: matchedBusinessIndex,
       wage: wageVal
     };
-  }
+}
   
 function createLabelAndDropdown(container, id, labelText, options) {
     const label = document.createElement('label');
@@ -994,6 +1001,8 @@ function createBusinessFields(container, uniqueId) {
     businessDiv.classList.add('business-entry');
     // Assign a permanent unique ID instead of a sequential index.
     businessDiv.dataset.uniqueId = uniqueId;
+    businessDiv.id = `businessEntry_${uniqueId}`;
+    container.appendChild(businessDiv);
 
     // Create the header for the business block.
     const header = document.createElement('h3');
@@ -1864,19 +1873,19 @@ function updateBusinessNet(index) {
     const incomeVal = unformatCurrency(incomeField?.value || '0');
     const expensesVal = unformatCurrency(expensesField?.value || '0');
     const netVal = incomeVal - expensesVal;
-
+    
     const netField = document.getElementById(`business${index}Net`);
     if (netField) {
         netField.value = formatCurrency(String(netVal));
         netField.style.color = (netVal < 0) ? 'red' : 'black';
     }
-
-    // 2. Clear any "overrides" from apportionment/disclaimers
+    
+    // 2. Clear any overrides and remove previous disclaimers
     for (let key in apportionmentOverrides) {
         delete apportionmentOverrides[key];
     }
-    removeDisclaimer(`businessEntry${index}`, 'DEPENDENT_WAGE');
-    removeDisclaimer(`businessEntry${index}`, 'SCORP_DEPENDENT_WAGE');
+    removeDisclaimer(`businessEntry_${index}`, 'DEPENDENT_WAGE');
+    removeDisclaimer(`businessEntry_${index}`, 'SCORP_DEPENDENT_WAGE');
     
     // 3. Compute total dependent wages for this business
     let totalDependentWages = 0;
@@ -1887,7 +1896,7 @@ function updateBusinessNet(index) {
         }
     }
     
-    // 4. For S‑Corp, compute total Reasonable Compensation
+    // 4. For S‑Corp, compute total Reasonable Compensation from owner fields
     let totalReasonableComp = 0;
     const businessTypeVal = document.getElementById(`business${index}Type`)?.value || '';
     if (businessTypeVal === 'S-Corp') {
@@ -1900,30 +1909,34 @@ function updateBusinessNet(index) {
             }
         }
     }
+    console.log('Expenses:', expensesVal, 'Dependent Wages:', totalDependentWages, 'Combined (for S-Corp):', totalDependentWages + totalReasonableComp);
 
-    // 5. If expenses field was blurred (and expenses > 0), check dependent wages vs. expenses
+    
+    // 5. Check if dependent wages exceed expenses (if the expenses field has been blurred)
     if (blurredExpenses[index] && expensesVal > 0) {
         if (totalDependentWages > expensesVal) {
             addDisclaimer(
-                `businessEntry${index}`,
+                `businessEntry_${index}`,
                 'DEPENDENT_WAGE',
-                `Dependent Wages of (${formatCurrency(String(totalDependentWages))}) Exceeds Expenses`
+                `Dependent Wages (${formatCurrency(String(totalDependentWages))}) Exceeds Expenses`
             );
         }
     }
-
-    // 6. For S‑Corp: if (dependent wages + owner comp) > expenses, show combined disclaimer
-    if (businessTypeVal === 'S-Corp') {
-        const combined = totalDependentWages + totalReasonableComp;
-        if (totalReasonableComp > 0 && combined > expensesVal) {
-            addDisclaimer(
-                `businessEntry${index}`,
-                'SCORP_DEPENDENT_WAGE',
-                `Dependent Wages (${formatCurrency(String(totalDependentWages))}) + Reasonable Compensation (${formatCurrency(String(totalReasonableComp))}) exceeds this S-Corp's Expenses (${formatCurrency(String(expensesVal))}).`
-            );
-        }
+    
+// 6. For S‑Corp: if (dependent wages + reasonable compensation) exceed expenses, show combined disclaimer
+if (businessTypeVal === 'S-Corp') {
+    const combined = totalDependentWages + totalReasonableComp;
+    // Only show error if there is any reasonable compensation,
+    // dependent wages are at least $1, and the combined total exceeds expenses.
+    if (totalReasonableComp > 0 && totalDependentWages >= 1 && combined > expensesVal) {
+        addDisclaimer(
+            `businessEntry_${index}`,
+            'SCORP_DEPENDENT_WAGE',
+            `Dependent Wages (${formatCurrency(String(totalDependentWages))}) + Reasonable Compensation (${formatCurrency(String(totalReasonableComp))}) exceeds this S‑Corp's Expenses (${formatCurrency(String(expensesVal))}).`
+        );
     }
-
+}
+    
     // 7. Update apportionment and other totals
     updateOwnerApportionment(index);
     checkSCorpReasonableComp(index);
@@ -1932,6 +1945,7 @@ function updateBusinessNet(index) {
     }
     recalculateTotals();
 }
+
 
 const apportionmentOverrides = {};
 
