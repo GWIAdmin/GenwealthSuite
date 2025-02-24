@@ -1402,18 +1402,19 @@ function createOwnerFields(businessIndex, numOwners) {
 
     /*
       Branching logic for different business types & filing statuses:
-      1) Non-MFJ => might auto-fill owners
+      1) Non‑MFJ => might auto‐fill owners
       2) MFJ => might have up to 3 owners, etc.
-      (This is the same logic you already had, with an added parameter "showReasonableComp")
     */
     if (filingStatus !== 'Married Filing Jointly') {
         if (numOwners === 1) {
-            // Single owner, 100% read-only
+            // Single owner, 100% read‑only.
+            // Now pass "showReasonableComp: isSCorp" so that if S‑Corp, the Reasonable Compensation field is added.
             const ownerSection = buildSingleAutoFillOwner({
                 businessIndex,
                 ownerIndex: 1,
                 ownerName: clientFirstName,
-                autoPct: '100.0000'
+                autoPct: '100.0000',
+                showReasonableComp: isSCorp
             });
             dynamicOwnerFieldsDiv.appendChild(ownerSection);
         } else if (numOwners === 2) {
@@ -1425,25 +1426,23 @@ function createOwnerFields(businessIndex, numOwners) {
                     ownerIndex: i,
                     defaultName: isClient ? clientFirstName : 'Other',
                     isMfjDropdown: false,
-                    showReasonableComp: isSCorp  // <--- Add this
+                    showReasonableComp: isSCorp
                 });
                 dynamicOwnerFieldsDiv.appendChild(ownerSection);
             }
         }
     } else {
-        // MFJ
+        // MFJ cases – unchanged from your original logic
         if (numOwners === 1) {
-            // Single owner (dropdown for client or spouse)
             const ownerSection = buildSingleOwnerDropdown({
                 businessIndex,
                 ownerIndex: 1,
                 clientName: clientFirstName,
                 spouseName: spouseFirstName,
-                showReasonableComp: isSCorp  // <--- Add this
+                showReasonableComp: isSCorp
             });
             dynamicOwnerFieldsDiv.appendChild(ownerSection);
         } else if (numOwners === 2) {
-            // Two owners (both dropdowns)
             for (let i = 1; i <= 2; i++) {
                 const ownerSection = buildTwoOwnerEntry({
                     businessIndex,
@@ -1452,36 +1451,35 @@ function createOwnerFields(businessIndex, numOwners) {
                     isMfjDropdown: true,
                     clientName: clientFirstName,
                     spouseName: spouseFirstName,
-                    showReasonableComp: isSCorp  // <--- Add this
+                    showReasonableComp: isSCorp
                 });
                 dynamicOwnerFieldsDiv.appendChild(ownerSection);
             }
         } else if (numOwners === 3) {
-            // Three owners => #1=Client, #2=Spouse, #3=Other
             for (let i = 1; i <= 3; i++) {
                 const ownerSection = buildThreeOwnerEntry({
                     businessIndex,
                     ownerIndex: i,
                     clientName: clientFirstName,
                     spouseName: spouseFirstName,
-                    showReasonableComp: isSCorp  // <--- Add this
+                    showReasonableComp: isSCorp
                 });
                 dynamicOwnerFieldsDiv.appendChild(ownerSection);
             }
         }
     }
 
-    // Re-validate ownership now that we’ve created new fields
+    // Re‑validate ownership now that we’ve created new fields
     validateTotalOwnership(businessIndex, numOwners);
     updateOwnerApportionment(businessIndex);
 }
 
-function buildSingleAutoFillOwner({ businessIndex, ownerIndex, ownerName, autoPct }) {
-    // A single read‑only owner. Example: Non‑MFJ, 1 owner => 100% client.
+function buildSingleAutoFillOwner({ businessIndex, ownerIndex, ownerName, autoPct, showReasonableComp = false }) {
     const container = document.createElement('section');
     container.classList.add('owner-entry');
     container.id = `ownerContainer-${businessIndex}-${ownerIndex}`;
 
+    // Owner name label and auto‑filled select
     const nameLabel = document.createElement('label');
     nameLabel.textContent = `Owner ${ownerIndex} (Auto-Filled)`;
     container.appendChild(nameLabel);
@@ -1489,7 +1487,6 @@ function buildSingleAutoFillOwner({ businessIndex, ownerIndex, ownerName, autoPc
     const nameSelect = document.createElement('select');
     nameSelect.id = `business${businessIndex}OwnerName${ownerIndex}`;
     nameSelect.name = `business${businessIndex}OwnerName${ownerIndex}`;
-    // Hard‑code the only option
     const opt = document.createElement('option');
     opt.value = ownerName;
     opt.textContent = ownerName;
@@ -1498,6 +1495,20 @@ function buildSingleAutoFillOwner({ businessIndex, ownerIndex, ownerName, autoPc
     nameSelect.style.backgroundColor = '#f0f0f0';
     container.appendChild(nameSelect);
 
+    // Add Reasonable Compensation field if needed (for S‑Corp)
+    if (showReasonableComp) {
+        const compInput = createLabelAndCurrencyField(
+            container,
+            `business${businessIndex}OwnerComp${ownerIndex}`,
+            'Reasonable Compensation:'
+        );
+        compInput.addEventListener('blur', function() {
+            checkSCorpReasonableComp(businessIndex);
+            updateBusinessNet(businessIndex);
+        });
+    }
+
+    // Ownership % label and read‑only input
     const pctLabel = document.createElement('label');
     pctLabel.textContent = 'Ownership %:';
     container.appendChild(pctLabel);
