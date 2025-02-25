@@ -1453,6 +1453,7 @@ function addScheduleCQuestion(businessIndex) {
     
     if (filingStatus === 'Married Filing Jointly') {
         const label = document.createElement('label');
+        label.setAttribute('for', `scheduleCOwner${businessIndex}`);
         label.id = `scheduleCLabel${businessIndex}`;
         label.style.marginTop = '12px';
         label.textContent = 'Which client owns this Schedule C?';
@@ -1636,6 +1637,7 @@ function buildTwoOwnerEntry({
 
     // 1) Owner label & dropdown
     const nameLabel = document.createElement('label');
+    nameLabel.setAttribute('for', `business${businessIndex}OwnerName${ownerIndex}`);
     nameLabel.textContent = `Owner ${ownerIndex}`;
     container.appendChild(nameLabel);
 
@@ -1729,7 +1731,8 @@ function buildSingleOwnerDropdown({
 
     // Owner name label & dropdown
     const nameLabel = document.createElement('label');
-    nameLabel.textContent = `Owner ${ownerIndex} (Pick who)`;
+    nameLabel.setAttribute('for', `business${businessIndex}OwnerName${ownerIndex}`);
+    nameLabel.textContent = `Owner ${ownerIndex} (Auto-Filled)`;
     container.appendChild(nameLabel);
 
     const nameSelect = document.createElement('select');
@@ -1801,6 +1804,7 @@ function buildThreeOwnerEntry({
 
     // Owner name (auto-filled)
     const nameLabel = document.createElement('label');
+    nameLabel.setAttribute('for', `business${businessIndex}OwnerName${ownerIndex}`);
     nameLabel.textContent = `Owner ${ownerIndex} (Auto-Filled)`;
     container.appendChild(nameLabel);
 
@@ -2033,7 +2037,6 @@ if (businessTypeVal === 'S-Corp') {
     }
     recalculateTotals();
 }
-
 
 const apportionmentOverrides = {};
 
