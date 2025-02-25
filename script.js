@@ -3487,6 +3487,81 @@ function addW2Block() {
         whoseW2Select.addEventListener('change', updateHeader);
     }
 
+    // --- Is This W-2 Compensation from Client's Business? ---
+    const isClientBusinessGroup = document.createElement('div');
+    isClientBusinessGroup.classList.add('form-group');
+    const isClientBusinessLabel = document.createElement('label');
+    isClientBusinessLabel.setAttribute('for', 'w2IsClientBusiness_' + w2Counter);
+    isClientBusinessLabel.textContent = 'Is This W-2 Compensation from Client\'s Business?';
+    isClientBusinessGroup.appendChild(isClientBusinessLabel);
+
+    const isClientBusinessSelect = document.createElement('select');
+    isClientBusinessSelect.id = 'w2IsClientBusiness_' + w2Counter;
+    isClientBusinessSelect.name = 'w2IsClientBusiness_' + w2Counter;
+    isClientBusinessSelect.required = true;
+
+    const isClientBusinessOptionDefault = document.createElement('option');
+    isClientBusinessOptionDefault.value = '';
+    isClientBusinessOptionDefault.textContent = 'Please Select';
+    isClientBusinessOptionDefault.disabled = true;
+    isClientBusinessOptionDefault.selected = true;
+    isClientBusinessSelect.appendChild(isClientBusinessOptionDefault);
+
+    const isClientBusinessOption1 = document.createElement('option');
+    isClientBusinessOption1.value = 'Yes';
+    isClientBusinessOption1.textContent = 'Yes';
+    isClientBusinessSelect.appendChild(isClientBusinessOption1);
+
+    const isClientBusinessOption2 = document.createElement('option');
+    isClientBusinessOption2.value = 'No';
+    isClientBusinessOption2.textContent = 'No';
+    isClientBusinessSelect.appendChild(isClientBusinessOption2);
+    isClientBusinessGroup.appendChild(isClientBusinessSelect);
+    collapsibleContent.appendChild(isClientBusinessGroup);
+
+    const businessNameGroup = document.createElement('div');
+    businessNameGroup.classList.add('form-group');
+    businessNameGroup.style.display = 'none';
+
+    const businessNameLabel = document.createElement('label');
+    businessNameLabel.setAttribute('for', 'w2BusinessName_' + w2Counter);
+    businessNameLabel.textContent = 'Please Select Business Name:';
+    businessNameGroup.appendChild(businessNameLabel);
+
+    const businessNameSelect = document.createElement('select');
+    businessNameSelect.id = 'w2BusinessName_' + w2Counter;
+    businessNameSelect.name = 'w2BusinessName_' + w2Counter;
+    businessNameGroup.appendChild(businessNameSelect);
+    collapsibleContent.appendChild(businessNameGroup);
+
+    isClientBusinessSelect.addEventListener('change', function() {
+        if (this.value === 'Yes') {
+            businessNameGroup.style.display = 'block';
+            populateBusinessNameDropdown(businessNameSelect);
+        } else {
+            businessNameGroup.style.display = 'none';
+        }
+    });
+
+    function populateBusinessNameDropdown(dropdown) {
+        dropdown.innerHTML = '';
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = 'Please Select';
+        defaultOption.disabled = true;
+        defaultOption.selected = true;
+        dropdown.appendChild(defaultOption);
+
+        const numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
+        for (let i = 1; i <= numBusinesses; i++) {
+            const businessName = document.getElementById(`businessName_${i}`)?.value || `Business ${i}`;
+            const option = document.createElement('option');
+            option.value = businessName;
+            option.textContent = businessName;
+            dropdown.appendChild(option);
+        }
+    }
+
     // --- Wages, Salaries, Tips, and Other Compensation ---
     const wagesGroup = document.createElement('div');
     wagesGroup.classList.add('form-group');
