@@ -52,6 +52,7 @@ let lastManualAdjustment = {};
 let w2Counter = 0;
 let businessCounter = 0;
 let businessUniqueId = 1;
+let w2WageMap = {};
 
 window.blurredIncome = {};
 window.blurredExpenses = {};
@@ -194,6 +195,96 @@ function updateOlderThan65Options() {
         olderSelect.appendChild(option);
     }
 }
+ 
+// Helper: Given a businessIndex and ownerIndex, find the first W‑2 block
+// that contributed wage to that owner. (It checks the global w2WageMap.)
+// Helper function that scrolls smoothly to the first W‑2 block 
+// that contributed wage to the owner of the given business.
+function scrollToW2Block(businessIndex, ownerIndex) {
+    const ownerSelect = document.getElementById(`business${businessIndex}OwnerName${ownerIndex}`);
+    if (!ownerSelect) return;
+    const ownerName = ownerSelect.value.trim();
+    if (!ownerName) return;
+    
+    // Loop through all mappings in w2WageMap
+    for (let key in w2WageMap) {
+      if (w2WageMap.hasOwnProperty(key)) {
+        const mapping = w2WageMap[key];
+        if (mapping.businessIndex === businessIndex && mapping.client === ownerName) {
+          const w2Block = document.getElementById(key);
+          if (w2Block) {
+            w2Block.scrollIntoView({ behavior: 'smooth' });
+            return;
+          }
+        }
+      }
+    }
+    // Fallback: scroll to the overall W‑2 container.
+    const w2Container = document.getElementById('w2sContainer');
+    if (w2Container) {
+      w2Container.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+function createResCompSection(businessIndex, ownerIndex) {
+    // Create the main container.
+    const resCompContainer = document.createElement('div');
+    resCompContainer.classList.add('res-comp-container');
+  
+    // Create and append the label.
+    const resCompLabel = document.createElement('span');
+    resCompLabel.classList.add('res-comp-label');
+    resCompLabel.textContent = 'Reasonable Compensation:';
+    resCompContainer.appendChild(resCompLabel);
+  
+    // Create and append the input.
+    const rcInput = document.createElement('input');
+    rcInput.type = 'text';
+    rcInput.id = `business${businessIndex}OwnerComp${ownerIndex}`;
+    rcInput.name = `business${businessIndex}OwnerComp${ownerIndex}`;
+    rcInput.classList.add('currency-field', 'res-comp-input');
+    rcInput.required = true;
+    rcInput.readOnly = true; // Initially read-only
+    rcInput.addEventListener('blur', function() {
+      checkSCorpReasonableComp(businessIndex);
+      updateBusinessNet(businessIndex);
+    });
+    resCompContainer.appendChild(rcInput);
+  
+    // Create a container for the two buttons (displayed horizontally).
+    const btnContainer = document.createElement('div');
+    btnContainer.classList.add('res-comp-btn-container');
+  
+    // Lock/Unlock button: use padlock symbols.
+    const lockBtn = document.createElement('button');
+    lockBtn.type = 'button';
+    lockBtn.classList.add('res-comp-btn');
+    // Initially locked: show closed padlock (Unicode U+1F512)
+    lockBtn.innerHTML = '🔒';
+    lockBtn.addEventListener('click', function() {
+      rcInput.readOnly = !rcInput.readOnly;
+      // Toggle the symbol: closed padlock for read-only, open padlock (U+1F513) for editable.
+      lockBtn.innerHTML = rcInput.readOnly ? '🔒' : '🔓';
+    });
+    btnContainer.appendChild(lockBtn);
+  
+    // Scroll button: use an upward arrow symbol.
+    const scrollBtn = document.createElement('button');
+    scrollBtn.type = 'button';
+    scrollBtn.classList.add('res-comp-btn');
+    // Use an up arrow symbol (e.g., Unicode U+21E7)
+    scrollBtn.innerHTML = '⇧';
+    scrollBtn.addEventListener('click', function() {
+      scrollToW2Block(businessIndex, ownerIndex);
+    });
+    btnContainer.appendChild(scrollBtn);
+  
+    // Append the button container below the input.
+    resCompContainer.appendChild(btnContainer);
+  
+    return resCompContainer;
+}
+ 
 
 //--------------------------------//
 // 4. DYNAMIC DEPENDENTS CREATION //
@@ -1289,7 +1380,12 @@ function handleBusinessTypeChange(index, businessType) {
         ownersContainer.style.display = 'block';
         dynamicOwnerFieldsDiv.innerHTML = '';
         populateNumOwnersOptionsForNonPartnership(numOwnersSelect, filingStatus);
-        numOwnersSelect.value = '0';
+        if (!businessDetailStore[`numOwnersSelect${index}`]) {
+            // Only default to 1 if there isn’t already a stored selection.
+            numOwnersSelect.value = '1';
+            businessDetailStore[`numOwnersSelect${index}`] = '1';
+        }
+        createOwnerFields(index, parseInt(numOwnersSelect.value, 10));
     }
     else if (businessType === 'C-Corp') {
         ownersContainer.style.display = 'block';
@@ -1343,6 +1439,7 @@ function handleBusinessTypeChange(index, businessType) {
             numOwnersSelect.value = '0';
         }
     }
+    updateAllBusinessOwnerResCom();
 }
 
 function addScheduleCQuestion(businessIndex) {
@@ -1496,16 +1593,10 @@ function buildSingleAutoFillOwner({ businessIndex, ownerIndex, ownerName, autoPc
     container.appendChild(nameSelect);
 
     // Add Reasonable Compensation field if needed (for S‑Corp)
+    // If needed, add the RC field with buttons.
     if (showReasonableComp) {
-        const compInput = createLabelAndCurrencyField(
-            container,
-            `business${businessIndex}OwnerComp${ownerIndex}`,
-            'Reasonable Compensation:'
-        );
-        compInput.addEventListener('blur', function() {
-            checkSCorpReasonableComp(businessIndex);
-            updateBusinessNet(businessIndex);
-        });
+      const resCompSection = createResCompSection(businessIndex, ownerIndex);
+      container.appendChild(resCompSection);
     }
 
     // Ownership % label and read‑only input
@@ -1580,22 +1671,17 @@ function buildTwoOwnerEntry({
     }
     container.appendChild(nameSelect);
 
+    // NEW: When the owner selection changes, update RC.
+    if (!nameSelect.disabled) {
+        nameSelect.addEventListener('change', function() {
+            updateBusinessOwnerResCom(businessIndex);
+        });
+    }
+
     // 2) Reasonable Comp field if this is S-Corp
     if (showReasonableComp) {
-        // Use createLabelAndCurrencyField:
-        const compInput = createLabelAndCurrencyField(
-            container,
-            `business${businessIndex}OwnerComp${ownerIndex}`,
-            'Reasonable Compensation:'
-        );
-        // The function above already adds the label & input to "container",
-        // as well as handles currency formatting on blur.
-
-        // Attach your existing logic:
-        compInput.addEventListener('blur', function() {
-            checkSCorpReasonableComp(businessIndex);
-            updateBusinessNet(businessIndex);
-        });
+        const resCompSection = createResCompSection(businessIndex, ownerIndex);
+        container.appendChild(resCompSection);
     }
 
     // 3) Ownership % label & input
@@ -1669,17 +1755,15 @@ function buildSingleOwnerDropdown({
 
     container.appendChild(nameSelect);
 
+    // NEW: Add listener so that changes update RC.
+    nameSelect.addEventListener('change', function() {
+        updateBusinessOwnerResCom(businessIndex);
+    });
+
     // Reasonable Comp if S-Corp
     if (showReasonableComp) {
-        const compInput = createLabelAndCurrencyField(
-            container,
-            `business${businessIndex}OwnerComp${ownerIndex}`,
-            'Reasonable Compensation:'
-        );
-        compInput.addEventListener('blur', function() {
-            checkSCorpReasonableComp(businessIndex);
-            updateBusinessNet(businessIndex);
-        });
+        const resCompSection = createResCompSection(businessIndex, ownerIndex);
+        container.appendChild(resCompSection);
     }
 
     // Ownership % (always 100% read‐only in this scenario)
@@ -1740,15 +1824,8 @@ function buildThreeOwnerEntry({
 
     // Reasonable Comp if S-Corp
     if (showReasonableComp) {
-        const compInput = createLabelAndCurrencyField(
-            container,
-            `business${businessIndex}OwnerComp${ownerIndex}`,
-            'Reasonable Compensation:'
-        );
-        compInput.addEventListener('blur', function() {
-            checkSCorpReasonableComp(businessIndex);
-            updateBusinessNet(businessIndex);
-        });
+        const resCompSection = createResCompSection(businessIndex, ownerIndex);
+        container.appendChild(resCompSection);
     }
 
     // Ownership %
@@ -2544,6 +2621,68 @@ function getBaseCcorpTaxDue(businessIndex) {
     return Math.round(rawTaxDue);
 }
 
+function updateBusinessOwnerResCom(businessIndex) {
+    const compField = document.getElementById(`business${businessIndex}OwnerComp1`);
+    if (!compField) {
+      console.warn(`[updateBusinessOwnerResCom] RC field for owner 1 in business ${businessIndex} not found. Skipping update.`);
+      return;
+    }
+
+    console.log("[updateBusinessOwnerResCom] Updating RC for business", businessIndex);
+    const numOwnersSelect = document.getElementById(`numOwnersSelect${businessIndex}`);
+    let numOwners = numOwnersSelect ? parseInt(numOwnersSelect.value, 10) : 1;
+    if (!numOwners || numOwners < 1) { numOwners = 1; }
+    
+    // Initialize totals for each owner.
+    const ownerTotals = {};  
+    for (let i = 1; i <= numOwners; i++) {
+      const ownerSelect = document.getElementById(`business${businessIndex}OwnerName${i}`);
+      if (ownerSelect) {
+        ownerTotals[ownerSelect.value.trim()] = 0;
+      }
+    }
+    
+    // Sum over all W-2 wage mappings for this business.
+    for (let key in w2WageMap) {
+      if (w2WageMap.hasOwnProperty(key)) {
+        const mapping = w2WageMap[key];
+        if (mapping.businessIndex === businessIndex) {
+          // Use the trimmed client first name (defaulting to 'Client1') if mapping.client isn’t defined.
+          const clientName = mapping.client || (document.getElementById('firstName').value.trim() || 'Client1');
+          if (ownerTotals.hasOwnProperty(clientName)) {
+            ownerTotals[clientName] += mapping.wage;
+          } else {
+            ownerTotals[clientName] = mapping.wage;
+          }
+        }
+      }
+    }
+    
+    console.log("[updateBusinessOwnerResCom] Owner totals:", ownerTotals);
+    
+    // Now update each owner's Reasonable Compensation field.
+    for (let i = 1; i <= numOwners; i++) {
+      const ownerSelect = document.getElementById(`business${businessIndex}OwnerName${i}`);
+      const compField = document.getElementById(`business${businessIndex}OwnerComp${i}`);
+      if (ownerSelect && compField) {
+        const ownerName = ownerSelect.value.trim();
+        const totalForOwner = ownerTotals[ownerName] || 0;
+        compField.value = formatCurrency(String(totalForOwner));
+        console.log(`[updateBusinessOwnerResCom] Owner ${i} (${ownerName}) set RC to ${compField.value}`);
+      } else {
+        console.warn(`[updateBusinessOwnerResCom] Missing element for owner ${i} in business ${businessIndex}`);
+      }
+    }
+}
+
+
+function updateAllBusinessOwnerResCom() {
+    const numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
+    for (let i = 1; i <= numBusinesses; i++) {
+      updateBusinessOwnerResCom(i);
+    }
+}
+  
 //---------------------------------------------------//
 // 10. DYNAMIC GENERATION OF SCHEDULE E FIELDS + NET //
 //---------------------------------------------------//
@@ -3574,16 +3713,77 @@ function addW2Block() {
     wagesInput.id = 'w2Wages_' + w2Counter;
     wagesInput.name = 'w2Wages_' + w2Counter;
     wagesInput.classList.add('currency-field');
-    wagesInput.addEventListener('blur', function() {
-        let value = unformatCurrency(wagesInput.value);
-        if (value < 0) {
-            value = 0;
-        }
-        wagesInput.value = formatCurrency(String(value));
-    });
     wagesGroup.appendChild(wagesInput);
     collapsibleContent.appendChild(wagesGroup);
+    
+    // When the wage input loses focus, format its value and update the mapping
+    wagesInput.addEventListener('blur', function() {
+        let value = unformatCurrency(wagesInput.value || '0');
+        if (value < 0) { value = 0; }
+        wagesInput.value = formatCurrency(String(value));
+        updateW2Mapping();
+    });
 
+     // Also update mapping when the business name dropdown changes
+     businessNameSelect.addEventListener('change', updateW2Mapping);
+     isClientBusinessSelect.addEventListener('change', updateW2Mapping);
+   
+     // This function checks that both a positive wage and a valid business selection exist
+     // before storing the mapping.
+     function updateW2Mapping() {
+        // Get the wage value from the W‑2 wage input and unformat it.
+        let wageVal = unformatCurrency(wagesInput.value || '0');
+        console.log("[updateW2Mapping] Wage value:", wageVal);
+    
+        // Check if the user selected "Yes" for business-related wages.
+        let isBusinessRelated = (isClientBusinessSelect.value === 'Yes');
+        console.log("[updateW2Mapping] isBusinessRelated:", isBusinessRelated);
+    
+        if (isBusinessRelated) {
+            let businessName = businessNameSelect.value;
+            console.log("[updateW2Mapping] Selected businessName:", businessName);
+            // Only proceed if wage > 0 and a business name is selected.
+            if (wageVal > 0 && businessName !== '') {
+                let numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
+                let businessIndex = null;
+                // Loop through all businesses to find a match.
+                for (let i = 1; i <= numBusinesses; i++) {
+                    let currentBizName = document.getElementById(`businessName_${i}`)?.value.trim();
+                    console.log(`[updateW2Mapping] Comparing businessName_${i}: "${currentBizName}" with selected: "${businessName}"`);
+                    if (currentBizName === businessName) {
+                        businessIndex = i;
+                        break;
+                    }
+                }
+                if (businessIndex) {
+                    // Use the trimmed first name field (or default to 'Client1') for the client association.
+                    let clientAssociation = document.getElementById('firstName').value.trim() || 'Client1';
+                    console.log("[updateW2Mapping] Client association before dropdown check:", clientAssociation);
+                    // If filing jointly and the "whose W‑2" dropdown exists, override the default.
+                    if (document.getElementById('filingStatus').value === 'Married Filing Jointly' &&
+                        document.getElementById('w2WhoseW2_' + w2Counter)) {
+                        clientAssociation = document.getElementById('w2WhoseW2_' + w2Counter).value;
+                    }
+                    console.log("[updateW2Mapping] Final clientAssociation:", clientAssociation, "BusinessIndex:", businessIndex);
+                    // Store the mapping using the current W‑2 block's id.
+                    w2WageMap[w2Block.id] = { wage: wageVal, businessIndex: businessIndex, client: clientAssociation };
+                    console.log("[updateW2Mapping] Mapping updated for block", w2Block.id, ":", w2WageMap[w2Block.id]);
+                } else {
+                    console.error("[updateW2Mapping] No matching business found for businessName:", businessName);
+                }
+            } else {
+                console.error("[updateW2Mapping] Invalid wage or missing business name. WageVal:", wageVal, "BusinessName:", businessName);
+            }
+        } else {
+            // If not business-related, remove any existing mapping.
+            if (w2WageMap[w2Block.id]) {
+                console.log("[updateW2Mapping] Removing mapping for block", w2Block.id);
+                delete w2WageMap[w2Block.id];
+            }
+        }
+
+    }
+    
     // --- Federal Income Tax Withheld ---
     const federalTaxGroup = document.createElement('div');
     federalTaxGroup.classList.add('form-group');
@@ -3711,4 +3911,28 @@ function addW2Block() {
         collapsibleContent.classList.toggle('active');
     });
 
+}
+
+function updateAllBusinessReasonableComp() {
+    const numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
+    for (let i = 1; i <= numBusinesses; i++) {
+        updateBusinessReasonableComp(i);
+    }
+}
+
+function updateBusinessReasonableComp(businessIndex) {
+    let totalWage = 0;
+    for (let key in w2WageMap) {
+        if (w2WageMap.hasOwnProperty(key)) {
+            let mapping = w2WageMap[key];
+            if (mapping.businessIndex === businessIndex) {
+                totalWage = totalWage + mapping.wage;
+            }
+        }
+    }
+    // Update the “Reasonable Compensation” field for this business.
+    const compField = document.getElementById(`business${businessIndex}ReasonableComp`);
+    if (compField) {
+        compField.value = formatCurrency(String(totalWage));
+    }
 }

@@ -823,3 +823,70 @@ body.dark-mode h3:hover {
   border-radius: 20px;
   cursor: pointer;
 }
+
+/* Reasonable Compensation Section */
+.res-comp-container {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 8px;
+}
+
+.res-comp-label {
+  font-weight: bold;
+  color: #4E4C5E;
+  margin-bottom: 4px;
+}
+
+.res-comp-input {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #4E4C5E;
+  border-radius: 5px;
+  background-color: #FFFFFF;
+  color: #000000;
+  margin-bottom: 8px;
+  box-sizing: border-box;
+}
+
+.res-comp-btn-container {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.res-comp-btn {
+  padding: 6px 10px;
+  font-size: 1rem;
+  background-color: #552583;
+  color: #E5E5E5;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.res-comp-btn:hover {
+  background-color: #FDB927;
+  color: #552583;
+}
+
+/* Dark Mode Overrides for RC Section */
+body.dark-mode .res-comp-label {
+  color: var(--h3-dark);
+}
+
+body.dark-mode .res-comp-input {
+  background-color: var(--input-dark);
+  color: var(--h3-dark);
+  border: 2px solid var(--border-dark);
+}
+
+body.dark-mode .res-comp-btn:hover {
+  background-color: #FDB927;
+  color: #552583;
+}
+
+body.dark-mode .res-comp-btn {
+  background-color: #552583;
+  color: var(--h3-dark);
+}
