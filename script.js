@@ -1443,35 +1443,41 @@ function handleBusinessTypeChange(index, businessType) {
 }
 
 function addScheduleCQuestion(businessIndex) {
-    const businessDivs = document.querySelectorAll('.business-entry');
-    const myDiv = businessDivs[businessIndex - 1];
-    if (!myDiv) return;
-
+    // Only add the question if filing status is MFJ.
     const filingStatus = document.getElementById('filingStatus').value;
+    if (filingStatus !== 'Married Filing Jointly') return;
+    
     const clientFirst = document.getElementById('firstName').value.trim() || 'Client1';
     const spouseFirst = document.getElementById('spouseFirstName').value.trim() || 'Client2';
     
-    if (filingStatus === 'Married Filing Jointly') {
-        const label = document.createElement('label');
-        label.setAttribute('for', `scheduleCOwner${businessIndex}`);
-        label.id = `scheduleCLabel${businessIndex}`;
-        label.style.marginTop = '12px';
-        label.textContent = 'Which client owns this Schedule C?';
-        myDiv.appendChild(label);
-
-        const scheduleCDropdown = document.createElement('select');
-        scheduleCDropdown.id = `scheduleCOwner${businessIndex}`;
-        scheduleCDropdown.name = `scheduleCOwner${businessIndex}`;
-        myDiv.appendChild(scheduleCDropdown);
-
-        const optionsArr = ['Please Select', clientFirst, spouseFirst];
-        optionsArr.forEach(optLabel => {
-            const opt = document.createElement('option');
-            opt.value = optLabel;
-            opt.textContent = optLabel;
-            scheduleCDropdown.appendChild(opt);
-        });
-    }
+    // Locate the "Business X Type" select element.
+    const typeSelect = document.getElementById(`business${businessIndex}Type`);
+    if (!typeSelect || !typeSelect.parentNode) return;
+    
+    // Create the label for the Schedule-C ownership question.
+    const label = document.createElement('label');
+    label.setAttribute('for', `scheduleCOwner${businessIndex}`);
+    label.id = `scheduleCLabel${businessIndex}`;
+    label.style.marginTop = '12px';
+    label.textContent = 'Which client owns this Schedule C?';
+    
+    // Create the dropdown for Schedule-C ownership.
+    const scheduleCDropdown = document.createElement('select');
+    scheduleCDropdown.id = `scheduleCOwner${businessIndex}`;
+    scheduleCDropdown.name = `scheduleCOwner${businessIndex}`;
+    
+    // Populate the dropdown options.
+    const optionsArr = ['Please Select', clientFirst, spouseFirst];
+    optionsArr.forEach(function(optLabel) {
+        const opt = document.createElement('option');
+        opt.value = optLabel;
+        opt.textContent = optLabel;
+        scheduleCDropdown.appendChild(opt);
+    });
+    
+    // Insert the label and dropdown immediately after the Business Type field.
+    typeSelect.parentNode.insertBefore(label, typeSelect.nextSibling);
+    typeSelect.parentNode.insertBefore(scheduleCDropdown, label.nextSibling);
 }
 
 function removeScheduleCQuestion(businessIndex) {
