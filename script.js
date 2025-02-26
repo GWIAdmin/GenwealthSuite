@@ -195,34 +195,73 @@ function updateOlderThan65Options() {
         olderSelect.appendChild(option);
     }
 }
+
+function expandParents(element) {
+    let parent = element.parentElement;
+    while (parent) {
+      if ((parent.classList.contains('collapsible') || parent.classList.contains('collapsible-content')) &&
+           !parent.classList.contains('active')) {
+        parent.classList.add('active');
+      }
+      parent = parent.parentElement;
+    }
+}
  
 // Helper: Given a businessIndex and ownerIndex, find the first W‑2 block
 // that contributed wage to that owner. (It checks the global w2WageMap.)
-// Helper function that scrolls smoothly to the first W‑2 block 
-// that contributed wage to the owner of the given business.
 function scrollToW2Block(businessIndex, ownerIndex) {
+    // 1. Expand the main Income section if it’s collapsed
+    const incomeContent = document.getElementById('incomeContent');
+    if (incomeContent && !incomeContent.classList.contains('active')) {
+      incomeContent.classList.add('active');
+    }
+  
+    // 2. Expand the W‑2 section container if it’s collapsed
+    const w2sContainer = document.getElementById('w2sContainer');
+    if (w2sContainer && !w2sContainer.classList.contains('active')) {
+      w2sContainer.classList.add('active');
+    }
+  
+    // 3. Get the owner name (in lowercase for a case-insensitive match)
     const ownerSelect = document.getElementById(`business${businessIndex}OwnerName${ownerIndex}`);
-    if (!ownerSelect) return;
-    const ownerName = ownerSelect.value.trim();
-    if (!ownerName) return;
-    
-    // Loop through all mappings in w2WageMap
+    if (!ownerSelect) {
+      return;
+    }
+    const ownerName = ownerSelect.value.trim().toLowerCase();
+    if (!ownerName) {
+      return;
+    }
+  
+    // 4. Loop over w2WageMap to find a matching W‑2 block
+    let found = false;
     for (let key in w2WageMap) {
       if (w2WageMap.hasOwnProperty(key)) {
         const mapping = w2WageMap[key];
-        if (mapping.businessIndex === businessIndex && mapping.client === ownerName) {
+        // Compare business index and do a case-insensitive check for the client name
+        if (mapping.businessIndex === businessIndex &&
+            mapping.client.trim().toLowerCase() === ownerName) {
           const w2Block = document.getElementById(key);
           if (w2Block) {
-            w2Block.scrollIntoView({ behavior: 'smooth' });
-            return;
+            // 5. Expand the specific W‑2 block’s content if needed
+            const collapsibleContent = w2Block.querySelector('.collapsible-content');
+            if (collapsibleContent && !collapsibleContent.classList.contains('active')) {
+              collapsibleContent.classList.add('active');
+              // Force reflow so that the change is registered
+              void collapsibleContent.offsetHeight;
+            }
+            // 6. Wait a bit for expansion to render, then scroll into view
+            setTimeout(() => {
+              w2Block.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 500);
+            found = true;
+            break;
           }
         }
       }
     }
-    // Fallback: scroll to the overall W‑2 container.
-    const w2Container = document.getElementById('w2sContainer');
-    if (w2Container) {
-      w2Container.scrollIntoView({ behavior: 'smooth' });
+    // 7. Fallback if no matching block was found.
+    if (!found && w2sContainer) {
+      w2sContainer.scrollIntoView({ behavior: 'smooth' });
     }
 }
 
@@ -284,7 +323,6 @@ function createResCompSection(businessIndex, ownerIndex) {
   
     return resCompContainer;
 }
- 
 
 //--------------------------------//
 // 4. DYNAMIC DEPENDENTS CREATION //
@@ -481,9 +519,7 @@ function handleEmploymentStatusChange(index, value) {
 
 function updateDependentBizMap(dependentIndex) {
     const wageStr = document.getElementById(`dependent${dependentIndex}Income`)?.value || '0';
-    console.log(`Dependent ${dependentIndex} income raw value:`, wageStr);
     const wageVal = unformatCurrency(wageStr);
-    console.log(`Parsed wage for Dependent ${dependentIndex}:`, wageVal);
     const employedEl = document.getElementById(`dependent${dependentIndex}EmployedInBusiness`);
     const employedVal = employedEl ? employedEl.value : 'No';
   
@@ -2007,8 +2043,6 @@ function updateBusinessNet(index) {
             }
         }
     }
-    console.log('Expenses:', expensesVal, 'Dependent Wages:', totalDependentWages, 'Combined (for S-Corp):', totalDependentWages + totalReasonableComp);
-
     
     // 5. Check if dependent wages exceed expenses (if the expenses field has been blurred)
     if (blurredExpenses[index] && expensesVal > 0) {
@@ -2637,7 +2671,6 @@ function updateBusinessOwnerResCom(businessIndex) {
       return;
     }
 
-    console.log("[updateBusinessOwnerResCom] Updating RC for business", businessIndex);
     const numOwnersSelect = document.getElementById(`numOwnersSelect${businessIndex}`);
     let numOwners = numOwnersSelect ? parseInt(numOwnersSelect.value, 10) : 1;
     if (!numOwners || numOwners < 1) { numOwners = 1; }
@@ -2666,9 +2699,7 @@ function updateBusinessOwnerResCom(businessIndex) {
         }
       }
     }
-    
-    console.log("[updateBusinessOwnerResCom] Owner totals:", ownerTotals);
-    
+        
     // Now update each owner's Reasonable Compensation field.
     for (let i = 1; i <= numOwners; i++) {
       const ownerSelect = document.getElementById(`business${businessIndex}OwnerName${i}`);
@@ -2677,7 +2708,6 @@ function updateBusinessOwnerResCom(businessIndex) {
         const ownerName = ownerSelect.value.trim();
         const totalForOwner = ownerTotals[ownerName] || 0;
         compField.value = formatCurrency(String(totalForOwner));
-        console.log(`[updateBusinessOwnerResCom] Owner ${i} (${ownerName}) set RC to ${compField.value}`);
       } else {
         console.warn(`[updateBusinessOwnerResCom] Missing element for owner ${i} in business ${businessIndex}`);
       }
@@ -3742,15 +3772,12 @@ function addW2Block() {
      function updateW2Mapping() {
         // Get the wage value from the W‑2 wage input and unformat it.
         let wageVal = unformatCurrency(wagesInput.value || '0');
-        console.log("[updateW2Mapping] Wage value:", wageVal);
     
         // Check if the user selected "Yes" for business-related wages.
         let isBusinessRelated = (isClientBusinessSelect.value === 'Yes');
-        console.log("[updateW2Mapping] isBusinessRelated:", isBusinessRelated);
     
         if (isBusinessRelated) {
             let businessName = businessNameSelect.value;
-            console.log("[updateW2Mapping] Selected businessName:", businessName);
             // Only proceed if wage > 0 and a business name is selected.
             if (wageVal > 0 && businessName !== '') {
                 let numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
@@ -3758,7 +3785,6 @@ function addW2Block() {
                 // Loop through all businesses to find a match.
                 for (let i = 1; i <= numBusinesses; i++) {
                     let currentBizName = document.getElementById(`businessName_${i}`)?.value.trim();
-                    console.log(`[updateW2Mapping] Comparing businessName_${i}: "${currentBizName}" with selected: "${businessName}"`);
                     if (currentBizName === businessName) {
                         businessIndex = i;
                         break;
@@ -3767,16 +3793,13 @@ function addW2Block() {
                 if (businessIndex) {
                     // Use the trimmed first name field (or default to 'Client1') for the client association.
                     let clientAssociation = document.getElementById('firstName').value.trim() || 'Client1';
-                    console.log("[updateW2Mapping] Client association before dropdown check:", clientAssociation);
                     // If filing jointly and the "whose W‑2" dropdown exists, override the default.
                     if (document.getElementById('filingStatus').value === 'Married Filing Jointly' &&
                         document.getElementById('w2WhoseW2_' + w2Counter)) {
                         clientAssociation = document.getElementById('w2WhoseW2_' + w2Counter).value;
                     }
-                    console.log("[updateW2Mapping] Final clientAssociation:", clientAssociation, "BusinessIndex:", businessIndex);
                     // Store the mapping using the current W‑2 block's id.
                     w2WageMap[w2Block.id] = { wage: wageVal, businessIndex: businessIndex, client: clientAssociation };
-                    console.log("[updateW2Mapping] Mapping updated for block", w2Block.id, ":", w2WageMap[w2Block.id]);
                 } else {
                     console.error("[updateW2Mapping] No matching business found for businessName:", businessName);
                 }
@@ -3786,7 +3809,6 @@ function addW2Block() {
         } else {
             // If not business-related, remove any existing mapping.
             if (w2WageMap[w2Block.id]) {
-                console.log("[updateW2Mapping] Removing mapping for block", w2Block.id);
                 delete w2WageMap[w2Block.id];
             }
         }
