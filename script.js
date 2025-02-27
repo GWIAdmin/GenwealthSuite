@@ -300,10 +300,10 @@ function createResCompSection(businessIndex, ownerIndex, isOtherOwner = false) {
         overrideBtn.addEventListener('click', function() {
             const isActive = overrideBtn.dataset.overrideActive === 'true';
             if (!isActive) {
-                // Activate override: enable editing and change button style.
-                overrideBtn.dataset.overrideActive = 'true';
-                compInput.readOnly = false;
-                overrideBtn.style.backgroundColor = 'var(--accent-hover)';
+            // Activate override: enable editing and change button style.
+            overrideBtn.dataset.overrideActive = 'true';
+            compInput.readOnly = false;
+            overrideBtn.style.backgroundColor = 'var(--accent-hover)';
                 // (The updateBusinessOwnerResCom function will keep the data attribute updated.)
             } else {
                 // Deactivate override: revert value to the stored default and lock the field.
@@ -1361,31 +1361,27 @@ function handleBusinessTypeChange(index, businessType) {
     dynamicOwnerFieldsDiv.innerHTML = '';
     // Remove any previously added "Which spouse owns Schedule‑C?" question 
     removeScheduleCQuestion(index);
-
     ownersContainer.style.display = 'block'; 
 
     const filingStatus = document.getElementById('filingStatus').value;
-    const clientFirstName = document.getElementById('firstName').value.trim() || 'Client1';
-    const spouseFirstName = document.getElementById('spouseFirstName').value.trim() || 'Client2';
+    const clientFirstName = document.getElementById('firstName').value.trim() || 'Client 1';
+    const spouseFirstName = document.getElementById('spouseFirstName').value.trim() || 'Client 2';
 
     if (businessType === 'Please Select') {
         ownersContainer.style.display = 'none';
         numOwnersSelect.innerHTML = '';
         return;
-    }
-    else if (businessType === 'Schedule-C') {
+    } else if (businessType === 'Schedule-C') {
         // Typically 1 "owner" or we skip owners entirely.
         ownersContainer.style.display = 'none';
         numOwnersSelect.innerHTML = '';
         dynamicOwnerFieldsDiv.innerHTML = '';
-
-        // If MFJ => ask "Which spouse owns this Schedule C?"
+        // If MFJ, ask "Which spouse owns this Schedule C?"
         if (filingStatus === 'Married Filing Jointly') {
             addScheduleCQuestion(index);
         }
         return;
-    }
-    else if (businessType === 'Partnership') {
+    } else if (businessType === 'Partnership') {
         ownersContainer.style.display = 'block';
         numOwnersSelect.innerHTML = '';
 
@@ -1398,7 +1394,6 @@ function handleBusinessTypeChange(index, businessType) {
             numOwnersSelect.value = '2';
             createOwnerFields(index, 2);
 
-            // Force #1=client, #2="Other," both disabled
             const owner1Select = document.getElementById(`business${index}OwnerName1`);
             const owner2Select = document.getElementById(`business${index}OwnerName2`);
             if (owner1Select) {
@@ -1412,7 +1407,7 @@ function handleBusinessTypeChange(index, businessType) {
                 owner2Select.style.backgroundColor = '#f0f0f0';
             }
         } else {
-            // MFJ => allow 2 or 3
+            // MFJ => allow 2 or 3 owners
             numOwnersSelect.innerHTML = '';
             let pleaseOpt = document.createElement('option');
             pleaseOpt.value = '0';
@@ -1433,19 +1428,16 @@ function handleBusinessTypeChange(index, businessType) {
 
             numOwnersSelect.value = '0'; 
         }
-    }
-    else if (businessType === 'S-Corp') {
+    } else if (businessType === 'S-Corp') {
         ownersContainer.style.display = 'block';
         dynamicOwnerFieldsDiv.innerHTML = '';
+        // Populate the dropdown with options where the default is "Please Select"
+        // (value 0 is disabled and selected by default)
         populateNumOwnersOptionsForNonPartnership(numOwnersSelect, filingStatus);
-        if (!businessDetailStore[`numOwnersSelect${index}`]) {
-            // Only default to 1 if there isn’t already a stored selection.
-            numOwnersSelect.value = '1';
-            businessDetailStore[`numOwnersSelect${index}`] = '1';
-        }
-        createOwnerFields(index, parseInt(numOwnersSelect.value, 10));
-    }
-    else if (businessType === 'C-Corp') {
+        // Do not set a default value or immediately create owner fields.
+        // Owner fields will be generated when the user makes a selection.
+        return;
+    } else if (businessType === 'C-Corp') {
         ownersContainer.style.display = 'block';
         dynamicOwnerFieldsDiv.innerHTML = '';
 
@@ -1474,8 +1466,7 @@ function handleBusinessTypeChange(index, businessType) {
             numOwnersSelect.appendChild(opt3);
 
             numOwnersSelect.value = '0';
-        }
-        else {
+        } else {
             numOwnersSelect.innerHTML = '';
             let opt0 = document.createElement('option');
             opt0.value = '0';
@@ -1552,8 +1543,8 @@ function createOwnerFields(businessIndex, numOwners) {
 
     // Get the filing status and the relevant client/spouse names
     const filingStatus = document.getElementById('filingStatus').value;
-    const clientFirstName = document.getElementById('firstName').value.trim() || 'Client1';
-    const spouseFirstName = document.getElementById('spouseFirstName').value.trim() || 'Client2';
+    const clientFirstName = document.getElementById('firstName').value.trim() || 'Client 1';
+    const spouseFirstName = document.getElementById('spouseFirstName').value.trim() || 'Client 2';
 
     // Determine if this business is an S‐Corp
     const businessTypeVal = document.getElementById(`business${businessIndex}Type`)?.value || '';
@@ -1875,9 +1866,9 @@ function buildThreeOwnerEntry({
 
     let fillName;
     if (ownerIndex === 1) {
-        fillName = clientName;
+        fillName = clientName || 'Client 1';
     } else if (ownerIndex === 2) {
-        fillName = spouseName;
+        fillName = spouseName || 'Client 2';
     } else {
         fillName = 'Other';
     }
@@ -2415,8 +2406,8 @@ function showCcorpTaxDue(businessIndex) {
 function getClientOwnershipPortionForCcorp(businessIndex, netVal) {
     // netVal is the total net, but we only want the slice belonging to the couple.
     const filingStatus = document.getElementById('filingStatus').value;
-    const clientFirstName = document.getElementById('firstName').value.trim() || 'Client1';
-    const spouseFirstName = document.getElementById('spouseFirstName').value.trim() || 'Client2';
+    const clientFirstName = document.getElementById('firstName').value.trim() || 'Client 1';
+    const spouseFirstName = document.getElementById('spouseFirstName').value.trim() || 'Client 2';
 
     const numOwnersSelect = document.getElementById(`numOwnersSelect${businessIndex}`);
     if (!numOwnersSelect) return 0;
@@ -2584,67 +2575,65 @@ function checkSCorpReasonableComp(businessIndex) {
 
 function updateBusinessOwnerDropdowns(businessIndex) {
     const ownerSelects = document.querySelectorAll(
-        `#dynamicOwnerFields${businessIndex} select[id^="business${businessIndex}OwnerName"]`
+      `#dynamicOwnerFields${businessIndex} select[id^="business${businessIndex}OwnerName"]`
     );
     if (!ownerSelects.length) return;
-
+  
     const filingStatus = document.getElementById('filingStatus').value;
-    const clientFirstName = document.getElementById('firstName').value.trim() || 'Client1';
-    const spouseFirstName = document.getElementById('spouseFirstName').value.trim() || 'Client2';
-
-    // Base options differ if MFJ vs. not
+    const clientFirstName = document.getElementById('firstName').value.trim() || 'Client 1';
+    const spouseFirstName = document.getElementById('spouseFirstName').value.trim() || 'Client 2';
+  
     let baseOptions;
     if (filingStatus === 'Married Filing Jointly') {
-        baseOptions = [clientFirstName, spouseFirstName, 'Other'];
+      baseOptions = [clientFirstName, spouseFirstName, 'Other'];
     } else {
-        baseOptions = [clientFirstName, 'Other'];
+      baseOptions = [clientFirstName, 'Other'];
     }
-
-    // Gather which names are already selected
+  
+    // Gather selected names from the dropdowns
     const selectedNames = [];
     ownerSelects.forEach(select => {
-        if (select.value && baseOptions.includes(select.value)) {
-            selectedNames.push(select.value);
-        }
+      if (select.value && baseOptions.includes(select.value)) {
+        selectedNames.push(select.value);
+      }
     });
-
-    // Now rebuild each dropdown’s option list
+  
     ownerSelects.forEach(select => {
-        const currentVal = select.value;
-        while (select.firstChild) {
-            select.removeChild(select.firstChild);
+      // Skip auto‐filled dropdown for Client 1 (assumed to be owner 1)
+      if (select.id.endsWith('OwnerName1')) return;
+  
+      const currentVal = select.value;
+      while (select.firstChild) {
+        select.removeChild(select.firstChild);
+      }
+      const pleaseOpt = document.createElement('option');
+      pleaseOpt.value = 'Please Select';
+      pleaseOpt.textContent = 'Please Select';
+      pleaseOpt.disabled = true;
+      select.appendChild(pleaseOpt);
+  
+      baseOptions.forEach(name => {
+        const isTakenElsewhere = (selectedNames.includes(name) && name !== currentVal);
+        if (!isTakenElsewhere) {
+          const opt = document.createElement('option');
+          opt.value = name;
+          opt.textContent = name;
+          select.appendChild(opt);
         }
-        const pleaseOpt = document.createElement('option');
-        pleaseOpt.value = 'Please Select';
-        pleaseOpt.textContent = 'Please Select';
-        pleaseOpt.disabled = true;
-        select.appendChild(pleaseOpt);
-
-        baseOptions.forEach(name => {
-            // If already chosen in a different select, skip 
-            // (unless that choice is this select’s currentVal).
-            const isTakenElsewhere = (selectedNames.includes(name) && name !== currentVal);
-            if (!isTakenElsewhere) {
-                const opt = document.createElement('option');
-                opt.value = name;
-                opt.textContent = name;
-                select.appendChild(opt);
-            }
-        });
-
-        // Re‑set the select’s value to either the old choice or "Please Select"
-        if ([...select.options].some(opt => opt.value === currentVal)) {
-            select.value = currentVal;
-        } else {
-            select.value = 'Please Select';
-            select.disabled = true;
-        }
+      });
+  
+      if ([...select.options].some(opt => opt.value === currentVal)) {
+        select.value = currentVal;
+      } else {
+        select.value = 'Please Select';
+        select.disabled = true;
+      }
     });
-
-    // Also update the business header text if you want
+  
+    // Optionally update the business header as well
     const header = document.getElementById(`businessNameHeading${businessIndex}`);
     if (header) {
-        header.textContent = updateBusinessHeader(businessIndex);
+      header.textContent = updateBusinessHeader(businessIndex);
     }
 }
 
@@ -2816,8 +2805,8 @@ function updateScheduleENet(index) {
 // Calculates the client portion for non–C-Corp businesses
 function getClientOwnershipPortion(businessIndex, netVal) {
     const filingStatus = document.getElementById('filingStatus').value;
-    const clientFirstName = document.getElementById('firstName').value.trim() || 'Client1';
-    const spouseFirstName = document.getElementById('spouseFirstName').value.trim() || 'Client2';
+    const clientFirstName = document.getElementById('firstName').value.trim() || 'Client 1';
+    const spouseFirstName = document.getElementById('spouseFirstName').value.trim() || 'Client 2';
     const numOwnersSelect = document.getElementById(`numOwnersSelect${businessIndex}`);
     if (!numOwnersSelect) {
         // If no owner fields are present, assume full net value belongs to the client.
@@ -3663,41 +3652,45 @@ function addW2Block() {
     if (document.getElementById('filingStatus').value === 'Married Filing Jointly') {
         const whoseW2Group = document.createElement('div');
         whoseW2Group.classList.add('form-group');
-
+    
         const whoseW2Label = document.createElement('label');
         whoseW2Label.setAttribute('for', 'w2WhoseW2_' + w2Counter);
         whoseW2Label.textContent = 'Whose W-2 is this?:';
         whoseW2Group.appendChild(whoseW2Label);
-
-        whoseW2Select = document.createElement('select');
+    
+        const whoseW2Select = document.createElement('select');
         whoseW2Select.id = 'w2WhoseW2_' + w2Counter;
         whoseW2Select.name = 'w2WhoseW2_' + w2Counter;
         whoseW2Select.required = true;
-
+    
+        // Add a "Please Select" option
         const pleaseSelectOption = document.createElement('option');
         pleaseSelectOption.value = '';
         pleaseSelectOption.textContent = 'Please Select';
         pleaseSelectOption.disabled = true;
         pleaseSelectOption.selected = true;
         whoseW2Select.appendChild(pleaseSelectOption);
-
+    
+        // Retrieve names from the form fields;
+        // if the spouse field is blank, default its value to "Client 2"
         const clientFirstName = document.getElementById('firstName').value.trim() || 'Client 1';
         const spouseFirstName = document.getElementById('spouseFirstName').value.trim() || 'Client 2';
-
+    
+        // Add both options
         const clientOption = document.createElement('option');
         clientOption.value = clientFirstName;
         clientOption.textContent = clientFirstName;
         whoseW2Select.appendChild(clientOption);
-
+    
         const spouseOption = document.createElement('option');
         spouseOption.value = spouseFirstName;
         spouseOption.textContent = spouseFirstName;
         whoseW2Select.appendChild(spouseOption);
-
+    
         whoseW2Group.appendChild(whoseW2Select);
         collapsibleContent.appendChild(whoseW2Group);
-
-        // Update header when dropdown selection changes
+    
+        // Update header when the dropdown changes
         whoseW2Select.addEventListener('change', updateHeader);
     }
 
@@ -3813,34 +3806,53 @@ function addW2Block() {
         let isBusinessRelated = (isClientBusinessSelect.value === 'Yes');
     
         if (isBusinessRelated) {
-            let businessName = businessNameSelect.value;
-            // Only proceed if wage > 0 and a business name is selected.
-            if (wageVal > 0 && businessName !== '') {
+            // Retrieve and trim the value from the business name dropdown.
+            let businessName = businessNameSelect.value.trim();
+            // If the user hasn’t selected a business (i.e. the value is empty),
+            // default to the first available non-default option from the dropdown.
+            if (businessName === '') {
+                if (businessNameSelect.options.length > 1) {
+                    businessName = businessNameSelect.options[1].value;
+                    businessNameSelect.value = businessName; // Update the dropdown display.
+                } else {
+                    businessName = 'Business 1'; // Fallback default.
+                }
+            }
+            // Proceed only if the wage is greater than zero.
+            if (wageVal > 0) {
                 let numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
                 let businessIndex = null;
-                // Loop through all businesses to find a match.
+                // Loop through each business to find a match.
                 for (let i = 1; i <= numBusinesses; i++) {
-                    let currentBizName = document.getElementById(`businessName_${i}`)?.value.trim();
+                    // Get the business name input; if empty, default to "Business i".
+                    let currentBizNameInput = document.getElementById(`businessName_${i}`);
+                    let currentBizName = (currentBizNameInput ? currentBizNameInput.value.trim() : '') || `Business ${i}`;
                     if (currentBizName === businessName) {
                         businessIndex = i;
                         break;
                     }
                 }
                 if (businessIndex) {
-                    // Use the trimmed first name field (or default to 'Client1') for the client association.
+                    // Determine the client association from the first name field (default to 'Client1').
                     let clientAssociation = document.getElementById('firstName').value.trim() || 'Client1';
-                    // If filing jointly and the "whose W‑2" dropdown exists, override the default.
-                    if (document.getElementById('filingStatus').value === 'Married Filing Jointly' &&
-                        document.getElementById('w2WhoseW2_' + w2Counter)) {
+                    // For Married Filing Jointly, override with the selection from the "Whose W‑2" dropdown if it exists.
+                    if (
+                        document.getElementById('filingStatus').value === 'Married Filing Jointly' &&
+                        document.getElementById('w2WhoseW2_' + w2Counter)
+                    ) {
                         clientAssociation = document.getElementById('w2WhoseW2_' + w2Counter).value;
                     }
                     // Store the mapping using the current W‑2 block's id.
-                    w2WageMap[w2Block.id] = { wage: wageVal, businessIndex: businessIndex, client: clientAssociation };
+                    w2WageMap[w2Block.id] = {
+                        wage: wageVal,
+                        businessIndex: businessIndex,
+                        client: clientAssociation
+                    };
                 } else {
                     console.error("[updateW2Mapping] No matching business found for businessName:", businessName);
                 }
             } else {
-                console.error("[updateW2Mapping] Invalid wage or missing business name. WageVal:", wageVal, "BusinessName:", businessName);
+                console.error("[updateW2Mapping] Invalid wage. WageVal:", wageVal);
             }
         } else {
             // If not business-related, remove any existing mapping.
@@ -3848,8 +3860,8 @@ function addW2Block() {
                 delete w2WageMap[w2Block.id];
             }
         }
-
     }
+    
     
     // --- Federal Income Tax Withheld ---
     const federalTaxGroup = document.createElement('div');
