@@ -857,6 +857,8 @@ body.dark-mode h3:hover {
 .res-comp-btn {
   padding: 6px 10px;
   font-size: 1rem;
+  margin-top: 20px;
+  margin-bottom: 10px;
   background-color: #552583;
   color: #E5E5E5;
   border: none;

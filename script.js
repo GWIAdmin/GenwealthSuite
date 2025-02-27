@@ -265,64 +265,72 @@ function scrollToW2Block(businessIndex, ownerIndex) {
     }
 }
 
-function createResCompSection(businessIndex, ownerIndex) {
-    // Create the main container.
-    const resCompContainer = document.createElement('div');
-    resCompContainer.classList.add('res-comp-container');
-  
-    // Create and append the label.
-    const resCompLabel = document.createElement('span');
-    resCompLabel.classList.add('res-comp-label');
-    resCompLabel.textContent = 'Reasonable Compensation:';
-    resCompContainer.appendChild(resCompLabel);
-  
-    // Create and append the input.
-    const rcInput = document.createElement('input');
-    rcInput.type = 'text';
-    rcInput.id = `business${businessIndex}OwnerComp${ownerIndex}`;
-    rcInput.name = `business${businessIndex}OwnerComp${ownerIndex}`;
-    rcInput.classList.add('currency-field', 'res-comp-input');
-    rcInput.required = true;
-    rcInput.readOnly = true; // Initially read-only
-    rcInput.addEventListener('blur', function() {
-      checkSCorpReasonableComp(businessIndex);
-      updateBusinessNet(businessIndex);
-    });
-    resCompContainer.appendChild(rcInput);
-  
-    // Create a container for the two buttons (displayed horizontally).
-    const btnContainer = document.createElement('div');
-    btnContainer.classList.add('res-comp-btn-container');
-  
-    // Lock/Unlock button: use padlock symbols.
-    const lockBtn = document.createElement('button');
-    lockBtn.type = 'button';
-    lockBtn.classList.add('res-comp-btn');
-    // Initially locked: show closed padlock (Unicode U+1F512)
-    lockBtn.innerHTML = '🔒';
-    lockBtn.addEventListener('click', function() {
-      rcInput.readOnly = !rcInput.readOnly;
-      // Toggle the symbol: closed padlock for read-only, open padlock (U+1F513) for editable.
-      lockBtn.innerHTML = rcInput.readOnly ? '🔒' : '🔓';
-    });
-    btnContainer.appendChild(lockBtn);
-  
-    // Scroll button: use an upward arrow symbol.
-    const scrollBtn = document.createElement('button');
-    scrollBtn.type = 'button';
-    scrollBtn.classList.add('res-comp-btn');
-    // Use an up arrow symbol (e.g., Unicode U+21E7)
-    scrollBtn.innerHTML = '⇧';
-    scrollBtn.addEventListener('click', function() {
-      scrollToW2Block(businessIndex, ownerIndex);
-    });
-    btnContainer.appendChild(scrollBtn);
-  
-    // Append the button container below the input.
-    resCompContainer.appendChild(btnContainer);
-  
-    return resCompContainer;
+function createResCompSection(businessIndex, ownerIndex, isOtherOwner = false) {
+    const container = document.createElement('div');
+    container.classList.add('res-comp-section');
+    // Set an ID so we can update this section later
+    container.id = `rcSection_${businessIndex}_${ownerIndex}`;
+    container.style.marginTop = '15px';
+    container.style.marginBottom = '5px';
+
+    const label = document.createElement('label');
+    label.textContent = 'Reasonable Compensation:';
+    container.appendChild(label);
+
+    const compInput = document.createElement('input');
+    compInput.type = 'text';
+    compInput.id = `business${businessIndex}OwnerComp${ownerIndex}`;
+    compInput.name = `business${businessIndex}OwnerComp${ownerIndex}`;
+    compInput.value = "0";
+    // If this is "Other," keep the field editable
+    compInput.readOnly = !isOtherOwner;
+    container.appendChild(compInput);
+
+    // Only add the lock and scroll buttons if not Other
+    if (!isOtherOwner) {
+        const btnContainer = document.createElement('div');
+        btnContainer.classList.add('res-comp-btn-container');
+
+        const lockBtn = document.createElement('button');
+        lockBtn.type = 'button';
+        lockBtn.classList.add('res-comp-btn');
+        lockBtn.innerHTML = '🔒';
+        lockBtn.addEventListener('click', function() {
+            compInput.readOnly = !compInput.readOnly;
+            lockBtn.innerHTML = compInput.readOnly ? '🔒' : '🔓';
+        });
+        btnContainer.appendChild(lockBtn);
+
+        const scrollBtn = document.createElement('button');
+        scrollBtn.type = 'button';
+        scrollBtn.classList.add('res-comp-btn');
+        scrollBtn.innerHTML = '⇧';
+        scrollBtn.addEventListener('click', function() {
+            scrollToW2Block(businessIndex, ownerIndex);
+        });
+        btnContainer.appendChild(scrollBtn);
+
+        container.appendChild(btnContainer);
+    }
+
+    return container;
 }
+
+function updateRCSectionForOwner(businessIndex, ownerIndex, isOther) {
+    const rcSection = document.getElementById(`rcSection_${businessIndex}_${ownerIndex}`);
+    if (!rcSection) return;
+    const compInput = rcSection.querySelector('input');
+    if (!compInput) return;
+    if (isOther) {
+        compInput.readOnly = false;
+        const btnContainer = rcSection.querySelector('.res-comp-btn-container');
+        if (btnContainer) {
+            btnContainer.remove();
+        }
+    }
+    // (If you wish to re-add buttons when not Other, add that logic here.)
+}
+
 
 //--------------------------------//
 // 4. DYNAMIC DEPENDENTS CREATION //
@@ -1688,17 +1696,13 @@ function buildTwoOwnerEntry({
     nameSelect.name = `business${businessIndex}OwnerName${ownerIndex}`;
     
     if (!isMfjDropdown) {
-        // For non‑MFJ, the owner name might be forced
         const fixedOpt = document.createElement('option');
         fixedOpt.value = defaultName;
         fixedOpt.textContent = defaultName;
         nameSelect.appendChild(fixedOpt);
-
-        // Make read-only so user can’t change it
         nameSelect.disabled = true;
         nameSelect.style.backgroundColor = '#f0f0f0';
     } else {
-        // MFJ => show a dropdown with client, spouse, other
         const pleaseOpt = document.createElement('option');
         pleaseOpt.value = 'Please Select';
         pleaseOpt.textContent = 'Please Select';
@@ -1715,16 +1719,18 @@ function buildTwoOwnerEntry({
     }
     container.appendChild(nameSelect);
 
-    // NEW: When the owner selection changes, update RC.
-    if (!nameSelect.disabled) {
-        nameSelect.addEventListener('change', function() {
-            updateBusinessOwnerResCom(businessIndex);
-        });
-    }
+    // NEW: Add event listener to update RC section based on selection
+    nameSelect.addEventListener('change', function() {
+        const isOther = nameSelect.value.trim().toLowerCase() === 'other';
+        updateRCSectionForOwner(businessIndex, ownerIndex, isOther);
+        updateBusinessOwnerResCom(businessIndex);
+    });
 
-    // 2) Reasonable Comp field if this is S-Corp
+    // 2) Reasonable Compensation field for S‑Corp
     if (showReasonableComp) {
-        const resCompSection = createResCompSection(businessIndex, ownerIndex);
+        // For non‑MFJ, determine if default is Other; for MFJ, the change event will update it
+        let isOtherOwner = (!isMfjDropdown && defaultName.trim().toLowerCase() === 'other');
+        const resCompSection = createResCompSection(businessIndex, ownerIndex, isOtherOwner);
         container.appendChild(resCompSection);
     }
 
@@ -1740,7 +1746,6 @@ function buildTwoOwnerEntry({
     pctInput.value = '';
     container.appendChild(pctInput);
 
-    // The remainder of your two‐owner logic (e.g. forcing total=100) remains the same...
     pctInput.addEventListener('input', function() {
         handleTwoOwnersInput(businessIndex, ownerIndex);
         updateOwnerApportionment(businessIndex);
@@ -1752,7 +1757,7 @@ function buildTwoOwnerEntry({
         }
     });
 
-    // Apportionment display area, if you have it
+    // 4) Apportionment display area
     const apportionmentContainer = document.createElement('div');
     apportionmentContainer.id = `business${businessIndex}OwnerPercent${ownerIndex}-apportionmentContainer`;
     container.appendChild(apportionmentContainer);
@@ -1800,18 +1805,19 @@ function buildSingleOwnerDropdown({
 
     container.appendChild(nameSelect);
 
-    // NEW: Add listener so that changes update RC.
+    // Attach event listener to update RC section if "Other" is selected.
     nameSelect.addEventListener('change', function() {
+        const isOther = nameSelect.value.trim().toLowerCase() === 'other';
+        updateRCSectionForOwner(businessIndex, ownerIndex, isOther);
         updateBusinessOwnerResCom(businessIndex);
     });
 
-    // Reasonable Comp if S-Corp
     if (showReasonableComp) {
         const resCompSection = createResCompSection(businessIndex, ownerIndex);
         container.appendChild(resCompSection);
     }
 
-    // Ownership % (always 100% read‐only in this scenario)
+    // Ownership % (always 100% read‑only in this scenario)
     const pctLabel = document.createElement('label');
     pctLabel.textContent = 'Ownership %:';
     container.appendChild(pctLabel);
@@ -1825,7 +1831,6 @@ function buildSingleOwnerDropdown({
     pctInput.style.backgroundColor = '#f0f0f0';
     container.appendChild(pctInput);
 
-    // Apportionment display area
     const apportionmentContainer = document.createElement('div');
     apportionmentContainer.id = `business${businessIndex}OwnerPercent${ownerIndex}-apportionmentContainer`;
     container.appendChild(apportionmentContainer);
@@ -1855,26 +1860,33 @@ function buildThreeOwnerEntry({
     nameSelect.name = `business${businessIndex}OwnerName${ownerIndex}`;
 
     let fillName;
-    if (ownerIndex === 1) fillName = clientName;
-    else if (ownerIndex === 2) fillName = spouseName;
-    else fillName = 'Other';
+    if (ownerIndex === 1) {
+        fillName = clientName;
+    } else if (ownerIndex === 2) {
+        fillName = spouseName;
+    } else {
+        fillName = 'Other';
+    }
 
     const opt = document.createElement('option');
     opt.value = fillName;
     opt.textContent = fillName;
     nameSelect.appendChild(opt);
 
+    // For auto-filled fields, disable selection
     nameSelect.disabled = true;
     nameSelect.style.backgroundColor = '#f0f0f0';
     container.appendChild(nameSelect);
 
-    // Reasonable Comp if S-Corp
+    // Reasonable Compensation if S-Corp
     if (showReasonableComp) {
-        const resCompSection = createResCompSection(businessIndex, ownerIndex);
+        // For the third owner (which is "Other") we want it unlocked
+        let isOtherOwner = (ownerIndex === 3);
+        const resCompSection = createResCompSection(businessIndex, ownerIndex, isOtherOwner);
         container.appendChild(resCompSection);
     }
 
-    // Ownership %
+    // Ownership % label & input
     const pctLabel = document.createElement('label');
     pctLabel.textContent = 'Ownership %:';
     container.appendChild(pctLabel);
@@ -1886,14 +1898,14 @@ function buildThreeOwnerEntry({
     pctInput.value = ''; // blank initially
 
     if (ownerIndex < 3) {
-        // Let user input #1 and #2
+        // Allow user input for owners 1 and 2
         pctInput.readOnly = false;
         pctInput.addEventListener('input', function() {
             autoCalculateLastOwner(businessIndex);
             updateOwnerApportionment(businessIndex);
         });
     } else {
-        // #3 is read-only, auto-calculated
+        // Owner 3 is auto-calculated so keep it read-only
         pctInput.readOnly = true;
         pctInput.style.backgroundColor = '#f0f0f0';
     }
