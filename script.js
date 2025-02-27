@@ -268,8 +268,6 @@ function scrollToW2Block(businessIndex, ownerIndex) {
 function createResCompSection(businessIndex, ownerIndex, isOtherOwner = false) {
     const container = document.createElement('div');
     container.classList.add('res-comp-section');
-    // Set an ID so we can update this section later
-    container.id = `rcSection_${businessIndex}_${ownerIndex}`;
     container.style.marginTop = '15px';
     container.style.marginBottom = '5px';
 
@@ -282,29 +280,45 @@ function createResCompSection(businessIndex, ownerIndex, isOtherOwner = false) {
     compInput.id = `business${businessIndex}OwnerComp${ownerIndex}`;
     compInput.name = `business${businessIndex}OwnerComp${ownerIndex}`;
     compInput.value = "0";
-    // If this is "Other," keep the field editable
+    // Store the default value in a data attribute
+    compInput.dataset.defaultValue = compInput.value;
+    // If not an "Other" owner, lock the field by default.
     compInput.readOnly = !isOtherOwner;
     container.appendChild(compInput);
 
-    // Only add the lock and scroll buttons if not Other
     if (!isOtherOwner) {
         const btnContainer = document.createElement('div');
         btnContainer.classList.add('res-comp-btn-container');
 
-        const lockBtn = document.createElement('button');
-        lockBtn.type = 'button';
-        lockBtn.classList.add('res-comp-btn');
-        lockBtn.innerHTML = '🔒';
-        lockBtn.addEventListener('click', function() {
-            compInput.readOnly = !compInput.readOnly;
-            lockBtn.innerHTML = compInput.readOnly ? '🔒' : '🔓';
+        const overrideBtn = document.createElement('button');
+        overrideBtn.type = 'button';
+        overrideBtn.classList.add('res-comp-btn');
+        overrideBtn.textContent = 'Override';
+        // Track override state in a data attribute.
+        overrideBtn.dataset.overrideActive = 'false';
+
+        overrideBtn.addEventListener('click', function() {
+            const isActive = overrideBtn.dataset.overrideActive === 'true';
+            if (!isActive) {
+                // Activate override: enable editing and change button style.
+                overrideBtn.dataset.overrideActive = 'true';
+                compInput.readOnly = false;
+                overrideBtn.style.backgroundColor = 'var(--accent-hover)';
+                // (The updateBusinessOwnerResCom function will keep the data attribute updated.)
+            } else {
+                // Deactivate override: revert value to the stored default and lock the field.
+                overrideBtn.dataset.overrideActive = 'false';
+                compInput.readOnly = true;
+                compInput.value = compInput.dataset.defaultValue;
+                overrideBtn.style.backgroundColor = '';
+            }
         });
-        btnContainer.appendChild(lockBtn);
+        btnContainer.appendChild(overrideBtn);
 
         const scrollBtn = document.createElement('button');
         scrollBtn.type = 'button';
         scrollBtn.classList.add('res-comp-btn');
-        scrollBtn.innerHTML = '⇧';
+        scrollBtn.textContent = '⇧';
         scrollBtn.addEventListener('click', function() {
             scrollToW2Block(businessIndex, ownerIndex);
         });
@@ -315,6 +329,7 @@ function createResCompSection(businessIndex, ownerIndex, isOtherOwner = false) {
 
     return container;
 }
+
 
 function updateRCSectionForOwner(businessIndex, ownerIndex, isOther) {
     const rcSection = document.getElementById(`rcSection_${businessIndex}_${ownerIndex}`);
@@ -330,7 +345,6 @@ function updateRCSectionForOwner(businessIndex, ownerIndex, isOther) {
     }
     // (If you wish to re-add buttons when not Other, add that logic here.)
 }
-
 
 //--------------------------------//
 // 4. DYNAMIC DEPENDENTS CREATION //
@@ -2677,18 +2691,11 @@ function getBaseCcorpTaxDue(businessIndex) {
 }
 
 function updateBusinessOwnerResCom(businessIndex) {
-    const compField = document.getElementById(`business${businessIndex}OwnerComp1`);
-    if (!compField) {
-      console.warn(`[updateBusinessOwnerResCom] RC field for owner 1 in business ${businessIndex} not found. Skipping update.`);
-      return;
-    }
-
     const numOwnersSelect = document.getElementById(`numOwnersSelect${businessIndex}`);
     let numOwners = numOwnersSelect ? parseInt(numOwnersSelect.value, 10) : 1;
     if (!numOwners || numOwners < 1) { numOwners = 1; }
     
-    // Initialize totals for each owner.
-    const ownerTotals = {};  
+    const ownerTotals = {};
     for (let i = 1; i <= numOwners; i++) {
       const ownerSelect = document.getElementById(`business${businessIndex}OwnerName${i}`);
       if (ownerSelect) {
@@ -2696,12 +2703,11 @@ function updateBusinessOwnerResCom(businessIndex) {
       }
     }
     
-    // Sum over all W-2 wage mappings for this business.
+    // Sum wages for this business from the global w2WageMap.
     for (let key in w2WageMap) {
       if (w2WageMap.hasOwnProperty(key)) {
         const mapping = w2WageMap[key];
         if (mapping.businessIndex === businessIndex) {
-          // Use the trimmed client first name (defaulting to 'Client1') if mapping.client isn’t defined.
           const clientName = mapping.client || (document.getElementById('firstName').value.trim() || 'Client1');
           if (ownerTotals.hasOwnProperty(clientName)) {
             ownerTotals[clientName] += mapping.wage;
@@ -2712,20 +2718,36 @@ function updateBusinessOwnerResCom(businessIndex) {
       }
     }
         
-    // Now update each owner's Reasonable Compensation field.
     for (let i = 1; i <= numOwners; i++) {
       const ownerSelect = document.getElementById(`business${businessIndex}OwnerName${i}`);
       const compField = document.getElementById(`business${businessIndex}OwnerComp${i}`);
       if (ownerSelect && compField) {
         const ownerName = ownerSelect.value.trim();
-        const totalForOwner = ownerTotals[ownerName] || 0;
-        compField.value = formatCurrency(String(totalForOwner));
+        const computedValue = formatCurrency(String(ownerTotals[ownerName] || 0));
+        
+        // If the field is NOT in override mode, update its value and default.
+        if (compField.readOnly) {
+          compField.value = computedValue;
+          compField.dataset.defaultValue = computedValue;
+        } else {
+          // In override mode, we want to update the stored default
+          // so that when override is toggled off, it reverts to the current computed value.
+          // If the user hasn't manually changed it (i.e. it still matches the stored default),
+          // then update the stored default.
+          if (compField.value === compField.dataset.defaultValue) {
+            compField.value = computedValue;
+            compField.dataset.defaultValue = computedValue;
+          } else {
+            // Alternatively, always update the stored default even if the user has changed the field.
+            // Uncomment the following line if you prefer that behavior:
+            compField.dataset.defaultValue = computedValue;
+          }
+        }
       } else {
         console.warn(`[updateBusinessOwnerResCom] Missing element for owner ${i} in business ${businessIndex}`);
       }
     }
 }
-
 
 function updateAllBusinessOwnerResCom() {
     const numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
@@ -2842,6 +2864,8 @@ function recalculateTotals() {
     const w2Wages = sumW2Wages();
     // Update the read‑only "Wages, Salaries, Tips:" field with that sum.
     document.getElementById('wages').value = formatCurrency(String(parseInt(w2Wages)));
+
+    updateAllBusinessOwnerResCom();
 
     const reasonableCompensation = getFieldValue('reasonableCompensation');
     const taxExemptInterest = getFieldValue('taxExemptInterest');
