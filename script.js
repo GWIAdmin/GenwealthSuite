@@ -3681,8 +3681,8 @@ function addW2Block() {
         pleaseSelectOption.selected = true;
         whoseW2Select.appendChild(pleaseSelectOption);
 
-        const clientFirstName = document.getElementById('firstName').value.trim() || 'Client';
-        const spouseFirstName = document.getElementById('spouseFirstName').value.trim() || 'Spouse';
+        const clientFirstName = document.getElementById('firstName').value.trim() || 'Client 1';
+        const spouseFirstName = document.getElementById('spouseFirstName').value.trim() || 'Client 2';
 
         const clientOption = document.createElement('option');
         clientOption.value = clientFirstName;
@@ -3958,11 +3958,20 @@ function addW2Block() {
     removeBtn.type = 'button';
     removeBtn.textContent = 'Remove this W-2?';
     removeBtn.classList.add('remove-w2-btn');
-
+    
+    // Updated event listener: when the W-2 block is removed, also remove its wage mapping.
     removeBtn.addEventListener('click', function() {
-      w2Block.remove();
+        // If a mapping exists for this W-2 block in w2WageMap, delete it to reset its value
+        if (w2WageMap.hasOwnProperty(w2Block.id)) {
+            delete w2WageMap[w2Block.id];
+        }
+        // Remove the W-2 block from the DOM
+        w2Block.remove();
+        // Recalculate totals so that the removal is reflected (including Reasonable Compensation)
+        recalculateTotals();
     });
-    collapsibleContent.appendChild(removeBtn); 
+    
+    collapsibleContent.appendChild(removeBtn);
 
     // Append the new W-2 block to the container
     document.getElementById('w2sContainer').appendChild(w2Block);   
