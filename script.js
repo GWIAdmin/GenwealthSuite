@@ -2932,6 +2932,16 @@ function recalculateTotals() {
             ? '' 
             : formatCurrency(String(parseInt(totalIncomeVal)));
 
+        const netTotalBusinessesVal = unformatCurrency(
+            document.getElementById('netTotalBusinesses')?.value || '0'
+        );
+    
+        const totalOfAllIncomeVal = totalIncomeVal + netTotalBusinessesVal;
+    
+        document.getElementById('totalOfAllIncome').value = isNaN(totalOfAllIncomeVal) 
+            ? '' 
+            : formatCurrency(String(parseInt(totalOfAllIncomeVal)));
+
     const halfSETax = getFieldValue('halfSETax');
     const retirementDeduction = getFieldValue('retirementDeduction');
     const medicalReimbursementPlan = getFieldValue('medicalReimbursementPlan');
@@ -2940,7 +2950,7 @@ function recalculateTotals() {
     const otherAdjustments = getFieldValue('otherAdjustments');
 
     const totalAdjustedGrossIncomeVal =
-        totalIncomeVal -
+        totalOfAllIncomeVal -
         halfSETax -
         retirementDeduction -
         medicalReimbursementPlan -
