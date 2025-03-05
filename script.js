@@ -2851,6 +2851,7 @@ function recalculateTotals() {
 
     // Sum up all W‑2 wages from dynamic blocks.
     const w2Wages = sumW2Wages();
+    console.log('W2 Wages:', w2Wages);
     // Update the read‑only "Wages, Salaries, Tips:" field with that sum.
     document.getElementById('wages').value = formatCurrency(String(parseInt(w2Wages)));
 
@@ -2892,6 +2893,7 @@ function recalculateTotals() {
             }
         }
     }
+    console.log('Businesses Net Total:', businessesNetTotal);
       
 
     // Update the new "Net Total of All Businesses" field
@@ -2907,6 +2909,7 @@ function recalculateTotals() {
         const netVal = unformatCurrency(netValStr);
         scheduleEsNetTotal += netVal;
     }
+    console.log('Schedule Es Net Total:', scheduleEsNetTotal);
 
     const totalIncomeVal = 
         w2Wages +
@@ -2926,6 +2929,7 @@ function recalculateTotals() {
         interestPrivateBonds +
         passiveActivityLossAdjustments +
         qualifiedBusinessDeduction;
+        console.log('totalIncomeVal (before formatting):', totalIncomeVal);
 
     document.getElementById('totalIncome').value = 
         isNaN(totalIncomeVal) 
@@ -2935,9 +2939,10 @@ function recalculateTotals() {
         const netTotalBusinessesVal = unformatCurrency(
             document.getElementById('netTotalBusinesses')?.value || '0'
         );
+        console.log('netTotalBusinessesVal:', netTotalBusinessesVal); 
     
         const totalOfAllIncomeVal = totalIncomeVal + netTotalBusinessesVal;
-    
+        console.log('totalOfAllIncomeVal:', totalOfAllIncomeVal);
         document.getElementById('totalOfAllIncome').value = isNaN(totalOfAllIncomeVal) 
             ? '' 
             : formatCurrency(String(parseInt(totalOfAllIncomeVal)));
@@ -2961,8 +2966,10 @@ function recalculateTotals() {
     document.getElementById('totalAdjustedGrossIncome').value = isNaN(totalAdjustedGrossIncomeVal)
         ? ''
         : parseInt(totalAdjustedGrossIncomeVal);
+        console.log('totalAdjustedGrossIncomeVal:', totalAdjustedGrossIncomeVal);
 
     updateTaxableIncome();
+    updateSelfEmploymentTax();
 }
 
 //-----------------------------------------------------//
@@ -4033,4 +4040,118 @@ function updateBusinessReasonableComp(businessIndex) {
     if (compField) {
         compField.value = formatCurrency(String(totalWage));
     }
+}
+
+//-------------------------------------//
+// 25. SELF-EMPLOYMENT TAX CALCULATION //
+//-------------------------------------//
+
+// This function calculates self-employment tax using only the income from
+// Schedule-C and Partnership businesses. The Social Security wage base is dynamic,
+// depending on the year selected in the "Enter Year of Most Recent Tax Return Filied:" field.
+function calculateDetailedSelfEmploymentTax() {
+    // 1. Determine the tax year from the form and set the corresponding Social Security wage base.
+    const taxYear = document.getElementById('year').value;
+    // Mapping of tax years to Social Security wage bases (adjust these numbers as needed).
+    const wageBaseMap = {
+        "2020": 137700,
+        "2021": 142800,
+        "2022": 147000,
+        "2023": 160200,
+        "2024": 168600,
+        "2025": 176100
+    };
+
+    const SOCIAL_SECURITY_WAGE_BASE = wageBaseMap[taxYear];
+
+    // 2. Set the Additional Medicare threshold based on filing status.
+    let additionalMedicareThreshold;
+    const filingStatus = document.getElementById('filingStatus').value;
+    if (filingStatus === 'Married Filing Jointly') {
+        additionalMedicareThreshold = 250000;
+    } else if (filingStatus === 'Married Filing Separately') {
+        additionalMedicareThreshold = 125000;
+    } else {
+        additionalMedicareThreshold = 200000;
+    }
+
+    // 3. Sum up W-2 wages for Client 1 and Client 2 only.
+    let totalW2ForClient = 0;
+    for (let key in w2WageMap) {
+        if (w2WageMap.hasOwnProperty(key)) {
+            const mapping = w2WageMap[key];
+            const clientFirst = document.getElementById('firstName').value.trim();
+            const spouseFirst = document.getElementById('spouseFirstName').value.trim();
+            if (mapping.client === clientFirst || mapping.client === spouseFirst) {
+                totalW2ForClient += mapping.wage;
+            }
+        }
+    }
+
+    // 4. Sum net income from businesses of type Schedule-C or Partnership.
+    let seIncome = 0;
+    const numBusinessesVal = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
+    for (let i = 1; i <= numBusinessesVal; i++) {
+        const businessTypeEl = document.getElementById(`business${i}Type`);
+        if (!businessTypeEl) continue;
+        const typeVal = businessTypeEl.value.trim();
+        // For Schedule-C, use the full net income.
+        if (typeVal === 'Schedule-C') {
+            const incomeVal = unformatCurrency(document.getElementById(`business${i}Income`).value || "0");
+            const expensesVal = unformatCurrency(document.getElementById(`business${i}Expenses`).value || "0");
+            seIncome += (incomeVal - expensesVal);
+        }
+        // For Partnership, include only the client’s share.
+        else if (typeVal === 'Partnership') {
+            const netValStr = document.getElementById(`business${i}Net`)?.value || "0";
+            const netVal = unformatCurrency(netValStr);
+            seIncome += getClientOwnershipPortion(i, netVal);
+        }
+        // Other business types are excluded.
+    }
+
+    // 5. Compute net earnings from self-employment.
+    const netEarningsSE = seIncome * 0.9235;
+
+    // 6. Determine the available Social Security wage base after accounting for W-2 wages.
+    const availableSSBase = Math.max(0, SOCIAL_SECURITY_WAGE_BASE - totalW2ForClient);
+    // Social Security tax is 12.4% on the lesser of net earnings or the available wage base.
+    const ssTaxable = Math.min(netEarningsSE, availableSSBase);
+    const socialSecurityTax = ssTaxable * 0.124;
+
+    // 7. Medicare tax is 2.9% on all net earnings.
+    const medicareTax = netEarningsSE * 0.029;
+
+    // 8. Additional Medicare tax is 0.9% on the amount by which the sum of W-2 wages and net earnings exceeds the threshold.
+    const totalWagesForMedicare = totalW2ForClient + netEarningsSE;
+    const additionalMedicareIncome = Math.max(0, totalWagesForMedicare - additionalMedicareThreshold);
+    const additionalMedicareTax = additionalMedicareIncome * 0.009;
+
+    // 9. Total Self-Employment Tax and the corresponding deduction (half of the tax).
+    const totalSelfEmploymentTax = socialSecurityTax + medicareTax + additionalMedicareTax;
+    const halfSelfEmploymentTaxDeduction = totalSelfEmploymentTax / 2;
+
+    console.log("Social Security Tax:", socialSecurityTax);
+    console.log("Medicare Tax:", medicareTax);
+    console.log("Additional Medicare Tax:", additionalMedicareTax);
+    console.log("Total Self-Employment Tax:", totalSelfEmploymentTax);
+    console.log("Half Self-Employment Tax Deduction:", halfSelfEmploymentTaxDeduction);
+
+    return {
+        totalSelfEmploymentTax: totalSelfEmploymentTax,
+        halfSelfEmploymentTaxDeduction: halfSelfEmploymentTaxDeduction,
+        socialSecurityTax: socialSecurityTax,
+        medicareTax: medicareTax,
+        additionalMedicareTax: additionalMedicareTax,
+        totalW2ForClient: totalW2ForClient,
+        seIncome: seIncome,
+        netEarningsSE: netEarningsSE
+    };
+}
+
+// This function updates the form fields for self-employment tax and its half-deduction.
+function updateSelfEmploymentTax() {
+    const taxResults = calculateDetailedSelfEmploymentTax();
+    document.getElementById('selfEmploymentTax').value = formatCurrency(String(taxResults.totalSelfEmploymentTax));
+    document.getElementById('halfSETax').value = formatCurrency(String(taxResults.halfSelfEmploymentTaxDeduction));
 }
