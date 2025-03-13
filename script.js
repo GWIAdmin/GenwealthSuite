@@ -3814,66 +3814,71 @@ function addW2Block() {
      function updateW2Mapping() {
         // Get the wage value from the W‑2 wage input and unformat it.
         let wageVal = unformatCurrency(wagesInput.value || '0');
-    
-        // Check if the user selected "Yes" for business-related wages.
-        let isBusinessRelated = (isClientBusinessSelect.value === 'Yes');
-    
-        if (isBusinessRelated) {
-            // Retrieve and trim the value from the business name dropdown.
-            let businessName = businessNameSelect.value.trim();
-            // If the user hasn’t selected a business (i.e. the value is empty),
-            // default to the first available non-default option from the dropdown.
-            if (businessName === '') {
-                if (businessNameSelect.options.length > 1) {
-                    businessName = businessNameSelect.options[1].value;
-                    businessNameSelect.value = businessName; // Update the dropdown display.
-                } else {
-                    businessName = 'Business 1'; // Fallback default.
-                }
-            }
-            // Proceed only if the wage is greater than zero.
-            if (wageVal > 0) {
-                let numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
-                let businessIndex = null;
-                // Loop through each business to find a match.
-                for (let i = 1; i <= numBusinesses; i++) {
-                    // Get the business name input; if empty, default to "Business i".
-                    let currentBizNameInput = document.getElementById(`businessName_${i}`);
-                    let currentBizName = (currentBizNameInput ? currentBizNameInput.value.trim() : '') || `Business ${i}`;
-                    if (currentBizName === businessName) {
-                        businessIndex = i;
-                        break;
-                    }
-                }
-                if (businessIndex) {
-                    // Determine the client association from the first name field (default to 'Client1').
-                    let clientAssociation = document.getElementById('firstName').value.trim() || 'Client1';
-                    // For Married Filing Jointly, override with the selection from the "Whose W‑2" dropdown if it exists.
-                    if (
-                        document.getElementById('filingStatus').value === 'Married Filing Jointly' &&
-                        document.getElementById('w2WhoseW2_' + w2Counter)
-                    ) {
-                        clientAssociation = document.getElementById('w2WhoseW2_' + w2Counter).value;
-                    }
-                    // Store the mapping using the current W‑2 block's id.
-                    w2WageMap[w2Block.id] = {
-                        wage: wageVal,
-                        businessIndex: businessIndex,
-                        client: clientAssociation
-                    };
-                } else {
-                    console.error("[updateW2Mapping] No matching business found for businessName:", businessName);
-                }
-            } else {
-                console.error("[updateW2Mapping] Invalid wage. WageVal:", wageVal);
-            }
-        } else {
-            // If not business-related, remove any existing mapping.
-            if (w2WageMap[w2Block.id]) {
-                delete w2WageMap[w2Block.id];
-            }
+        if (wageVal <= 0) {
+          console.error("[updateW2Mapping] Invalid wage. WageVal:", wageVal);
+          // Remove any previous mapping if the wage isn’t positive.
+          delete w2WageMap[w2Block.id];
+          return;
         }
-    }
+        
+        // Determine if the dropdown "Is This W‑2 Compensation from Client's Business?" is set to "Yes".
+        // (This flag will be stored, but the wage will always be recorded.)
+        let isBusinessRelated = (isClientBusinessSelect.value === 'Yes');
+        
+        // Build the mapping object.
+        let mapping = {
+          wage: wageVal,
+          isBusinessRelated: isBusinessRelated
+        };
+      
+        // Determine the client association from the "firstName" field.
+        // If filing MFJ and a "Whose W‑2" dropdown exists, use that value.
+        let clientAssociation = document.getElementById('firstName').value.trim() || 'Client1';
+        if (
+          document.getElementById('filingStatus').value === 'Married Filing Jointly' &&
+          document.getElementById('w2WhoseW2_' + w2Counter)
+        ) {
+          clientAssociation = document.getElementById('w2WhoseW2_' + w2Counter).value;
+        }
+        mapping.client = clientAssociation;
+        
+        // If the wage is marked as business-related, determine the business index
+        // by comparing the business name input (or dropdown) value.
+        if (isBusinessRelated) {
+          let businessName = businessNameSelect.value.trim();
+          if (businessName === '') {
+            // Default to the first non-default option if nothing is selected.
+            if (businessNameSelect.options.length > 1) {
+              businessName = businessNameSelect.options[1].value;
+              businessNameSelect.value = businessName;
+            } else {
+              businessName = 'Business 1';
+            }
+          }
+          let numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
+          let businessIndex = null;
+          for (let i = 1; i <= numBusinesses; i++) {
+            let currentBizNameInput = document.getElementById(`businessName_${i}`);
+            let currentBizName = (currentBizNameInput ? currentBizNameInput.value.trim() : '') || `Business ${i}`;
+            if (currentBizName === businessName) {
+              businessIndex = i;
+              break;
+            }
+          }
+          if (businessIndex) {
+            mapping.businessIndex = businessIndex;
+          } else {
+            console.error("[updateW2Mapping] No matching business found for businessName:", businessName);
+          }
+        } else {
+          // For non–business wages, we still record the wage but leave businessIndex null.
+          mapping.businessIndex = null;
+        }
+        
+        // Finally, update (or add) the mapping in the global w2WageMap using the current W‑2 block's id.
+        w2WageMap[w2Block.id] = mapping;
+      }
+      
     
     
     // --- Federal Income Tax Withheld ---
@@ -4069,103 +4074,175 @@ function calculateDetailedSelfEmploymentTax() {
       additionalMedicareThreshold = 200000;
     }
   
-    // 3. Sum up W‑2 wages.
-    let totalW2ForClient = sumW2Wages();
-    // const clientFirst = document.getElementById('firstName').value.trim();
-    // if (filingStatus === 'Married Filing Separately') {
-    //   // Only include wages for the primary taxpayer.
-    //   for (let key in w2WageMap) {
-    //     if (w2WageMap.hasOwnProperty(key)) {
-    //       const mapping = w2WageMap[key];
-    //       if (mapping.client === clientFirst) {
-    //         totalW2ForClient += mapping.wage;
-    //       }
-    //     }
-    //   }
-    // } else {
-    //   const spouseFirst = document.getElementById('spouseFirstName').value.trim();
-    //   for (let key in w2WageMap) {
-    //     if (w2WageMap.hasOwnProperty(key)) {
-    //       const mapping = w2WageMap[key];
-    //       if (mapping.client === clientFirst || mapping.client === spouseFirst) {
-    //         totalW2ForClient += mapping.wage;
-    //       }
-    //     }
-    //   }
-    // }
+    // 3. If filing status is MFJ, calculate each spouse’s SE income separately.
+    if (filingStatus === 'Married Filing Jointly') {
+      const clientFirst = document.getElementById('firstName').value.trim() || 'Client 1';
+      const spouseFirst = document.getElementById('spouseFirstName').value.trim() || 'Client 2';
   
-    // 4. Sum net income from self‑employment businesses (only Schedule‑C and Partnership).
-    let seIncome = 0;
-    const numBusinessesVal = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
-    for (let i = 1; i <= numBusinessesVal; i++) {
-      const businessTypeEl = document.getElementById(`business${i}Type`);
-      if (!businessTypeEl) continue;
-      const typeVal = businessTypeEl.value.trim();
-      if (typeVal === 'Schedule-C') {
-        // Use the full Schedule‑C net income.
-        const incomeVal = unformatCurrency(document.getElementById(`business${i}Income`).value || "0");
-        const expensesVal = unformatCurrency(document.getElementById(`business${i}Expenses`).value || "0");
-        seIncome += (incomeVal - expensesVal);
-      } else if (typeVal === 'Partnership') {
-        // For Partnership, include only the client’s share.
-        const netValStr = document.getElementById(`business${i}Net`)?.value || "0";
-        const netVal = unformatCurrency(netValStr);
-        seIncome += getClientOwnershipPortion(i, netVal);
+      // 3a. Sum W‑2 wages separately.
+      let clientW2 = 0, spouseW2 = 0;
+      for (let key in w2WageMap) {
+        if (w2WageMap.hasOwnProperty(key)) {
+          const mapping = w2WageMap[key];
+          if (mapping.client === clientFirst) {
+            clientW2 += mapping.wage;
+          } else if (mapping.client === spouseFirst) {
+            spouseW2 += mapping.wage;
+          }
+        }
       }
-      // Other business types are excluded.
+  
+      // 3b. Sum SE income from businesses for each spouse.
+      let clientSEIncome = 0, spouseSEIncome = 0;
+      const numBusinessesVal = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
+      for (let i = 1; i <= numBusinessesVal; i++) {
+        const businessTypeEl = document.getElementById(`business${i}Type`);
+        if (!businessTypeEl) continue;
+        const typeVal = businessTypeEl.value.trim();
+        const netVal = unformatCurrency(document.getElementById(`business${i}Net`).value || '0');
+        if (typeVal === 'Schedule-C') {
+          // Use a dedicated dropdown to determine the owner.
+          let scheduleCOwnerEl = document.getElementById(`scheduleCOwner${i}`);
+          if (scheduleCOwnerEl) {
+            const owner = scheduleCOwnerEl.value;
+            if (owner === clientFirst) {
+              clientSEIncome += netVal;
+            } else if (owner === spouseFirst) {
+              spouseSEIncome += netVal;
+            }
+          } else {
+            // Fallback: assign to client.
+            clientSEIncome += netVal;
+          }
+        } else if (typeVal === 'Partnership') {
+          // Loop through each owner field.
+          const numOwnersEl = document.getElementById(`numOwnersSelect${i}`);
+          const numOwners = numOwnersEl ? parseInt(numOwnersEl.value, 10) || 0 : 0;
+          for (let j = 1; j <= numOwners; j++) {
+            const ownerNameEl = document.getElementById(`business${i}OwnerName${j}`);
+            const pctEl = document.getElementById(`business${i}OwnerPercent${j}`);
+            if (ownerNameEl && pctEl) {
+              const ownerName = ownerNameEl.value.trim();
+              const pct = parseFloat(pctEl.value.trim() || "0");
+              const portion = netVal * (pct / 100);
+              if (ownerName === clientFirst) {
+                clientSEIncome += portion;
+              } else if (ownerName === spouseFirst) {
+                spouseSEIncome += portion;
+              }
+            }
+          }
+        }
+        // Other business types are not included.
+      }
+  
+      // 3c. Compute net earnings (apply the 92.35% adjustment).
+      const clientNetEarningsSE = clientSEIncome * 0.9235;
+      const spouseNetEarningsSE = spouseSEIncome * 0.9235;
+  
+      // 3d. Compute available Social Security bases.
+      const clientAvailableSS = Math.max(0, SOCIAL_SECURITY_WAGE_BASE - clientW2);
+      const spouseAvailableSS = Math.max(0, SOCIAL_SECURITY_WAGE_BASE - spouseW2);
+  
+      // 3e. Compute Social Security and Medicare taxes per spouse.
+      const clientSSTax = Math.min(clientNetEarningsSE, clientAvailableSS) * 0.124;
+      const spouseSSTax = Math.min(spouseNetEarningsSE, spouseAvailableSS) * 0.124;
+      const clientMedicareTax = clientNetEarningsSE * 0.029;
+      const spouseMedicareTax = spouseNetEarningsSE * 0.029;
+  
+      // 3f. Combined SE tax (excluding additional Medicare).
+      const seTaxExcludingAdditional = clientSSTax + clientMedicareTax + spouseSSTax + spouseMedicareTax;
+  
+      // 3g. Compute Additional Medicare Tax on the combined wages.
+      const totalW2Combined = clientW2 + spouseW2;
+      const totalNetEarningsSE = clientNetEarningsSE + spouseNetEarningsSE;
+      const combinedForMedicare = totalW2Combined + totalNetEarningsSE;
+      const additionalMedicareIncome = Math.max(0, combinedForMedicare - additionalMedicareThreshold);
+      const additionalMedicareTax = additionalMedicareIncome * 0.009;
+  
+      // 3h. Compute half SE tax deduction.
+      const halfSelfEmploymentTaxDeduction = seTaxExcludingAdditional / 2;
+  
+      // Debug logs (optional)
+      console.log("MFJ Branch:");
+      console.log("Client W-2:", clientW2, "Spouse W-2:", spouseW2);
+      console.log("Client SE Income:", clientSEIncome, "Spouse SE Income:", spouseSEIncome);
+      console.log("Client Net Earnings SE:", clientNetEarningsSE, "Spouse Net Earnings SE:", spouseNetEarningsSE);
+      console.log("Client Available SS:", clientAvailableSS, "Spouse Available SS:", spouseAvailableSS);
+      console.log("Client SS Tax:", clientSSTax, "Spouse SS Tax:", spouseSSTax);
+      console.log("Client Medicare Tax:", clientMedicareTax, "Spouse Medicare Tax:", spouseMedicareTax);
+      console.log("SE Tax (Excl. Additional):", seTaxExcludingAdditional);
+      console.log("Additional Medicare Tax:", additionalMedicareTax);
+      console.log("Half SE Tax Deduction:", halfSelfEmploymentTaxDeduction);
+  
+      return {
+        seTaxExcludingAdditional,
+        additionalMedicareTax,
+        halfSelfEmploymentTaxDeduction,
+        client: {
+          w2: clientW2,
+          seIncome: clientSEIncome,
+          netEarningsSE: clientNetEarningsSE,
+          ssTax: clientSSTax,
+          medicareTax: clientMedicareTax
+        },
+        spouse: {
+          w2: spouseW2,
+          seIncome: spouseSEIncome,
+          netEarningsSE: spouseNetEarningsSE,
+          ssTax: spouseSSTax,
+          medicareTax: spouseMedicareTax
+        }
+      };
     }
-  
-    // 5. Compute net earnings from self‑employment (apply the 92.35% adjustment).
-    // Do not round prematurely.
-    const netEarningsSE = seIncome * 0.9235;
-  
-    // 6. Compute Social Security tax.
-    const availableSSBase = Math.max(0, SOCIAL_SECURITY_WAGE_BASE - totalW2ForClient);
-    const ssTaxable = Math.min(netEarningsSE, availableSSBase);
-    const socialSecurityTax = ssTaxable * 0.124;
-  
-    // 7. Compute Medicare tax (2.9% of net SE earnings).
-    const medicareTax = netEarningsSE * 0.029;
-  
-    // 8. Compute Additional Medicare tax (0.9% on excess over the threshold).
-    const totalWagesForMedicare = totalW2ForClient + netEarningsSE;
-    const additionalMedicareIncome = Math.max(0, totalWagesForMedicare - additionalMedicareThreshold);
-    const additionalMedicareTax = additionalMedicareIncome * 0.009;
-  
-    // 9. Compute SE Tax (for reporting, exclude additional Medicare tax).
-    const seTaxExcludingAdditional = socialSecurityTax + medicareTax;
-    // For the SE tax deduction, use the SE Tax (excluding additional Medicare tax).
-    const halfSelfEmploymentTaxDeduction = seTaxExcludingAdditional / 2;
-  
-    // Debug logs (remove in production)
-    console.log("Social Security Tax:", socialSecurityTax);
-    console.log("Medicare Tax:", medicareTax);
-    console.log("Additional Medicare Tax:", additionalMedicareTax);
-    console.log("SE Tax (Excluding Additional Medicare):", seTaxExcludingAdditional);
-    console.log("Half SE Tax Deduction:", halfSelfEmploymentTaxDeduction);
-  
-    return {
-      seTaxExcludingAdditional: seTaxExcludingAdditional,
-      additionalMedicareTax: additionalMedicareTax,
-      halfSelfEmploymentTaxDeduction: halfSelfEmploymentTaxDeduction,
-      socialSecurityTax: socialSecurityTax,
-      medicareTax: medicareTax,
-      totalW2ForClient: totalW2ForClient,
-      seIncome: seIncome,
-      netEarningsSE: netEarningsSE
-    };
+    // 4. Non‑MFJ branch.
+    else {
+      const totalW2ForClient = sumW2Wages();
+      let seIncome = 0;
+      const numBusinessesVal = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
+      for (let i = 1; i <= numBusinessesVal; i++) {
+        const businessTypeEl = document.getElementById(`business${i}Type`);
+        if (!businessTypeEl) continue;
+        const typeVal = businessTypeEl.value.trim();
+        if (typeVal === 'Schedule-C') {
+          const incomeVal = unformatCurrency(document.getElementById(`business${i}Income`).value || "0");
+          const expensesVal = unformatCurrency(document.getElementById(`business${i}Expenses`).value || "0");
+          seIncome += (incomeVal - expensesVal);
+        } else if (typeVal === 'Partnership') {
+          const ownerPctEl = document.getElementById(`business${i}OwnerPercent1`);
+          const pctVal = ownerPctEl ? parseFloat(ownerPctEl.value.trim() || "0") : 100;
+          const netVal = unformatCurrency(document.getElementById(`business${i}Net`).value || '0');
+          seIncome += netVal * (pctVal / 100);
+        }
+      }
+      const netEarningsSE = seIncome * 0.9235;
+      const availableSSBase = Math.max(0, SOCIAL_SECURITY_WAGE_BASE - totalW2ForClient);
+      const ssTaxable = Math.min(netEarningsSE, availableSSBase);
+      const socialSecurityTax = ssTaxable * 0.124;
+      const medicareTax = netEarningsSE * 0.029;
+      const totalWagesForMedicare = totalW2ForClient + netEarningsSE;
+      const additionalMedicareIncome = Math.max(0, totalWagesForMedicare - additionalMedicareThreshold);
+      const additionalMedicareTax = additionalMedicareIncome * 0.009;
+      const seTaxExcludingAdditional = socialSecurityTax + medicareTax;
+      const halfSelfEmploymentTaxDeduction = seTaxExcludingAdditional / 2;
+    
+      return {
+        seTaxExcludingAdditional,
+        additionalMedicareTax,
+        halfSelfEmploymentTaxDeduction,
+        totalW2ForClient,
+        seIncome,
+        netEarningsSE
+      };
+    }
 }
-  
+    
 function updateSelfEmploymentTax() {
     const taxResults = calculateDetailedSelfEmploymentTax();
-  
-    // For reporting, display only the Social Security + Medicare tax in the SE Tax field.
-    document.getElementById('selfEmploymentTax').value = formatCurrency(String(Math.round(taxResults.seTaxExcludingAdditional)));
-  
-    // Display Additional Medicare Tax separately.
-    document.getElementById('additionalMedicareTax').value = formatCurrency(String(Math.round(taxResults.additionalMedicareTax)));
-  
-    // Display half SE tax deduction (based on SE tax excluding additional Medicare).
-    document.getElementById('halfSETax').value = formatCurrency(String(Math.round(taxResults.halfSelfEmploymentTaxDeduction)));
-}
-  
+    document.getElementById('selfEmploymentTax').value =
+      formatCurrency(String(Math.round(taxResults.seTaxExcludingAdditional)));
+    document.getElementById('additionalMedicareTax').value =
+      formatCurrency(String(Math.round(taxResults.additionalMedicareTax)));
+    document.getElementById('halfSETax').value =
+      formatCurrency(String(Math.round(taxResults.halfSelfEmploymentTaxDeduction)));
+} 
