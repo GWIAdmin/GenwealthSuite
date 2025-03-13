@@ -2806,29 +2806,30 @@ function updateScheduleENet(index) {
 function getClientOwnershipPortion(businessIndex, netVal) {
     const filingStatus = document.getElementById('filingStatus').value;
     const clientFirstName = document.getElementById('firstName').value.trim() || 'Client 1';
+    
+    // For Single (or any non‑MFJ filer), assume the first owner is the client.
+    if (filingStatus !== 'Married Filing Jointly') {
+        const ownerPctEl = document.getElementById(`business${businessIndex}OwnerPercent1`);
+        const pctVal = ownerPctEl ? parseFloat(ownerPctEl.value.trim() || "0") : 100;
+        return netVal * (pctVal / 100);
+    }
+    
+    // For Married Filing Jointly, sum the percentages for both client and spouse.
     const spouseFirstName = document.getElementById('spouseFirstName').value.trim() || 'Client 2';
     const numOwnersSelect = document.getElementById(`numOwnersSelect${businessIndex}`);
     if (!numOwnersSelect) {
-        // If no owner fields are present, assume full net value belongs to the client.
         return netVal;
     }
     const numOwners = parseInt(numOwnersSelect.value, 10) || 0;
-    
     let totalClientOwnershipPercent = 0;
     for (let i = 1; i <= numOwners; i++) {
         const ownerNameEl = document.getElementById(`business${businessIndex}OwnerName${i}`);
         const ownerPctEl = document.getElementById(`business${businessIndex}OwnerPercent${i}`);
         if (!ownerNameEl || !ownerPctEl) continue;
         const ownerNameVal = ownerNameEl.value.trim();
-        const pctVal = parseFloat(ownerPctEl.value.trim() || '0');
-        if (filingStatus === 'Married Filing Jointly') {
-            if (ownerNameVal === clientFirstName || ownerNameVal === spouseFirstName) {
-                totalClientOwnershipPercent += pctVal;
-            }
-        } else {
-            if (ownerNameVal === clientFirstName) {
-                totalClientOwnershipPercent += pctVal;
-            }
+        const pctVal = parseFloat(ownerPctEl.value.trim() || "0");
+        if (ownerNameVal === clientFirstName || ownerNameVal === spouseFirstName) {
+            totalClientOwnershipPercent += pctVal;
         }
     }
     return netVal * (totalClientOwnershipPercent / 100);
@@ -2935,13 +2936,8 @@ function recalculateTotals() {
         isNaN(totalIncomeVal) 
             ? '' 
             : formatCurrency(String(parseInt(totalIncomeVal)));
-
-        const netTotalBusinessesVal = unformatCurrency(
-            document.getElementById('netTotalBusinesses')?.value || '0'
-        );
-        console.log('netTotalBusinessesVal:', netTotalBusinessesVal); 
     
-        const totalOfAllIncomeVal = totalIncomeVal + netTotalBusinessesVal;
+        const totalOfAllIncomeVal = totalIncomeVal;
         console.log('totalOfAllIncomeVal:', totalOfAllIncomeVal);
         document.getElementById('totalOfAllIncome').value = isNaN(totalOfAllIncomeVal) 
             ? '' 
@@ -2968,8 +2964,8 @@ function recalculateTotals() {
         : parseInt(totalAdjustedGrossIncomeVal);
         console.log('totalAdjustedGrossIncomeVal:', totalAdjustedGrossIncomeVal);
 
-    updateTaxableIncome();
-    updateSelfEmploymentTax();
+        updateSelfEmploymentTax();
+        updateTaxableIncome();
 }
 
 //-----------------------------------------------------//
@@ -4075,15 +4071,29 @@ function calculateDetailedSelfEmploymentTax() {
         additionalMedicareThreshold = 200000;
     }
 
-    // 3. Sum up W-2 wages for Client 1 and Client 2 only.
+    // 3. Sum up W-2 wages for the taxpayer.
+    // For Married Filing Separately (MFS), only count Client 1's wages.
     let totalW2ForClient = 0;
-    for (let key in w2WageMap) {
-        if (w2WageMap.hasOwnProperty(key)) {
-            const mapping = w2WageMap[key];
-            const clientFirst = document.getElementById('firstName').value.trim();
-            const spouseFirst = document.getElementById('spouseFirstName').value.trim();
-            if (mapping.client === clientFirst || mapping.client === spouseFirst) {
-                totalW2ForClient += mapping.wage;
+    const clientFirst = document.getElementById('firstName').value.trim();
+    if (filingStatus === 'Married Filing Separately') {
+        // Only include wages for Client 1
+        for (let key in w2WageMap) {
+            if (w2WageMap.hasOwnProperty(key)) {
+                const mapping = w2WageMap[key];
+                if (mapping.client === clientFirst) {
+                    totalW2ForClient += mapping.wage;
+                }
+            }
+        }
+    } else {
+        // For other statuses, include wages for both client and spouse.
+        const spouseFirst = document.getElementById('spouseFirstName').value.trim();
+        for (let key in w2WageMap) {
+            if (w2WageMap.hasOwnProperty(key)) {
+                const mapping = w2WageMap[key];
+                if (mapping.client === clientFirst || mapping.client === spouseFirst) {
+                    totalW2ForClient += mapping.wage;
+                }
             }
         }
     }
@@ -4111,7 +4121,7 @@ function calculateDetailedSelfEmploymentTax() {
     }
 
     // 5. Compute net earnings from self-employment.
-    const netEarningsSE = seIncome * 0.9235;
+    const netEarningsSE = Math.round(seIncome * 0.9235);
 
     // 6. Determine the available Social Security wage base after accounting for W-2 wages.
     const availableSSBase = Math.max(0, SOCIAL_SECURITY_WAGE_BASE - totalW2ForClient);
@@ -4152,6 +4162,16 @@ function calculateDetailedSelfEmploymentTax() {
 // This function updates the form fields for self-employment tax and its half-deduction.
 function updateSelfEmploymentTax() {
     const taxResults = calculateDetailedSelfEmploymentTax();
-    document.getElementById('selfEmploymentTax').value = formatCurrency(String(taxResults.totalSelfEmploymentTax));
+    
+    // Calculate Self-Employment Tax as the sum of Social Security Tax and Medicare Tax only.
+    const selfEmploymentTax = taxResults.socialSecurityTax + taxResults.medicareTax;
+    
+    // Update the SE Tax field (excluding Additional Medicare Tax)
+    document.getElementById('selfEmploymentTax').value = formatCurrency(String(selfEmploymentTax));
+    
+    // Update the Additional Medicare Tax field separately.
+    document.getElementById('additionalMedicareTax').value = formatCurrency(String(taxResults.additionalMedicareTax));
+    
+    // Update the half SE Tax deduction field as before.
     document.getElementById('halfSETax').value = formatCurrency(String(taxResults.halfSelfEmploymentTaxDeduction));
 }
