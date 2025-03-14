@@ -1496,8 +1496,8 @@ function addScheduleCQuestion(businessIndex) {
     const filingStatus = document.getElementById('filingStatus').value;
     if (filingStatus !== 'Married Filing Jointly') return;
     
-    const clientFirst = document.getElementById('firstName').value.trim() || 'Client1';
-    const spouseFirst = document.getElementById('spouseFirstName').value.trim() || 'Client2';
+    const clientFirst = document.getElementById('firstName').value.trim() || 'Client 1';
+    const spouseFirst = document.getElementById('spouseFirstName').value.trim() || 'Client 2';
     
     // Locate the "Business X Type" select element.
     const typeSelect = document.getElementById(`business${businessIndex}Type`);
@@ -4050,8 +4050,15 @@ function updateBusinessReasonableComp(businessIndex) {
 // This function calculates self-employment tax using only the income from
 // Schedule-C and Partnership businesses. The Social Security wage base is dynamic,
 // depending on the year selected in the "Enter Year of Most Recent Tax Return Filied:" field.
+//-------------------------------------//
+// 25. SELF-EMPLOYMENT TAX CALCULATION //
+//-------------------------------------//
+
+// This function calculates self-employment tax using only the income from
+// Schedule-C and Partnership businesses. The Social Security wage base is dynamic,
+// depending on the year selected in the "Enter Year of Most Recent Tax Return Filied:" field.
 function calculateDetailedSelfEmploymentTax() {
-    // 1. Determine tax year and set the corresponding Social Security wage base.
+    // 1. Determine tax year and set the Social Security wage base.
     const taxYear = document.getElementById('year').value;
     const wageBaseMap = {
       "2020": 137700,
@@ -4063,7 +4070,7 @@ function calculateDetailedSelfEmploymentTax() {
     };
     const SOCIAL_SECURITY_WAGE_BASE = wageBaseMap[taxYear];
   
-    // 2. Set the Additional Medicare threshold based on filing status.
+    // 2. Set Additional Medicare threshold based on filing status.
     const filingStatus = document.getElementById('filingStatus').value;
     let additionalMedicareThreshold;
     if (filingStatus === 'Married Filing Jointly') {
@@ -4074,7 +4081,7 @@ function calculateDetailedSelfEmploymentTax() {
       additionalMedicareThreshold = 200000;
     }
   
-    // 3. If filing status is MFJ, calculate each spouse’s SE income separately.
+    // 3. Calculate Self‑Employment Tax Separately
     if (filingStatus === 'Married Filing Jointly') {
       const clientFirst = document.getElementById('firstName').value.trim() || 'Client 1';
       const spouseFirst = document.getElementById('spouseFirstName').value.trim() || 'Client 2';
@@ -4099,10 +4106,11 @@ function calculateDetailedSelfEmploymentTax() {
         const businessTypeEl = document.getElementById(`business${i}Type`);
         if (!businessTypeEl) continue;
         const typeVal = businessTypeEl.value.trim();
-        const netVal = unformatCurrency(document.getElementById(`business${i}Net`).value || '0');
         if (typeVal === 'Schedule-C') {
-          // Use a dedicated dropdown to determine the owner.
-          let scheduleCOwnerEl = document.getElementById(`scheduleCOwner${i}`);
+          // Retrieve net income without forcing negatives to zero.
+          let netVal = unformatCurrency(document.getElementById(`business${i}Net`).value || '0');
+          // Use dropdown to assign owner if available.
+          const scheduleCOwnerEl = document.getElementById(`scheduleCOwner${i}`);
           if (scheduleCOwnerEl) {
             const owner = scheduleCOwnerEl.value;
             if (owner === clientFirst) {
@@ -4111,11 +4119,9 @@ function calculateDetailedSelfEmploymentTax() {
               spouseSEIncome += netVal;
             }
           } else {
-            // Fallback: assign to client.
             clientSEIncome += netVal;
           }
         } else if (typeVal === 'Partnership') {
-          // Loop through each owner field.
           const numOwnersEl = document.getElementById(`numOwnersSelect${i}`);
           const numOwners = numOwnersEl ? parseInt(numOwnersEl.value, 10) || 0 : 0;
           for (let j = 1; j <= numOwners; j++) {
@@ -4124,7 +4130,8 @@ function calculateDetailedSelfEmploymentTax() {
             if (ownerNameEl && pctEl) {
               const ownerName = ownerNameEl.value.trim();
               const pct = parseFloat(pctEl.value.trim() || "0");
-              const portion = netVal * (pct / 100);
+              // Remove Math.max so negative portions are included.
+              let portion = unformatCurrency(document.getElementById(`business${i}Net`).value || '0') * (pct / 100);
               if (ownerName === clientFirst) {
                 clientSEIncome += portion;
               } else if (ownerName === spouseFirst) {
@@ -4133,34 +4140,28 @@ function calculateDetailedSelfEmploymentTax() {
             }
           }
         }
-        // Other business types are not included.
+        // Other business types are not included in SE tax.
       }
   
-      // 3c. Compute net earnings (apply the 92.35% adjustment).
-      const clientNetEarningsSE = clientSEIncome * 0.9235;
-      const spouseNetEarningsSE = spouseSEIncome * 0.9235;
+      // 3c. Apply the 92.35% adjustment and ensure non-negative net earnings.
+      const clientNetEarningsSE = Math.max(0, clientSEIncome * 0.9235);
+      const spouseNetEarningsSE = Math.max(0, spouseSEIncome * 0.9235);
   
       // 3d. Compute available Social Security bases.
       const clientAvailableSS = Math.max(0, SOCIAL_SECURITY_WAGE_BASE - clientW2);
       const spouseAvailableSS = Math.max(0, SOCIAL_SECURITY_WAGE_BASE - spouseW2);
   
-      // 3e. Compute Social Security and Medicare taxes per spouse.
+      // 3e. Compute Social Security and Medicare taxes for each spouse.
       const clientSSTax = Math.min(clientNetEarningsSE, clientAvailableSS) * 0.124;
       const spouseSSTax = Math.min(spouseNetEarningsSE, spouseAvailableSS) * 0.124;
       const clientMedicareTax = clientNetEarningsSE * 0.029;
       const spouseMedicareTax = spouseNetEarningsSE * 0.029;
-  
-      // 3f. Combined SE tax (excluding additional Medicare).
       const seTaxExcludingAdditional = clientSSTax + clientMedicareTax + spouseSSTax + spouseMedicareTax;
   
-      // 3g. Compute Additional Medicare Tax on the combined wages.
-      const totalW2Combined = clientW2 + spouseW2;
-      const totalNetEarningsSE = clientNetEarningsSE + spouseNetEarningsSE;
-      const combinedForMedicare = totalW2Combined + totalNetEarningsSE;
-      const additionalMedicareIncome = Math.max(0, combinedForMedicare - additionalMedicareThreshold);
-      const additionalMedicareTax = additionalMedicareIncome * 0.009;
+      // 3f. Compute Additional Medicare Tax via dedicated function.
+      const additionalMedicareTax = calculateAdditionalMedicareTax(clientW2, spouseW2, clientNetEarningsSE, spouseNetEarningsSE, additionalMedicareThreshold);
   
-      // 3h. Compute half SE tax deduction.
+      // 3g. Compute half SE tax deduction.
       const halfSelfEmploymentTaxDeduction = seTaxExcludingAdditional / 2;
   
       // Debug logs (optional)
@@ -4195,7 +4196,7 @@ function calculateDetailedSelfEmploymentTax() {
         }
       };
     }
-    // 4. Non‑MFJ branch.
+    // 4. Non‑Married Filing Jointly branch.
     else {
       const totalW2ForClient = sumW2Wages();
       let seIncome = 0;
@@ -4207,7 +4208,8 @@ function calculateDetailedSelfEmploymentTax() {
         if (typeVal === 'Schedule-C') {
           const incomeVal = unformatCurrency(document.getElementById(`business${i}Income`).value || "0");
           const expensesVal = unformatCurrency(document.getElementById(`business${i}Expenses`).value || "0");
-          seIncome += (incomeVal - expensesVal);
+          let net = incomeVal - expensesVal;
+          seIncome += net;
         } else if (typeVal === 'Partnership') {
           const ownerPctEl = document.getElementById(`business${i}OwnerPercent1`);
           const pctVal = ownerPctEl ? parseFloat(ownerPctEl.value.trim() || "0") : 100;
@@ -4215,7 +4217,7 @@ function calculateDetailedSelfEmploymentTax() {
           seIncome += netVal * (pctVal / 100);
         }
       }
-      const netEarningsSE = seIncome * 0.9235;
+      const netEarningsSE = Math.max(0, seIncome * 0.9235);
       const availableSSBase = Math.max(0, SOCIAL_SECURITY_WAGE_BASE - totalW2ForClient);
       const ssTaxable = Math.min(netEarningsSE, availableSSBase);
       const socialSecurityTax = ssTaxable * 0.124;
@@ -4225,7 +4227,7 @@ function calculateDetailedSelfEmploymentTax() {
       const additionalMedicareTax = additionalMedicareIncome * 0.009;
       const seTaxExcludingAdditional = socialSecurityTax + medicareTax;
       const halfSelfEmploymentTaxDeduction = seTaxExcludingAdditional / 2;
-    
+  
       return {
         seTaxExcludingAdditional,
         additionalMedicareTax,
@@ -4245,4 +4247,16 @@ function updateSelfEmploymentTax() {
       formatCurrency(String(Math.round(taxResults.additionalMedicareTax)));
     document.getElementById('halfSETax').value =
       formatCurrency(String(Math.round(taxResults.halfSelfEmploymentTaxDeduction)));
-} 
+}
+
+//-----------------------------------------//
+// 26. ADDITIONAL MEDICARE TAX CALCULATION //
+//-----------------------------------------//
+function calculateAdditionalMedicareTax(clientW2, spouseW2, clientNetEarningsSE, spouseNetEarningsSE, additionalMedicareThreshold) {
+    const totalW2Combined = clientW2 + spouseW2;
+    const totalNetEarningsSE = clientNetEarningsSE + spouseNetEarningsSE;
+    const combinedForMedicare = totalW2Combined + totalNetEarningsSE;
+    const additionalMedicareIncome = Math.max(0, combinedForMedicare - additionalMedicareThreshold);
+    return additionalMedicareIncome * 0.009;
+  }
+  
