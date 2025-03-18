@@ -1682,8 +1682,8 @@ function buildTwoOwnerEntry({
     ownerIndex, 
     defaultName, 
     isMfjDropdown = false,
-    clientName = 'Client1',
-    spouseName = 'Client2',
+    clientName = 'Client 1',
+    spouseName = 'Client 2',
     showReasonableComp = false
 }) {
     const container = document.createElement('section');
@@ -2697,7 +2697,7 @@ function updateBusinessOwnerResCom(businessIndex) {
       if (w2WageMap.hasOwnProperty(key)) {
         const mapping = w2WageMap[key];
         if (mapping.businessIndex === businessIndex) {
-          const clientName = mapping.client || (document.getElementById('firstName').value.trim() || 'Client1');
+          const clientName = mapping.client || (document.getElementById('firstName').value.trim() || 'Client 1');
           if (ownerTotals.hasOwnProperty(clientName)) {
             ownerTotals[clientName] += mapping.wage;
           } else {
@@ -3843,7 +3843,7 @@ function addW2Block() {
         mapping.client = (document.getElementById('filingStatus').value === 'Married Filing Jointly' &&
                           document.getElementById('w2WhoseW2_' + w2Counter))
                           ? document.getElementById('w2WhoseW2_' + w2Counter).value
-                          : (document.getElementById('firstName').value.trim() || 'Client1');
+                          : (document.getElementById('firstName').value.trim() || 'Client 1');
     
         if (isBusinessRelated) {
             let businessName = businessNameSelect.value.trim();
