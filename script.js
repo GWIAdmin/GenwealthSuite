@@ -2839,22 +2839,38 @@ function getClientOwnershipPortion(businessIndex, netVal) {
 function sumW2Wages() {
     const w2Container = document.getElementById('w2sContainer');
     let totalW2Wages = 0;
+    let totalMedicareWages = 0;
+    
     if (w2Container) {
-        const wageInputs = w2Container.querySelectorAll("input[id^='w2Wages_']");
-        wageInputs.forEach(input => {
-            totalW2Wages += unformatCurrency(input.value || '0');
+        const w2Blocks = w2Container.querySelectorAll(".w2-block");
+        w2Blocks.forEach(block => {
+            const wageInput = block.querySelector("input[id^='w2Wages_']");
+            const medicareInput = block.querySelector("input[id^='w2MedicareWages_']");
+
+            let wageVal = unformatCurrency(wageInput?.value || '0');
+            let medicareVal = unformatCurrency(medicareInput?.value || '0');
+
+            if (medicareVal > 0) {
+                totalMedicareWages += medicareVal;  // Prioritize Medicare Wages
+            } else {
+                totalW2Wages += wageVal;
+            }
         });
     }
-    return totalW2Wages;
+
+    return { totalW2Wages, totalMedicareWages };
 }
 
 function recalculateTotals() {
 
-    // Sum up all W‑2 wages from dynamic blocks.
-    const w2Wages = sumW2Wages();
-    console.log('W2 Wages:', w2Wages);
-    // Update the read‑only "Wages, Salaries, Tips:" field with that sum.
-    document.getElementById('wages').value = formatCurrency(String(parseInt(w2Wages)));
+    // 1. Get updated wage values.
+    let { totalW2Wages, totalMedicareWages } = sumW2Wages();
+
+    // 2. If any W-2 has Medicare Wages, override total Wages with the Medicare total.
+    let finalWages = (totalMedicareWages > 0) ? totalMedicareWages : totalW2Wages;
+
+    // 3. Update the "Wages, Salaries, Tips:" field in the main summary
+    document.getElementById('wages').value = formatCurrency(String(parseInt(finalWages)));
 
     updateAllBusinessOwnerResCom();
 
@@ -2913,7 +2929,7 @@ function recalculateTotals() {
     console.log('Schedule Es Net Total:', scheduleEsNetTotal);
 
     const totalIncomeVal = 
-        w2Wages +
+        finalWages +
         reasonableCompensation +
         taxExemptInterest +
         taxableInterest +
@@ -3812,74 +3828,51 @@ function addW2Block() {
      // This function checks that both a positive wage and a valid business selection exist
      // before storing the mapping.
      function updateW2Mapping() {
-        // Get the wage value from the W‑2 wage input and unformat it.
         let wageVal = unformatCurrency(wagesInput.value || '0');
-        if (wageVal <= 0) {
-          console.error("[updateW2Mapping] Invalid wage. WageVal:", wageVal);
-          // Remove any previous mapping if the wage isn’t positive.
-          delete w2WageMap[w2Block.id];
-          return;
-        }
-        
-        // Determine if the dropdown "Is This W‑2 Compensation from Client's Business?" is set to "Yes".
-        // (This flag will be stored, but the wage will always be recorded.)
-        let isBusinessRelated = (isClientBusinessSelect.value === 'Yes');
-        
-        // Build the mapping object.
-        let mapping = {
-          wage: wageVal,
-          isBusinessRelated: isBusinessRelated
-        };
-      
-        // Determine the client association from the "firstName" field.
-        // If filing MFJ and a "Whose W‑2" dropdown exists, use that value.
-        let clientAssociation = document.getElementById('firstName').value.trim() || 'Client1';
-        if (
-          document.getElementById('filingStatus').value === 'Married Filing Jointly' &&
-          document.getElementById('w2WhoseW2_' + w2Counter)
-        ) {
-          clientAssociation = document.getElementById('w2WhoseW2_' + w2Counter).value;
-        }
-        mapping.client = clientAssociation;
-        
-        // If the wage is marked as business-related, determine the business index
-        // by comparing the business name input (or dropdown) value.
-        if (isBusinessRelated) {
-          let businessName = businessNameSelect.value.trim();
-          if (businessName === '') {
-            // Default to the first non-default option if nothing is selected.
-            if (businessNameSelect.options.length > 1) {
-              businessName = businessNameSelect.options[1].value;
-              businessNameSelect.value = businessName;
-            } else {
-              businessName = 'Business 1';
-            }
-          }
-          let numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
-          let businessIndex = null;
-          for (let i = 1; i <= numBusinesses; i++) {
-            let currentBizNameInput = document.getElementById(`businessName_${i}`);
-            let currentBizName = (currentBizNameInput ? currentBizNameInput.value.trim() : '') || `Business ${i}`;
-            if (currentBizName === businessName) {
-              businessIndex = i;
-              break;
-            }
-          }
-          if (businessIndex) {
-            mapping.businessIndex = businessIndex;
-          } else {
-            console.error("[updateW2Mapping] No matching business found for businessName:", businessName);
-          }
-        } else {
-          // For non–business wages, we still record the wage but leave businessIndex null.
-          mapping.businessIndex = null;
-        }
-        
-        // Finally, update (or add) the mapping in the global w2WageMap using the current W‑2 block's id.
-        w2WageMap[w2Block.id] = mapping;
-      }
-      
+        let medicareWagesVal = unformatCurrency(medicareWagesInput.value || '0');
+        let finalWage = (medicareWagesVal > 0) ? medicareWagesVal : wageVal;
     
+        if (finalWage <= 0) {
+            delete w2WageMap[w2Block.id]; // Remove mapping if no valid wage exists
+            return;
+        }
+    
+        let isBusinessRelated = (isClientBusinessSelect.value === 'Yes');
+    
+        let mapping = {
+            wage: wageVal,                  // Store the original wage value
+            medicareWages: medicareWagesVal,  // Store Medicare wages separately
+            isBusinessRelated: isBusinessRelated
+        };
+    
+        // Determine the client association
+        mapping.client = (document.getElementById('filingStatus').value === 'Married Filing Jointly' &&
+                          document.getElementById('w2WhoseW2_' + w2Counter))
+                          ? document.getElementById('w2WhoseW2_' + w2Counter).value
+                          : (document.getElementById('firstName').value.trim() || 'Client1');
+    
+        if (isBusinessRelated) {
+            let businessName = businessNameSelect.value.trim();
+            if (businessName === '' && businessNameSelect.options.length > 1) {
+                businessName = businessNameSelect.options[1].value;
+                businessNameSelect.value = businessName;
+            }
+            let numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
+            let businessIndex = null;
+            for (let i = 1; i <= numBusinesses; i++) {
+                let currentBizName = document.getElementById(`businessName_${i}`)?.value.trim() || `Business ${i}`;
+                if (currentBizName === businessName) {
+                    businessIndex = i;
+                    break;
+                }
+            }
+            mapping.businessIndex = businessIndex;
+        } else {
+            mapping.businessIndex = null;
+        }
+    
+        w2WageMap[w2Block.id] = mapping;
+    }
     
     // --- Federal Income Tax Withheld ---
     const federalTaxGroup = document.createElement('div');
@@ -3910,6 +3903,34 @@ function addW2Block() {
     medicareWagesInput.classList.add('currency-field');
     medicareWagesGroup.appendChild(medicareWagesInput);
     collapsibleContent.appendChild(medicareWagesGroup);
+
+    // Handle "Medicare Wages and Tips" Override
+    medicareWagesInput.addEventListener('blur', function () {
+        let medicareVal = unformatCurrency(medicareWagesInput.value || '0');
+        let wageVal = unformatCurrency(wagesInput.value || '0');
+
+        if (medicareVal > 0) {
+            wagesInput.value = ''; // Clear Wages if Medicare Wages is entered
+        } else if (medicareVal === 0 && wageVal === 0) {
+            wagesInput.value = ''; // Ensure empty state remains empty
+        }
+
+        medicareWagesInput.value = (medicareVal > 0) ? formatCurrency(String(medicareVal)) : ''; 
+        updateW2Mapping();
+    });
+
+    // Handle "Wages, Salaries, Tips" Restore Logic
+    wagesInput.addEventListener('blur', function () {
+        let wageVal = unformatCurrency(wagesInput.value || '0');
+        let medicareVal = unformatCurrency(medicareWagesInput.value || '0');
+
+        if (wageVal > 0 && medicareVal > 0) {
+            medicareWagesInput.value = ''; // Remove override if Wages is re-entered
+        }
+
+        wagesInput.value = (wageVal > 0) ? formatCurrency(String(wageVal)) : ''; 
+        updateW2Mapping();
+    });
 
     // --- Medicare Tax Withheld ---
     const medicareTaxGroup = document.createElement('div');
@@ -4043,13 +4064,7 @@ function updateBusinessReasonableComp(businessIndex) {
     }
 }
 
-//-------------------------------------//
-// 25. SELF-EMPLOYMENT TAX CALCULATION //
-//-------------------------------------//
 
-// This function calculates self-employment tax using only the income from
-// Schedule-C and Partnership businesses. The Social Security wage base is dynamic,
-// depending on the year selected in the "Enter Year of Most Recent Tax Return Filied:" field.
 //-------------------------------------//
 // 25. SELF-EMPLOYMENT TAX CALCULATION //
 //-------------------------------------//
@@ -4198,7 +4213,11 @@ function calculateDetailedSelfEmploymentTax() {
     }
     // 4. Non‑Married Filing Jointly branch.
     else {
-      const totalW2ForClient = sumW2Wages();
+
+    // Destructure the returned object from sumW2Wages() and determine effective wages.
+      const { totalW2Wages, totalMedicareWages } = sumW2Wages();
+      const effectiveW2 = totalMedicareWages > 0 ? totalMedicareWages : totalW2Wages;
+
       let seIncome = 0;
       const numBusinessesVal = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
       for (let i = 1; i <= numBusinessesVal; i++) {
@@ -4218,11 +4237,11 @@ function calculateDetailedSelfEmploymentTax() {
         }
       }
       const netEarningsSE = Math.max(0, seIncome * 0.9235);
-      const availableSSBase = Math.max(0, SOCIAL_SECURITY_WAGE_BASE - totalW2ForClient);
+      const availableSSBase = Math.max(0, SOCIAL_SECURITY_WAGE_BASE - effectiveW2);
       const ssTaxable = Math.min(netEarningsSE, availableSSBase);
       const socialSecurityTax = ssTaxable * 0.124;
       const medicareTax = netEarningsSE * 0.029;
-      const totalWagesForMedicare = totalW2ForClient + netEarningsSE;
+      const totalWagesForMedicare = effectiveW2 + netEarningsSE;
       const additionalMedicareIncome = Math.max(0, totalWagesForMedicare - additionalMedicareThreshold);
       const additionalMedicareTax = additionalMedicareIncome * 0.009;
       const seTaxExcludingAdditional = socialSecurityTax + medicareTax;
@@ -4232,7 +4251,7 @@ function calculateDetailedSelfEmploymentTax() {
         seTaxExcludingAdditional,
         additionalMedicareTax,
         halfSelfEmploymentTaxDeduction,
-        totalW2ForClient,
+        totalW2ForClient: effectiveW2,
         seIncome,
         netEarningsSE
       };
