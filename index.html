@@ -612,17 +612,26 @@
           <input type="text" id="estimatedBalanceDue" name="estimatedBalanceDue" class="currency-field" readonly required>
         </div>
 
-        <div class="form-group">
-          <label for="employeeTaxes">Employee Taxes:</label>
-          <input type="text" id="employeeTaxes" name="employeeTaxes" class="currency-field" readonly required>
-        </div>
-
-        <div class="form-group">
-          <label for="employerTaxes">Employer Taxes:</label>
-          <input type="text" id="employerTaxes" name="employerTaxes" class="currency-field" readonly required>
-        </div>
-
         </div> 
+      </section>
+
+      <!-- Employer and Employee Taxes Section -->
+      <section id="employerEmployeeTaxes">
+        <h2 onclick="toggleCollapsible('employerEmployeeTaxesContent')">Employer and Employee Taxes</h2>
+        <div id="employerEmployeeTaxesContent" class="collapsible">        
+
+        <div class="form-group">
+
+          <div class="form-group">
+            <label for="employeeTaxes">Employee Taxes:</label>
+            <input type="text" id="employeeTaxes" name="employeeTaxes" class="currency-field" readonly required>
+          </div>
+  
+          <div class="form-group">
+            <label for="employerTaxes">Employer Taxes:</label>
+            <input type="text" id="employerTaxes" name="employerTaxes" class="currency-field" readonly required>
+          </div>
+        </div>
       </section>
 
       <!-- State Taxable Income Section -->
