@@ -346,6 +346,47 @@ function updateRCSectionForOwner(businessIndex, ownerIndex, isOther) {
     // (If you wish to re-add buttons when not Other, add that logic here.)
 }
 
+function ensureGlobalRCField() {
+    let rcField = document.getElementById('reasonableCompensation');
+    if (!rcField) {
+      rcField = document.createElement('input');
+      rcField.type = 'hidden'; // This makes it not visible.
+      rcField.id = 'reasonableCompensation';
+      rcField.name = 'reasonableCompensation';
+    }
+    return rcField;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const rcField = ensureGlobalRCField();
+    // Append it to the document, for example, to the body or a specific container:
+    document.body.appendChild(rcField);
+});
+
+function updateAggregateResComp() {
+    console.log("updateAggregateResComp() called");
+    let totalRC = 0;
+    const numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
+    for (let i = 1; i <= numBusinesses; i++) {
+        const numOwnersSelect = document.getElementById(`numOwnersSelect${i}`);
+        if (numOwnersSelect) {
+            const numOwners = parseInt(numOwnersSelect.value, 10) || 0;
+            for (let j = 1; j <= numOwners; j++) {
+                const compField = document.getElementById(`business${i}OwnerComp${j}`);
+                if (compField) {
+                    let compVal = unformatCurrency(compField.value);
+                    totalRC += compVal;
+                }
+            }
+        }
+    }
+    const rcField = document.getElementById('reasonableCompensation');
+    if (rcField) {
+        rcField.value = formatCurrency(String(totalRC));
+        console.log("Global RC Updated to:", rcField.value);
+    }
+}
+
 //--------------------------------//
 // 4. DYNAMIC DEPENDENTS CREATION //
 //--------------------------------//
@@ -1729,7 +1770,9 @@ function buildTwoOwnerEntry({
         const isOther = nameSelect.value.trim().toLowerCase() === 'other';
         updateRCSectionForOwner(businessIndex, ownerIndex, isOther);
         updateBusinessOwnerResCom(businessIndex);
-    });
+        updateAggregateResComp(); // update the global RC field
+        recalculateTotals();      // recalc taxes using the new RC value
+    });    
 
     // 2) Reasonable Compensation field for S‑Corp
     if (showReasonableComp) {
@@ -1813,9 +1856,16 @@ function buildSingleOwnerDropdown({
     // Attach event listener to update RC section if "Other" is selected.
     nameSelect.addEventListener('change', function() {
         const isOther = nameSelect.value.trim().toLowerCase() === 'other';
+        // Update the RC section for this owner. This will lock/unlock the field.
         updateRCSectionForOwner(businessIndex, ownerIndex, isOther);
+        // Update the RC value for this business block.
         updateBusinessOwnerResCom(businessIndex);
+        // Aggregate all business RC values into the global "reasonableCompensation" field.
+        updateAggregateResComp();
+        // Finally, recalculate all totals so that your tax functions use the updated RC.
+        recalculateTotals();
     });
+    
 
     if (showReasonableComp) {
         const resCompSection = createResCompSection(businessIndex, ownerIndex);
@@ -1872,6 +1922,19 @@ function buildThreeOwnerEntry({
     } else {
         fillName = 'Other';
     }
+
+    nameSelect.addEventListener('change', function() {
+        const isOther = nameSelect.value.trim().toLowerCase() === 'other';
+        // Update the RC section (lock/unlock field) based on the owner selection.
+        updateRCSectionForOwner(businessIndex, ownerIndex, isOther);
+        // Transfer the W‑2 “Res Comp” value into this business block’s RC field.
+        updateBusinessOwnerResCom(businessIndex);
+        // Recalculate the global RC field from all business blocks.
+        updateAggregateResComp();
+        // Recalculate all totals so that employer taxes are calculated with the new RC value.
+        recalculateTotals();
+    });
+    
 
     const opt = document.createElement('option');
     opt.value = fillName;
@@ -2736,6 +2799,7 @@ function updateBusinessOwnerResCom(businessIndex) {
         console.warn(`[updateBusinessOwnerResCom] Missing element for owner ${i} in business ${businessIndex}`);
       }
     }
+    updateAggregateResComp();
 }
 
 function updateAllBusinessOwnerResCom() {
@@ -2904,8 +2968,6 @@ function recalculateTotals() {
             }
         }
     }
-    console.log('Businesses Net Total:', businessesNetTotal);
-      
 
     // Update the new "Net Total of All Businesses" field
     const netTotalBusinessesInput = document.getElementById('netTotalBusinesses');
@@ -2920,7 +2982,6 @@ function recalculateTotals() {
         const netVal = unformatCurrency(netValStr);
         scheduleEsNetTotal += netVal;
     }
-    console.log('Schedule Es Net Total:', scheduleEsNetTotal);
 
     const totalIncomeVal = 
         finalWages +
@@ -2940,7 +3001,6 @@ function recalculateTotals() {
         interestPrivateBonds +
         passiveActivityLossAdjustments +
         qualifiedBusinessDeduction;
-        console.log('totalIncomeVal (before formatting):', totalIncomeVal);
 
     document.getElementById('totalIncome').value = 
         isNaN(totalIncomeVal) 
@@ -2948,7 +3008,6 @@ function recalculateTotals() {
             : formatCurrency(String(parseInt(totalIncomeVal)));
     
         const totalOfAllIncomeVal = totalIncomeVal;
-        console.log('totalOfAllIncomeVal:', totalOfAllIncomeVal);
         document.getElementById('totalOfAllIncome').value = isNaN(totalOfAllIncomeVal) 
             ? '' 
             : formatCurrency(String(parseInt(totalOfAllIncomeVal)));
@@ -2972,10 +3031,11 @@ function recalculateTotals() {
     document.getElementById('totalAdjustedGrossIncome').value = isNaN(totalAdjustedGrossIncomeVal)
         ? ''
         : parseInt(totalAdjustedGrossIncomeVal);
-        console.log('totalAdjustedGrossIncomeVal:', totalAdjustedGrossIncomeVal);
 
         updateSelfEmploymentTax();
         updateTaxableIncome();
+        updateAggregateResComp();
+        calculateEmployerEmployeeTaxes();
 }
 
 //-----------------------------------------------------//
@@ -3072,6 +3132,13 @@ deductionFields.forEach(fieldId => {
         field.addEventListener('input', recalculateDeductions);
         field.addEventListener('change', recalculateDeductions);
     }
+});
+
+document.querySelectorAll("input[id*='OwnerComp']").forEach(input => {
+    input.addEventListener('blur', () => {
+         updateAggregateResComp();
+         recalculateTotals();
+    });
 });
 
 //-----------------------------------------------------------//
@@ -4168,6 +4235,7 @@ function calculateDetailedSelfEmploymentTax() {
       const halfSelfEmploymentTaxDeduction = seTaxExcludingAdditional / 2;
   
       // Debug logs (optional)
+      console.log("---------------------------------------------------------------------");
       console.log("MFJ Branch:");
       console.log("Client W-2:", clientW2, "Spouse W-2:", spouseW2);
       console.log("Client SE Income:", clientSEIncome, "Spouse SE Income:", spouseSEIncome);
@@ -4178,6 +4246,7 @@ function calculateDetailedSelfEmploymentTax() {
       console.log("SE Tax (Excl. Additional):", seTaxExcludingAdditional);
       console.log("Additional Medicare Tax:", additionalMedicareTax);
       console.log("Half SE Tax Deduction:", halfSelfEmploymentTaxDeduction);
+      console.log("---------------------------------------------------------------------");
   
       return {
         seTaxExcludingAdditional,
@@ -4285,4 +4354,73 @@ function sumEffectiveW2ForMedicare() {
     }
     return totalEffectiveW2;
 }  
-  
+
+//---------------------------------//
+// 27. EMPLOYER AND EMPLOYEE TAXES //
+//---------------------------------//
+
+function calculateEmployerEmployeeTaxes() {
+    // 1. Determine the tax year and set the Social Security wage base.
+    const taxYear = document.getElementById('year').value;
+    const wageBaseMap = {
+        "2020": 137700,
+        "2021": 142800,
+        "2022": 147000,
+        "2023": 160200,
+        "2024": 168600,
+        "2025": 176100
+    };
+    const SOCIAL_SECURITY_WAGE_BASE = wageBaseMap[taxYear] || 0;
+
+    // 2. Sum total W-2 wages using your existing helper function.
+    const { totalW2Wages } = sumW2Wages();
+
+    // 3. Calculate employee payroll taxes.
+    const employeeSocialSecurityTax = Math.min(totalW2Wages, SOCIAL_SECURITY_WAGE_BASE) * 0.062;
+    const employeeMedicareTax = totalW2Wages * 0.0145;
+    const employeeTotalTax = employeeSocialSecurityTax + employeeMedicareTax;
+
+    // 4. Determine if Reasonable Compensation is reported.
+    //    (Assumes you have an input field with id "reasonableCompensation" that aggregates RC values.)
+    const rcValue = getFieldValue('reasonableCompensation');
+
+    // 5. Calculate employer payroll taxes only if RC is greater than 0.
+    let employerTotalTax = 0;
+    if (rcValue > 0) {
+        const employerSocialSecurityTax = Math.min(rcValue, SOCIAL_SECURITY_WAGE_BASE) * 0.062;
+        const employerMedicareTax = rcValue * 0.0145;
+        employerTotalTax = employerSocialSecurityTax + employerMedicareTax;
+    }
+    // Otherwise, if no reasonable compensation is reported, employer taxes remain zero.
+
+    // 6. Update the UI summary fields.
+    const employeeTaxField = document.getElementById('employeeTaxes');
+    if (employeeTaxField) {
+        employeeTaxField.value = formatCurrency(String(Math.round(employeeTotalTax)));
+    }
+    const employerTaxField = document.getElementById('employerTaxes');
+    if (employerTaxField) {
+        employerTaxField.value = formatCurrency(String(Math.round(employerTotalTax)));
+    }
+
+    // Optional: Log values for debugging.
+    console.log("---------------------------------------------------------------------");
+    console.log("Employee Payroll Taxes:");
+    console.log("  Social Security Tax =", employeeSocialSecurityTax);
+    console.log("  Medicare Tax =", employeeMedicareTax);
+    console.log("  Total =", employeeTotalTax);
+    console.log("Employer Payroll Taxes (RC > 0 ?):", rcValue > 0 ? employerTotalTax : 0);
+    console.log("---------------------------------------------------------------------");
+
+    // Return an object with the calculated values if needed.
+    return {
+        employee: {
+            socialSecurity: employeeSocialSecurityTax,
+            medicare: employeeMedicareTax,
+            total: employeeTotalTax
+        },
+        employer: {
+            total: employerTotalTax
+        }
+    };
+}
