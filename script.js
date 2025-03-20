@@ -387,6 +387,64 @@ function updateAggregateResComp() {
     }
 }
 
+function getStateTaxKey(stateAbbrev) {
+    // Map state abbreviations to the full key used in your tax mapping.
+    const stateMapping = {
+      "AL": "Alabama Taxes",
+      "AK": "Alaska Taxes",
+      "AZ": "Arizona Taxes",
+      "AR": "Arkansas Taxes",
+      "CA": "California Taxes",
+      "CO": "Colorado Taxes",
+      "CT": "Connecticut Taxes",
+      "DE": "Delaware Taxes",
+      "FL": "Florida Taxes",
+      "GA": "Georgia Taxes",
+      "HI": "Hawaii Taxes",
+      "ID": "Idaho Taxes",
+      "IL": "Illinois Taxes",
+      "IN": "Indiana Taxes",
+      "IA": "Iowa Taxes",
+      "KS": "Kansas Taxes",
+      "KY": "Kentucky Taxes",
+      "LA": "Louisiana Taxes",
+      "ME": "Maine Taxes",
+      "MD": "Maryland Taxes",
+      "MA": "Massachusetts Taxes",
+      "MI": "Michigan Taxes",
+      "MN": "Minnesota Taxes",
+      "MS": "Mississippi Taxes",
+      "MO": "Missouri Taxes",
+      "MT": "Montana Taxes",
+      "NE": "Nebraska Taxes",
+      "NV": "Nevada Taxes",
+      "NH": "New Hampshire Taxes",
+      "NJ": "New Jersey Taxes",
+      "NM": "New Mexico Taxes",
+      "NY": "New York Taxes",
+      "NC": "North Carolina Taxes",
+      "ND": "North Dakota Taxes",
+      "OH": "Ohio Taxes",
+      "OK": "Oklahoma Taxes",
+      "OR": "Oregon Taxes",
+      "PA": "Pennsylvania Taxes",
+      "RI": "Rhode Island Taxes",
+      "SC": "South Carolina Taxes",
+      "SD": "South Dakota Taxes",
+      "TN": "Tennessee Taxes",
+      "TX": "Texas Taxes",
+      "UT": "Utah Taxes",
+      "VT": "Vermont Taxes",
+      "VA": "Virginia Taxes",
+      "WA": "Washington Taxes",
+      "DC": "Washington D.C. Taxes", // if applicable
+      "WV": "West Virginia Taxes",
+      "WI": "Wisconsin Taxes",
+      "WY": "Wyoming Taxes"
+    };
+    return stateMapping[stateAbbrev] || "";
+}
+
 //--------------------------------//
 // 4. DYNAMIC DEPENDENTS CREATION //
 //--------------------------------//
@@ -3195,6 +3253,17 @@ document.getElementById('state').addEventListener('input', function() {
     const selectStateEl = document.getElementById('selectState');
     selectStateEl.value = this.value;
     selectStateEl.classList.add('auto-copied');
+    
+    // NEW: Trigger update on all W-2 blocks so FUTA and "Unemployment 2022 - 2025:" update automatically
+    const w2Blocks = document.querySelectorAll('.w2-block');
+    w2Blocks.forEach(block => {
+      // Find the wages input field in each W-2 block
+      const wagesInput = block.querySelector("input[id^='w2Wages_']");
+      if (wagesInput) {
+        // Dispatch a "blur" event so updateW2Mapping() is re-run for that block
+        wagesInput.dispatchEvent(new Event('blur'));
+      }
+    });
 });
 
 //-----------------------------//
@@ -3908,22 +3977,39 @@ function addW2Block() {
         const isClientBusinessSelect = document.getElementById('w2IsClientBusiness_' + w2Counter);
         const isBusinessRelated = (isClientBusinessSelect.value === 'Yes');
     
-        let unemploymentTax = 0;
+
+        let unemploymentTaxCustom = 0; // for Unemployment 2022 - 2025
         if (isBusinessRelated) {
-            // Get the state unemployment tax dropdown and determine FUTA tax rate.
             const stateTaxSelect = document.getElementById('w2StateUnemploymentTax_' + w2Counter);
-            // Use 6% if "No", and 0.6% if "Yes" (or default)
-            const FUTA_TAX_RATE = (stateTaxSelect && stateTaxSelect.value === 'No') ? 0.06 : 0.006;
-            const WAGE_LIMIT = 7000;  // FUTA applies only to the first $7,000 of wages
-            unemploymentTax = Math.min(finalWage, WAGE_LIMIT) * FUTA_TAX_RATE;
+            // Update the FUTA field correctly by passing finalWage and the state value:
+            const futaValue = calculateFUTA(finalWage, stateTaxSelect.value);
+            const unemploymentFUTAInput = document.getElementById('w2UnemploymentTax_' + w2Counter);
+            if (unemploymentFUTAInput) {
+                unemploymentFUTAInput.value = formatCurrency(futaValue.toFixed(2));
+            }
+            
+            // Now update the "Unemployment 2022 - 2025:" field using your custom function.
+            // (Make sure your calculateUnemploymentTax() function is defined and returns a number.)
+            const taxYear = document.getElementById('year').value;
+            // Get the full state key from the Personal Information state field:
+            const stateAbbrev = document.getElementById('state').value;
+            const stateTaxKey = getStateTaxKey(stateAbbrev);
+            const unemployment2022_2025Value = calculateUnemploymentTax(taxYear, stateTaxKey, finalWage, "Yes");
+            const unemployment2022_2025Input = document.getElementById('w2Unemployment2022_2025_' + w2Counter);
+            if (unemployment2022_2025Input) {
+                unemployment2022_2025Input.value = formatCurrency(unemployment2022_2025Value.toFixed(2));
+            }
+        } else {
+            // If not business related, clear FUTA and "Unemployment 2022 - 2025:" fields:
+            const unemploymentFUTAInput = document.getElementById('w2UnemploymentTax_' + w2Counter);
+            if (unemploymentFUTAInput) {
+                unemploymentFUTAInput.value = "";
+            }
+            const unemployment2022_2025Input = document.getElementById('w2Unemployment2022_2025_' + w2Counter);
+            if (unemployment2022_2025Input) {
+                unemployment2022_2025Input.value = "";
+            }
         }
-    
-        // Update the Unemployment Tax field
-        const unemploymentTaxInput = document.getElementById('w2UnemploymentTax_' + w2Counter);
-        if (unemploymentTaxInput) {
-            unemploymentTaxInput.value = formatCurrency(unemploymentTax.toFixed(2));
-        }
-    
         recalculateTotals();
     
         // Build or update the mapping object
@@ -3931,7 +4017,7 @@ function addW2Block() {
             wage: wageVal,
             medicareWages: medicareWagesVal,
             isBusinessRelated: isBusinessRelated,
-            unemploymentTax: unemploymentTax
+            unemploymentTax: unemploymentTaxCustom
         };
     
         mapping.client = (document.getElementById('filingStatus').value === 'Married Filing Jointly' &&
@@ -4023,6 +4109,22 @@ function addW2Block() {
     medicareTaxGroup.appendChild(medicareTaxInput);
     collapsibleContent.appendChild(medicareTaxGroup);  
 
+    // --- Unemployment 2022 - 2025 ---
+    const unemployment2022_2025Group = document.createElement('div');
+    unemployment2022_2025Group.classList.add('form-group');
+    const unemployment2022_2025Label = document.createElement('label');
+    unemployment2022_2025Label.setAttribute('for', 'w2Unemployment2022_2025_' + w2Counter);
+    unemployment2022_2025Label.textContent = 'Unemployment 2022 - 2025:';
+    unemployment2022_2025Group.appendChild(unemployment2022_2025Label);
+    const unemployment2022_2025Input = document.createElement('input');
+    unemployment2022_2025Input.type = 'text';
+    unemployment2022_2025Input.id = 'w2Unemployment2022_2025_' + w2Counter;
+    unemployment2022_2025Input.name = 'w2Unemployment2022_2025_' + w2Counter;
+    unemployment2022_2025Input.classList.add('currency-field');
+    unemployment2022_2025Input.readOnly = true;  // Make it read-only
+    unemployment2022_2025Group.appendChild(unemployment2022_2025Input);
+    collapsibleContent.appendChild(unemployment2022_2025Group);
+
     // --- Employer State Unemployment Tax Question ---
     const stateTaxGroup = document.createElement('div');
     stateTaxGroup.classList.add('form-group');
@@ -4091,20 +4193,20 @@ function addW2Block() {
     // --- State Income Tax ---
     const stateIncomeTaxGroup = document.createElement('div');
     stateIncomeTaxGroup.classList.add('form-group');
-    
+
     const stateIncomeTaxLabel = document.createElement('label');
     stateIncomeTaxLabel.setAttribute('for', 'w2StateTaxWithheld_' + w2Counter);
     stateIncomeTaxLabel.textContent = 'State Income Tax Withheld:';
     // Append the label to the group (not the other way around)
     stateIncomeTaxGroup.appendChild(stateIncomeTaxLabel);
-    
+
     const stateIncomeTaxInput = document.createElement('input');
     stateIncomeTaxInput.type = 'text';
     stateIncomeTaxInput.id = 'w2StateTaxWithheld_' + w2Counter;
     stateIncomeTaxInput.name = 'w2StateTaxWithheld_' + w2Counter;
     stateIncomeTaxInput.classList.add('currency-field');
     stateIncomeTaxGroup.appendChild(stateIncomeTaxInput);
-    
+
     collapsibleContent.appendChild(stateIncomeTaxGroup);
 
     // --- How many Codes are there in Box 12 of W-2? ---
@@ -4512,22 +4614,249 @@ function calculateEmployerEmployeeTaxes() {
 }
 
 // Helper function to calculate FUTA (Federal Unemployment Tax Act)
-// Helper function to calculate FUTA (Federal Unemployment Tax Act)
-function calculateFUTA(stateUnemploymentPaid) {
-    const WAGE_LIMIT = 7000;  // FUTA applies only to the first $7,000 of wages
-
-    // Adjust the FUTA tax rate based on whether state unemployment tax is paid
+function calculateFUTA(wageAmount, stateUnemploymentPaid) {
+    const WAGE_LIMIT = 7000; // FUTA applies only to the first $7,000 of wages
     const FUTA_TAX_RATE = stateUnemploymentPaid === 'No' ? 0.06 : 0.006; // 6% if "No", 0.6% if "Yes"
-
-    // Get all the unemployment tax input fields
-    const unemploymentTaxInputs = document.querySelectorAll("input[id^='w2UnemploymentTax_']");
-    let totalUnemploymentTax = 0;
-
-    // Sum the values from all unemployment tax input fields
-    unemploymentTaxInputs.forEach(input => {
-        totalUnemploymentTax += unformatCurrency(input.value || '0');
-    });
-
-    // Apply the FUTA tax rate to the wage value (capped at $7,000)
-    return Math.min(totalUnemploymentTax, WAGE_LIMIT) * FUTA_TAX_RATE;
+    return Math.min(wageAmount, WAGE_LIMIT) * FUTA_TAX_RATE;
 }
+
+function calculateUnemploymentTax(year, stateTax, wageAmount, isClientBusiness) {
+    // Only perform the calculation if the compensation is from the client's business.
+    if (isClientBusiness !== "Yes") {
+      return "";
+    }
+  
+    let mapping;
+    switch (parseInt(year, 10)) {
+      case 2022:
+        mapping = {
+          "Alabama Taxes": { limit: 8000, rate: 0.027 },
+          "Alaska Taxes": { limit: 45200, rate: 0.0237 },
+          "Arizona Taxes": { limit: 7000, rate: 0.02 },
+          "Arkansas Taxes": { limit: 10000, rate: 0.031 },
+          "California Taxes": { limit: 7000, rate: 0.034 },
+          "Colorado Taxes": { limit: 17000, rate: 0.017 },
+          "Connecticut Taxes": { limit: 15000, rate: 0.03 },
+          "Delaware Taxes": { limit: 16500, rate: 0.018 },
+          "District of Columbia Taxes": { limit: 9000, rate: 0.027 },
+          "Florida Taxes": { limit: 7000, rate: 0.027 },
+          "Georgia Taxes": { limit: 9500, rate: 0.0264 },
+          "Hawaii Taxes": { limit: 51600, rate: 0.03 },
+          "Idaho Taxes": { limit: 46500, rate: 0.0097 },
+          "Illinois Taxes": { limit: 12960, rate: 0.03525 },
+          "Indiana Taxes": { limit: 9500, rate: 0.025 },
+          "Iowa Taxes": { limit: 34800, rate: 0.01 },
+          "Kansas Taxes": { limit: 14000, rate: 0.027 },
+          "Kentucky Taxes": { limit: 11100, rate: 0.027 },
+          "Louisiana Taxes": { limit: 7700, rate: 0.027 },
+          "Maine Taxes": { limit: 12000, rate: 0.0224 },
+          "Maryland Taxes": { limit: 8500, rate: 0.026 },
+          "Massachusetts Taxes": { limit: 15000, rate: 0.0242 },
+          "Michigan Taxes": { limit: 9500, rate: 0.027 },
+          "Minnesota Taxes": { limit: 38000, rate: 0.027 },
+          "Mississippi Taxes": { limit: 14000, rate: 0.01 },
+          "Missouri Taxes": { limit: 11000, rate: 0.02376 },
+          "Montana Taxes": { limit: 38100, rate: 0.027 },
+          "Nebraska Taxes": { limit: 24000, rate: 0.0125 },
+          "Nevada Taxes": { limit: 36600, rate: 0.0295 },
+          "New Hampshire Taxes": { limit: 14000, rate: 0.027 },
+          "New Jersey Taxes": { limit: 39800, rate: 0.028 },
+          "New Mexico Taxes": { limit: 28700, rate: 0.01 },
+          "New York Taxes": { limit: 12000, rate: 0.03125 },
+          "North Carolina Taxes": { limit: 28000, rate: 0.01 },
+          "North Dakota Taxes": { limit: 38400, rate: 0.0102 },
+          "Ohio Taxes": { limit: 9000, rate: 0.027 },
+          "Oklahoma Taxes": { limit: 24800, rate: 0.015 },
+          "Oregon Taxes": { limit: 47700, rate: 0.024 },
+          "Pennsylvania Taxes": { limit: 10000, rate: 0.03689 },
+          "Rhode Island Taxes": { limit: 24600, rate: 0.0098 },
+          "South Carolina Taxes": { limit: 14000, rate: 0.0049 },
+          "South Dakota Taxes": { limit: 15000, rate: 0.012 },
+          "Tennessee Taxes": { limit: 7000, rate: 0.027 },
+          "Texas Taxes": { limit: 9000, rate: 0.027 },
+          "Utah Taxes": { limit: 41600, rate: 0.027 },
+          "Vermont Taxes": { limit: 15500, rate: 0.01 },
+          "Virginia Taxes": { limit: 8000, rate: 0.0273 },
+          "Washington Taxes": { limit: 62500, rate: 0.027 },
+          "West Virginia Taxes": { limit: 12000, rate: 0.027 },
+          "Wisconsin Taxes": { limit: 14000, rate: 0.0305 },
+          "Wyoming Taxes": { limit: 27700, rate: 0.027 }
+        };
+        break;
+      case 2023:
+        mapping = {
+          "Alabama Taxes": { limit: 8000, rate: 0.027 },
+          "Alaska Taxes": { limit: 41500, rate: 0.0237 },
+          "Arizona Taxes": { limit: 7000, rate: 0.02 },
+          "Arkansas Taxes": { limit: 12000, rate: 0.031 },
+          "California Taxes": { limit: 7000, rate: 0.034 },
+          "Colorado Taxes": { limit: 13800, rate: 0.017 },
+          "Connecticut Taxes": { limit: 15000, rate: 0.028 },
+          "Delaware Taxes": { limit: 8500, rate: 0.001 },
+          "District of Columbia Taxes": { limit: 9000, rate: 0.027 },
+          "Florida Taxes": { limit: 7000, rate: 0.027 },
+          "Georgia Taxes": { limit: 9500, rate: 0.027 },
+          "Hawaii Taxes": { limit: 46800, rate: 0.04 },
+          "Idaho Taxes": { limit: 41500, rate: 0.01071 },
+          "Illinois Taxes": { limit: 12900, rate: 0.0395 },
+          "Indiana Taxes": { limit: 9500, rate: 0.025 },
+          "Iowa Taxes": { limit: 29500, rate: 0.01 },
+          "Kansas Taxes": { limit: 14000, rate: 0.027 },
+          "Kentucky Taxes": { limit: 11000, rate: 0.027 },
+          "Louisiana Taxes": { limit: 7500, rate: 0.0009 },
+          "Maine Taxes": { limit: 12000, rate: 0.0219 },
+          "Maryland Taxes": { limit: 8500, rate: 0.023 },
+          "Massachusetts Taxes": { limit: 15000, rate: 0.0143 },
+          "Michigan Taxes": { limit: 9500, rate: 0.027 },
+          "Minnesota Taxes": { limit: 35000, rate: 0.001 },
+          "Mississippi Taxes": { limit: 14000, rate: 0.01 },
+          "Missouri Taxes": { limit: 13500, rate: 0.027 },
+          "Montana Taxes": { limit: 34500, rate: 0.0013 },
+          "Nebraska Taxes": { limit: 9000, rate: 0.0125 },
+          "Nevada Taxes": { limit: 33100, rate: 0.0295 },
+          "New Hampshire Taxes": { limit: 14000, rate: 0.027 },
+          "New Jersey Taxes": { limit: 35700, rate: 0.031 },
+          "New Mexico Taxes": { limit: 25400, rate: 0.01 },
+          "New York Taxes": { limit: 11500, rate: 0.026 },
+          "North Carolina Taxes": { limit: 25400, rate: 0.01 },
+          "North Dakota Taxes": { limit: 39200, rate: 0.0113 },
+          "Ohio Taxes": { limit: 9000, rate: 0.027 },
+          "Oklahoma Taxes": { limit: 17500, rate: 0.015 },
+          "Oregon Taxes": { limit: 43000, rate: 0.021 },
+          "Pennsylvania Taxes": { limit: 10000, rate: 0.03822 },
+          "Rhode Island Taxes": { limit: 24000, rate: 0.0109 },
+          "South Carolina Taxes": { limit: 14000, rate: 0.0045 },
+          "South Dakota Taxes": { limit: 15000, rate: 0.012 },
+          "Tennessee Taxes": { limit: 7000, rate: 0.027 },
+          "Texas Taxes": { limit: 9000, rate: 0.027 },
+          "Utah Taxes": { limit: 35700, rate: 0.003 },
+          "Vermont Taxes": { limit: 16000, rate: 0.01 },
+          "Virginia Taxes": { limit: 8000, rate: 0.025 },
+          "Washington Taxes": { limit: 56200, rate: 0.0125 },
+          "West Virginia Taxes": { limit: 12000, rate: 0.027 },
+          "Wisconsin Taxes": { limit: 14000, rate: 0.0305 },
+          "Wyoming Taxes": { limit: 25800, rate: 0.018 }
+        };
+        break;
+      case 2024:
+        // For 2024, we assume the mapping is the same as for 2023.
+        mapping = {
+          "Alabama Taxes": { limit: 8000, rate: 0.027 },
+          "Alaska Taxes": { limit: 41500, rate: 0.0237 },
+          "Arizona Taxes": { limit: 7000, rate: 0.02 },
+          "Arkansas Taxes": { limit: 12000, rate: 0.031 },
+          "California Taxes": { limit: 7000, rate: 0.034 },
+          "Colorado Taxes": { limit: 13800, rate: 0.017 },
+          "Connecticut Taxes": { limit: 15000, rate: 0.028 },
+          "Delaware Taxes": { limit: 8500, rate: 0.001 },
+          "District of Columbia Taxes": { limit: 9000, rate: 0.027 },
+          "Florida Taxes": { limit: 7000, rate: 0.027 },
+          "Georgia Taxes": { limit: 9500, rate: 0.027 },
+          "Hawaii Taxes": { limit: 46800, rate: 0.04 },
+          "Idaho Taxes": { limit: 41500, rate: 0.01071 },
+          "Illinois Taxes": { limit: 12900, rate: 0.0395 },
+          "Indiana Taxes": { limit: 9500, rate: 0.025 },
+          "Iowa Taxes": { limit: 29500, rate: 0.01 },
+          "Kansas Taxes": { limit: 14000, rate: 0.027 },
+          "Kentucky Taxes": { limit: 11000, rate: 0.027 },
+          "Louisiana Taxes": { limit: 7500, rate: 0.0009 },
+          "Maine Taxes": { limit: 12000, rate: 0.0219 },
+          "Maryland Taxes": { limit: 8500, rate: 0.023 },
+          "Massachusetts Taxes": { limit: 15000, rate: 0.0143 },
+          "Michigan Taxes": { limit: 9500, rate: 0.027 },
+          "Minnesota Taxes": { limit: 35000, rate: 0.001 },
+          "Mississippi Taxes": { limit: 14000, rate: 0.01 },
+          "Missouri Taxes": { limit: 13500, rate: 0.027 },
+          "Montana Taxes": { limit: 34500, rate: 0.0013 },
+          "Nebraska Taxes": { limit: 9000, rate: 0.0125 },
+          "Nevada Taxes": { limit: 33100, rate: 0.0295 },
+          "New Hampshire Taxes": { limit: 14000, rate: 0.027 },
+          "New Jersey Taxes": { limit: 35700, rate: 0.031 },
+          "New Mexico Taxes": { limit: 25400, rate: 0.01 },
+          "New York Taxes": { limit: 11500, rate: 0.026 },
+          "North Carolina Taxes": { limit: 25400, rate: 0.01 },
+          "North Dakota Taxes": { limit: 39200, rate: 0.0113 },
+          "Ohio Taxes": { limit: 9000, rate: 0.027 },
+          "Oklahoma Taxes": { limit: 17500, rate: 0.015 },
+          "Oregon Taxes": { limit: 43000, rate: 0.021 },
+          "Pennsylvania Taxes": { limit: 10000, rate: 0.03822 },
+          "Rhode Island Taxes": { limit: 24000, rate: 0.0109 },
+          "South Carolina Taxes": { limit: 14000, rate: 0.0045 },
+          "South Dakota Taxes": { limit: 15000, rate: 0.012 },
+          "Tennessee Taxes": { limit: 7000, rate: 0.027 },
+          "Texas Taxes": { limit: 9000, rate: 0.027 },
+          "Utah Taxes": { limit: 35700, rate: 0.003 },
+          "Vermont Taxes": { limit: 16000, rate: 0.01 },
+          "Virginia Taxes": { limit: 8000, rate: 0.025 },
+          "Washington Taxes": { limit: 56200, rate: 0.0125 },
+          "West Virginia Taxes": { limit: 12000, rate: 0.027 },
+          "Wisconsin Taxes": { limit: 14000, rate: 0.0305 },
+          "Wyoming Taxes": { limit: 25800, rate: 0.018 }
+        };
+        break;
+      case 2025:
+        mapping = {
+          "Alabama Taxes": { limit: 8000, rate: 0.027 },
+          "Alaska Taxes": { limit: 41500, rate: 0.0237 },
+          "Arizona Taxes": { limit: 7000, rate: 0.02 },
+          "Arkansas Taxes": { limit: 12000, rate: 0.031 },
+          "California Taxes": { limit: 7000, rate: 0.034 },
+          "Colorado Taxes": { limit: 13800, rate: 0.017 },
+          "Connecticut Taxes": { limit: 15000, rate: 0.028 },
+          "Delaware Taxes": { limit: 8500, rate: 0.001 },
+          "District of Columbia Taxes": { limit: 9000, rate: 0.027 },
+          "Florida Taxes": { limit: 7000, rate: 0.027 },
+          "Georgia Taxes": { limit: 9500, rate: 0.027 },
+          "Hawaii Taxes": { limit: 46800, rate: 0.04 },
+          "Idaho Taxes": { limit: 41500, rate: 0.01071 },
+          "Illinois Taxes": { limit: 12900, rate: 0.0395 },
+          "Indiana Taxes": { limit: 9500, rate: 0.025 },
+          "Iowa Taxes": { limit: 29500, rate: 0.01 },
+          "Kansas Taxes": { limit: 14000, rate: 0.027 },
+          "Kentucky Taxes": { limit: 11000, rate: 0.027 },
+          "Louisiana Taxes": { limit: 7500, rate: 0.0009 },
+          "Maine Taxes": { limit: 12000, rate: 0.0219 },
+          "Maryland Taxes": { limit: 8500, rate: 0.023 },
+          "Massachusetts Taxes": { limit: 15000, rate: 0.0143 },
+          "Michigan Taxes": { limit: 9500, rate: 0.027 },
+          "Minnesota Taxes": { limit: 35000, rate: 0.001 },
+          "Mississippi Taxes": { limit: 14000, rate: 0.01 },
+          "Missouri Taxes": { limit: 13500, rate: 0.027 },
+          "Montana Taxes": { limit: 34500, rate: 0.0013 },
+          "Nebraska Taxes": { limit: 9000, rate: 0.0125 },
+          "Nevada Taxes": { limit: 33100, rate: 0.0295 },
+          "New Hampshire Taxes": { limit: 14000, rate: 0.027 },
+          "New Jersey Taxes": { limit: 35700, rate: 0.031 },
+          "New Mexico Taxes": { limit: 25400, rate: 0.01 },
+          "New York Taxes": { limit: 11500, rate: 0.026 },
+          "North Carolina Taxes": { limit: 25400, rate: 0.01 },
+          "North Dakota Taxes": { limit: 39200, rate: 0.0113 },
+          "Ohio Taxes": { limit: 9000, rate: 0.027 },
+          "Oklahoma Taxes": { limit: 17500, rate: 0.015 },
+          "Oregon Taxes": { limit: 43000, rate: 0.021 },
+          "Pennsylvania Taxes": { limit: 10000, rate: 0.03822 },
+          "Rhode Island Taxes": { limit: 24000, rate: 0.0109 },
+          "South Carolina Taxes": { limit: 14000, rate: 0.0045 },
+          "South Dakota Taxes": { limit: 15000, rate: 0.012 },
+          "Tennessee Taxes": { limit: 7000, rate: 0.027 },
+          "Texas Taxes": { limit: 9000, rate: 0.027 },
+          "Utah Taxes": { limit: 35700, rate: 0.003 },
+          "Vermont Taxes": { limit: 16000, rate: 0.01 },
+          "Virginia Taxes": { limit: 8000, rate: 0.025 },
+          "Washington Taxes": { limit: 56200, rate: 0.0125 },
+          "West Virginia Taxes": { limit: 12000, rate: 0.027 },
+          "Wisconsin Taxes": { limit: 14000, rate: 0.0305 },
+          "Wyoming Taxes": { limit: 25800, rate: 0.018 }
+        };
+        break;
+      default:
+        return "-";
+    }
+  
+    if (!mapping.hasOwnProperty(stateTax)) {
+      return 0;
+    }
+  
+    const { limit, rate } = mapping[stateTax];
+    return Math.min(wageAmount, limit) * rate;
+}  
