@@ -3816,6 +3816,12 @@ function addW2Block() {
     isClientBusinessGroup.appendChild(isClientBusinessSelect);
     collapsibleContent.appendChild(isClientBusinessGroup);
 
+        // Add this to the section where you handle the "Is This W-2 Compensation from Client's Business?" field
+        isClientBusinessSelect.addEventListener('change', function () {
+            updateW2Mapping();  // Recalculate W-2 mapping, including unemployment tax, based on the selected value
+            recalculateTotals(); // Update totals after recalculation
+        });
+
     const businessNameGroup = document.createElement('div');
     businessNameGroup.classList.add('form-group');
     businessNameGroup.style.display = 'none';
@@ -3894,23 +3900,44 @@ function addW2Block() {
         let finalWage = (medicareWagesVal > 0) ? medicareWagesVal : wageVal;
     
         if (finalWage <= 0) {
-            delete w2WageMap[w2Block.id]; // Remove mapping if no valid wage exists
+            delete w2WageMap[w2Block.id];
             return;
         }
     
-        let isBusinessRelated = (isClientBusinessSelect.value === 'Yes');
+        // Check if compensation is from client's business
+        const isClientBusinessSelect = document.getElementById('w2IsClientBusiness_' + w2Counter);
+        const isBusinessRelated = (isClientBusinessSelect.value === 'Yes');
     
+        let unemploymentTax = 0;
+        if (isBusinessRelated) {
+            // Get the state unemployment tax dropdown and determine FUTA tax rate.
+            const stateTaxSelect = document.getElementById('w2StateUnemploymentTax_' + w2Counter);
+            // Use 6% if "No", and 0.6% if "Yes" (or default)
+            const FUTA_TAX_RATE = (stateTaxSelect && stateTaxSelect.value === 'No') ? 0.06 : 0.006;
+            const WAGE_LIMIT = 7000;  // FUTA applies only to the first $7,000 of wages
+            unemploymentTax = Math.min(finalWage, WAGE_LIMIT) * FUTA_TAX_RATE;
+        }
+    
+        // Update the Unemployment Tax field
+        const unemploymentTaxInput = document.getElementById('w2UnemploymentTax_' + w2Counter);
+        if (unemploymentTaxInput) {
+            unemploymentTaxInput.value = formatCurrency(unemploymentTax.toFixed(2));
+        }
+    
+        recalculateTotals();
+    
+        // Build or update the mapping object
         let mapping = {
-            wage: wageVal,                  // Store the original wage value
-            medicareWages: medicareWagesVal,  // Store Medicare wages separately
-            isBusinessRelated: isBusinessRelated
+            wage: wageVal,
+            medicareWages: medicareWagesVal,
+            isBusinessRelated: isBusinessRelated,
+            unemploymentTax: unemploymentTax
         };
     
-        // Determine the client association
         mapping.client = (document.getElementById('filingStatus').value === 'Married Filing Jointly' &&
-                          document.getElementById('w2WhoseW2_' + w2Counter))
-                          ? document.getElementById('w2WhoseW2_' + w2Counter).value
-                          : (document.getElementById('firstName').value.trim() || 'Client 1');
+                            document.getElementById('w2WhoseW2_' + w2Counter))
+                            ? document.getElementById('w2WhoseW2_' + w2Counter).value
+                            : (document.getElementById('firstName').value.trim() || 'Client 1');
     
         if (isBusinessRelated) {
             let businessName = businessNameSelect.value.trim();
@@ -3934,6 +3961,7 @@ function addW2Block() {
     
         w2WageMap[w2Block.id] = mapping;
     }
+      
     
     // --- Federal Income Tax Withheld ---
     const federalTaxGroup = document.createElement('div');
@@ -3995,6 +4023,56 @@ function addW2Block() {
     medicareTaxGroup.appendChild(medicareTaxInput);
     collapsibleContent.appendChild(medicareTaxGroup);  
 
+    // --- Employer State Unemployment Tax Question ---
+    const stateTaxGroup = document.createElement('div');
+    stateTaxGroup.classList.add('form-group');
+    const stateTaxLabel = document.createElement('label');
+    stateTaxLabel.setAttribute('for', 'w2StateUnemploymentTax_' + w2Counter);
+    stateTaxLabel.textContent = 'Has the Employer paid State Unemployment Tax?';
+    stateTaxGroup.appendChild(stateTaxLabel);
+
+    const stateTaxSelect = document.createElement('select');
+    stateTaxSelect.id = 'w2StateUnemploymentTax_' + w2Counter;
+    stateTaxSelect.name = 'w2StateUnemploymentTax_' + w2Counter;
+    stateTaxSelect.required = true;
+
+    const yesOption = document.createElement('option');
+    yesOption.value = 'Yes';
+    yesOption.textContent = 'Yes';
+    yesOption.selected = true;
+
+    const noOption = document.createElement('option');
+    noOption.value = 'No';
+    noOption.textContent = 'No';
+
+    stateTaxSelect.appendChild(yesOption);
+    stateTaxSelect.appendChild(noOption);
+
+    stateTaxGroup.appendChild(stateTaxSelect);
+    collapsibleContent.appendChild(stateTaxGroup);
+
+    // --- Unemployment Tax (FUTA) --- 
+    const unemploymentTaxGroup = document.createElement('div');
+    unemploymentTaxGroup.classList.add('form-group');
+    const unemploymentTaxLabel = document.createElement('label');
+    unemploymentTaxLabel.setAttribute('for', 'w2UnemploymentTax_' + w2Counter);
+    unemploymentTaxLabel.textContent = 'Unemployment Tax (FUTA):';
+    unemploymentTaxGroup.appendChild(unemploymentTaxLabel);
+    const unemploymentTaxInput = document.createElement('input');
+    unemploymentTaxInput.type = 'text';
+    unemploymentTaxInput.id = 'w2UnemploymentTax_' + w2Counter;
+    unemploymentTaxInput.name = 'w2UnemploymentTax_' + w2Counter;
+    unemploymentTaxInput.classList.add('currency-field');
+    unemploymentTaxInput.readOnly = true;  // Make it read-only
+    unemploymentTaxGroup.appendChild(unemploymentTaxInput);
+    collapsibleContent.appendChild(unemploymentTaxGroup);
+
+       // Add an event listener for the dropdown to change the FUTA rate
+       stateTaxSelect.addEventListener('change', function() {
+        updateW2Mapping();  // Recalculate W-2 mapping, including unemployment tax
+        recalculateTotals(); // Update totals after recalculation
+    });
+
     // --- State Wages, Tips, etc. ---
     const stateWagesGroup = document.createElement('div');
     stateWagesGroup.classList.add('form-group');
@@ -4011,19 +4089,23 @@ function addW2Block() {
     collapsibleContent.appendChild(stateWagesGroup);   
     
     // --- State Income Tax ---
-    const stateTaxGroup = document.createElement('div');
-    stateTaxGroup.classList.add('form-group');
-    const stateTaxLabel = document.createElement('label');
-    stateTaxLabel.setAttribute('for', 'w2StateTaxWithheld_' + w2Counter);
-    stateTaxLabel.textContent = 'State Income Tax Withheld:';
-    stateTaxGroup.appendChild(stateTaxLabel);
-    const stateTaxInput = document.createElement('input');
-    stateTaxInput.type = 'text';
-    stateTaxInput.id = 'w2StateTaxWithheld_' + w2Counter;
-    stateTaxInput.name = 'w2StateTaxWithheld_' + w2Counter;
-    stateTaxInput.classList.add('currency-field');
-    stateTaxGroup.appendChild(stateTaxInput);
-    collapsibleContent.appendChild(stateTaxGroup);
+    const stateIncomeTaxGroup = document.createElement('div');
+    stateIncomeTaxGroup.classList.add('form-group');
+    
+    const stateIncomeTaxLabel = document.createElement('label');
+    stateIncomeTaxLabel.setAttribute('for', 'w2StateTaxWithheld_' + w2Counter);
+    stateIncomeTaxLabel.textContent = 'State Income Tax Withheld:';
+    // Append the label to the group (not the other way around)
+    stateIncomeTaxGroup.appendChild(stateIncomeTaxLabel);
+    
+    const stateIncomeTaxInput = document.createElement('input');
+    stateIncomeTaxInput.type = 'text';
+    stateIncomeTaxInput.id = 'w2StateTaxWithheld_' + w2Counter;
+    stateIncomeTaxInput.name = 'w2StateTaxWithheld_' + w2Counter;
+    stateIncomeTaxInput.classList.add('currency-field');
+    stateIncomeTaxGroup.appendChild(stateIncomeTaxInput);
+    
+    collapsibleContent.appendChild(stateIncomeTaxGroup);
 
     // --- How many Codes are there in Box 12 of W-2? ---
     const codeNumGroup = document.createElement('div');
@@ -4390,7 +4472,11 @@ function calculateEmployerEmployeeTaxes() {
         const employerSocialSecurityTax = Math.min(rcValue, SOCIAL_SECURITY_WAGE_BASE) * 0.062;
         const employerMedicareTax = rcValue * 0.0145;
         employerTotalTax = employerSocialSecurityTax + employerMedicareTax;
+
+        // 5.1. Add the value from "Unemployment Tax (FUTA):"
+        employerTotalTax += calculateFUTA();
     }
+
     // Otherwise, if no reasonable compensation is reported, employer taxes remain zero.
 
     // 6. Update the UI summary fields.
@@ -4423,4 +4509,25 @@ function calculateEmployerEmployeeTaxes() {
             total: employerTotalTax
         }
     };
+}
+
+// Helper function to calculate FUTA (Federal Unemployment Tax Act)
+// Helper function to calculate FUTA (Federal Unemployment Tax Act)
+function calculateFUTA(stateUnemploymentPaid) {
+    const WAGE_LIMIT = 7000;  // FUTA applies only to the first $7,000 of wages
+
+    // Adjust the FUTA tax rate based on whether state unemployment tax is paid
+    const FUTA_TAX_RATE = stateUnemploymentPaid === 'No' ? 0.06 : 0.006; // 6% if "No", 0.6% if "Yes"
+
+    // Get all the unemployment tax input fields
+    const unemploymentTaxInputs = document.querySelectorAll("input[id^='w2UnemploymentTax_']");
+    let totalUnemploymentTax = 0;
+
+    // Sum the values from all unemployment tax input fields
+    unemploymentTaxInputs.forEach(input => {
+        totalUnemploymentTax += unformatCurrency(input.value || '0');
+    });
+
+    // Apply the FUTA tax rate to the wage value (capped at $7,000)
+    return Math.min(totalUnemploymentTax, WAGE_LIMIT) * FUTA_TAX_RATE;
 }
