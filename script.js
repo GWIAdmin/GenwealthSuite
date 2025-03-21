@@ -4158,7 +4158,7 @@ function addW2Block() {
     unemploymentTaxGroup.classList.add('form-group');
     const unemploymentTaxLabel = document.createElement('label');
     unemploymentTaxLabel.setAttribute('for', 'w2UnemploymentTax_' + w2Counter);
-    unemploymentTaxLabel.textContent = 'Unemployment Tax (FUTA):';
+    unemploymentTaxLabel.textContent = 'FUTA:';
     unemploymentTaxGroup.appendChild(unemploymentTaxLabel);
     const unemploymentTaxInput = document.createElement('input');
     unemploymentTaxInput.type = 'text';
@@ -4574,10 +4574,22 @@ function calculateEmployerEmployeeTaxes() {
         const employerSocialSecurityTax = Math.min(rcValue, SOCIAL_SECURITY_WAGE_BASE) * 0.062;
         const employerMedicareTax = rcValue * 0.0145;
         employerTotalTax = employerSocialSecurityTax + employerMedicareTax;
+        console.log("Employer Social Security Tax:", employerSocialSecurityTax);
+        console.log("Employer Medicare Tax:", employerMedicareTax);
 
         // 5.1. Add the value from "Unemployment Tax (FUTA):"
-        employerTotalTax += calculateFUTA();
+        const stateTaxValue = document.getElementById('w2StateUnemploymentTax_' + w2Counter).value;
+        employerTotalTax += calculateFUTA(rcValue, stateTaxValue);
     }
+        // 5.2. Sum up all the "Unemployment 2022 - 2025:" field values from all W-2 blocks.
+        let unemployment2022_2025Total = 0;
+        const unemploymentFields = document.querySelectorAll("input[id^='w2Unemployment2022_2025_']");
+        unemploymentFields.forEach(field => {
+          const val = unformatCurrency(field.value || '');
+          unemployment2022_2025Total += val;
+        });
+        // Add that total to the employer tax calculation.
+        employerTotalTax += unemployment2022_2025Total;
 
     // Otherwise, if no reasonable compensation is reported, employer taxes remain zero.
 
@@ -4617,6 +4629,9 @@ function calculateEmployerEmployeeTaxes() {
 function calculateFUTA(wageAmount, stateUnemploymentPaid) {
     const WAGE_LIMIT = 7000; // FUTA applies only to the first $7,000 of wages
     const FUTA_TAX_RATE = stateUnemploymentPaid === 'No' ? 0.06 : 0.006; // 6% if "No", 0.6% if "Yes"
+    console.log("Wage Amount:", wageAmount);
+    console.log("State Unemployment Paid:", stateUnemploymentPaid);
+    console.log("FUTA Tax Rate:", FUTA_TAX_RATE);
     return Math.min(wageAmount, WAGE_LIMIT) * FUTA_TAX_RATE;
 }
 
@@ -4850,7 +4865,7 @@ function calculateUnemploymentTax(year, stateTax, wageAmount, isClientBusiness) 
         };
         break;
       default:
-        return "-";
+        return "0";
     }
   
     if (!mapping.hasOwnProperty(stateTax)) {
