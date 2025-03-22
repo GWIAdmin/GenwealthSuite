@@ -617,19 +617,28 @@
 
       <!-- Employer and Employee Taxes Section -->
       <section id="employerEmployeeTaxes">
-        <h2 onclick="toggleCollapsible('employerEmployeeTaxesContent')">Employer and Employee Taxes</h2>
-        <div id="employerEmployeeTaxesContent" class="collapsible">        
-
-        <div class="form-group">
-
+        <h2 onclick="toggleCollapsible('employerEmployeeTaxesContent')">
+          Employer and Employee Taxes
+        </h2>
+        <div id="employerEmployeeTaxesContent" class="collapsible">
           <div class="form-group">
-            <label for="employeeTaxes">Employee Taxes:</label>
-            <input type="text" id="employeeTaxes" name="employeeTaxes" class="currency-field" readonly required>
-          </div>
-  
-          <div class="form-group">
-            <label for="employerTaxes">Employer Taxes:</label>
-            <input type="text" id="employerTaxes" name="employerTaxes" class="currency-field" readonly required>
+            <div class="form-group">
+              <label for="employeeTaxes">Employee Taxes:</label>
+              <input type="text" id="employeeTaxes" name="employeeTaxes" class="currency-field" readonly required>
+            </div>
+            <div class="form-group">
+              <label for="employerTaxes">Employer Taxes:</label>
+              <input type="text" id="employerTaxes" name="employerTaxes" class="currency-field" readonly required>
+            </div>
+            <!-- Static fields for unemployment taxes -->
+            <div class="form-group">
+              <label for="staticUnemployment2022_2025">Unemployment 2022 - 2025:</label>
+              <input type="text" id="staticUnemployment2022_2025" name="staticUnemployment2022_2025" class="currency-field" readonly>
+            </div>
+            <div class="form-group">
+              <label for="staticFUTA">FUTA:</label>
+              <input type="text" id="staticFUTA" name="staticFUTA" class="currency-field" readonly>
+            </div>
           </div>
         </div>
       </section>
