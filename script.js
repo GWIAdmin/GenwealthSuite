@@ -445,6 +445,16 @@ function getStateTaxKey(stateAbbrev) {
     return stateMapping[stateAbbrev] || "";
 }
 
+/**
+ * @typedef {Object} WageMapping
+ * @property {number} wage
+ * @property {number} medicareWages
+ * @property {boolean} isBusinessRelated
+ * @property {number} unemploymentTax
+ * @property {number} [futaValue]
+ * @property {number} [unemploymentValue]
+ */
+
 //--------------------------------//
 // 4. DYNAMIC DEPENDENTS CREATION //
 //--------------------------------//
@@ -2990,6 +3000,9 @@ function recalculateTotals() {
 
     updateAllBusinessOwnerResCom();
 
+    // *** NEW: Update FUTA and Unemployment fields ***
+    updateStaticUnemploymentFields();
+
     const reasonableCompensation = getFieldValue('reasonableCompensation');
     const taxExemptInterest = getFieldValue('taxExemptInterest');
     const taxableInterest = getFieldValue('taxableInterest');
@@ -3765,7 +3778,7 @@ function addW2Block() {
     header.textContent = 'W-2 #' + w2Counter;
     header.style.cursor = 'pointer';
     w2Block.appendChild(header);  
-    
+
     // Create a container for the collapsible content
     const collapsibleContent = document.createElement('div');
     collapsibleContent.classList.add('collapsible-content', 'active');
@@ -3811,17 +3824,17 @@ function addW2Block() {
     if (document.getElementById('filingStatus').value === 'Married Filing Jointly') {
         const whoseW2Group = document.createElement('div');
         whoseW2Group.classList.add('form-group');
-    
+
         const whoseW2Label = document.createElement('label');
         whoseW2Label.setAttribute('for', 'w2WhoseW2_' + w2Counter);
         whoseW2Label.textContent = 'Whose W-2 is this?:';
         whoseW2Group.appendChild(whoseW2Label);
-    
+
         const whoseW2Select = document.createElement('select');
         whoseW2Select.id = 'w2WhoseW2_' + w2Counter;
         whoseW2Select.name = 'w2WhoseW2_' + w2Counter;
         whoseW2Select.required = true;
-    
+
         // Add a "Please Select" option
         const pleaseSelectOption = document.createElement('option');
         pleaseSelectOption.value = '';
@@ -3829,26 +3842,26 @@ function addW2Block() {
         pleaseSelectOption.disabled = true;
         pleaseSelectOption.selected = true;
         whoseW2Select.appendChild(pleaseSelectOption);
-    
+
         // Retrieve names from the form fields;
         // if the spouse field is blank, default its value to "Client 2"
         const clientFirstName = document.getElementById('firstName').value.trim() || 'Client 1';
         const spouseFirstName = document.getElementById('spouseFirstName').value.trim() || 'Client 2';
-    
+
         // Add both options
         const clientOption = document.createElement('option');
         clientOption.value = clientFirstName;
         clientOption.textContent = clientFirstName;
         whoseW2Select.appendChild(clientOption);
-    
+
         const spouseOption = document.createElement('option');
         spouseOption.value = spouseFirstName;
         spouseOption.textContent = spouseFirstName;
         whoseW2Select.appendChild(spouseOption);
-    
+
         whoseW2Group.appendChild(whoseW2Select);
         collapsibleContent.appendChild(whoseW2Group);
-    
+
         // Update header when the dropdown changes
         whoseW2Select.addEventListener('change', updateHeader);
     }
@@ -3948,7 +3961,7 @@ function addW2Block() {
     wagesInput.classList.add('currency-field');
     wagesGroup.appendChild(wagesInput);
     collapsibleContent.appendChild(wagesGroup);
-    
+
     // When the wage input loses focus, format its value and update the mapping
     wagesInput.addEventListener('blur', function() {
         let value = unformatCurrency(wagesInput.value || '0');
@@ -3960,71 +3973,47 @@ function addW2Block() {
      // Also update mapping when the business name dropdown changes
      businessNameSelect.addEventListener('change', updateW2Mapping);
      isClientBusinessSelect.addEventListener('change', updateW2Mapping);
-   
+
      // This function checks that both a positive wage and a valid business selection exist
      // before storing the mapping.
      function updateW2Mapping() {
         let wageVal = unformatCurrency(wagesInput.value || '0');
         let medicareWagesVal = unformatCurrency(medicareWagesInput.value || '0');
         let finalWage = (medicareWagesVal > 0) ? medicareWagesVal : wageVal;
-    
+
         if (finalWage <= 0) {
             delete w2WageMap[w2Block.id];
             return;
         }
-    
+
         // Check if compensation is from client's business
         const isClientBusinessSelect = document.getElementById('w2IsClientBusiness_' + w2Counter);
         const isBusinessRelated = (isClientBusinessSelect.value === 'Yes');
-    
-
-        let unemploymentTaxCustom = 0; // for Unemployment 2022 - 2025
-        if (isBusinessRelated) {
-            const stateTaxSelect = document.getElementById('w2StateUnemploymentTax_' + w2Counter);
-            // Update the FUTA field correctly by passing finalWage and the state value:
-            const futaValue = calculateFUTA(finalWage, stateTaxSelect.value);
-            const unemploymentFUTAInput = document.getElementById('w2UnemploymentTax_' + w2Counter);
-            if (unemploymentFUTAInput) {
-                unemploymentFUTAInput.value = formatCurrency(futaValue.toFixed(2));
-            }
-            
-            // Now update the "Unemployment 2022 - 2025:" field using your custom function.
-            // (Make sure your calculateUnemploymentTax() function is defined and returns a number.)
-            const taxYear = document.getElementById('year').value;
-            // Get the full state key from the Personal Information state field:
-            const stateAbbrev = document.getElementById('state').value;
-            const stateTaxKey = getStateTaxKey(stateAbbrev);
-            const unemployment2022_2025Value = calculateUnemploymentTax(taxYear, stateTaxKey, finalWage, "Yes");
-            const unemployment2022_2025Input = document.getElementById('w2Unemployment2022_2025_' + w2Counter);
-            if (unemployment2022_2025Input) {
-                unemployment2022_2025Input.value = formatCurrency(unemployment2022_2025Value.toFixed(2));
-            }
-        } else {
-            // If not business related, clear FUTA and "Unemployment 2022 - 2025:" fields:
-            const unemploymentFUTAInput = document.getElementById('w2UnemploymentTax_' + w2Counter);
-            if (unemploymentFUTAInput) {
-                unemploymentFUTAInput.value = "";
-            }
-            const unemployment2022_2025Input = document.getElementById('w2Unemployment2022_2025_' + w2Counter);
-            if (unemployment2022_2025Input) {
-                unemployment2022_2025Input.value = "";
-            }
-        }
-        recalculateTotals();
-    
+        
         // Build or update the mapping object
         let mapping = {
             wage: wageVal,
             medicareWages: medicareWagesVal,
             isBusinessRelated: isBusinessRelated,
-            unemploymentTax: unemploymentTaxCustom
+            futaValue: 0,
+            unemploymentTax: 0
         };
-    
+        if (isBusinessRelated) {
+            const stateTaxSelect = document.getElementById('w2StateUnemploymentTax_' + w2Counter);
+            // FUTA: calculate and assign
+            mapping.futaValue = calculateFUTA(finalWage, stateTaxSelect.value);
+        
+            // Unemployment 2022-2025: calculate and assign
+            const taxYear = document.getElementById('year').value;
+            const stateAbbrev = document.getElementById('state').value;
+            const stateTaxKey = getStateTaxKey(stateAbbrev);
+            mapping.unemploymentTax = calculateUnemploymentTax(taxYear, stateTaxKey, finalWage, "Yes");
+        }
         mapping.client = (document.getElementById('filingStatus').value === 'Married Filing Jointly' &&
                             document.getElementById('w2WhoseW2_' + w2Counter))
                             ? document.getElementById('w2WhoseW2_' + w2Counter).value
                             : (document.getElementById('firstName').value.trim() || 'Client 1');
-    
+
         if (isBusinessRelated) {
             let businessName = businessNameSelect.value.trim();
             if (businessName === '' && businessNameSelect.options.length > 1) {
@@ -4044,11 +4033,12 @@ function addW2Block() {
         } else {
             mapping.businessIndex = null;
         }
-    
+
         w2WageMap[w2Block.id] = mapping;
+        recalculateTotals();
     }
-      
-    
+
+
     // --- Federal Income Tax Withheld ---
     const federalTaxGroup = document.createElement('div');
     federalTaxGroup.classList.add('form-group');
@@ -4063,7 +4053,7 @@ function addW2Block() {
     federalTaxInput.classList.add('currency-field');
     federalTaxGroup.appendChild(federalTaxInput);
     collapsibleContent.appendChild(federalTaxGroup);   
-    
+
     // --- Medicare Wages and Tips ---
     const medicareWagesGroup = document.createElement('div');
     medicareWagesGroup.classList.add('form-group');
@@ -4109,21 +4099,21 @@ function addW2Block() {
     medicareTaxGroup.appendChild(medicareTaxInput);
     collapsibleContent.appendChild(medicareTaxGroup);  
 
-    // --- Unemployment 2022 - 2025 ---
-    const unemployment2022_2025Group = document.createElement('div');
-    unemployment2022_2025Group.classList.add('form-group');
-    const unemployment2022_2025Label = document.createElement('label');
-    unemployment2022_2025Label.setAttribute('for', 'w2Unemployment2022_2025_' + w2Counter);
-    unemployment2022_2025Label.textContent = 'Unemployment 2022 - 2025:';
-    unemployment2022_2025Group.appendChild(unemployment2022_2025Label);
-    const unemployment2022_2025Input = document.createElement('input');
-    unemployment2022_2025Input.type = 'text';
-    unemployment2022_2025Input.id = 'w2Unemployment2022_2025_' + w2Counter;
-    unemployment2022_2025Input.name = 'w2Unemployment2022_2025_' + w2Counter;
-    unemployment2022_2025Input.classList.add('currency-field');
-    unemployment2022_2025Input.readOnly = true;  // Make it read-only
-    unemployment2022_2025Group.appendChild(unemployment2022_2025Input);
-    collapsibleContent.appendChild(unemployment2022_2025Group);
+    // // --- Unemployment 2022 - 2025 ---
+    // const unemployment2022_2025Group = document.createElement('div');
+    // unemployment2022_2025Group.classList.add('form-group');
+    // const unemployment2022_2025Label = document.createElement('label');
+    // unemployment2022_2025Label.setAttribute('for', 'w2Unemployment2022_2025_' + w2Counter);
+    // unemployment2022_2025Label.textContent = 'Unemployment 2022 - 2025:';
+    // unemployment2022_2025Group.appendChild(unemployment2022_2025Label);
+    // const unemployment2022_2025Input = document.createElement('input');
+    // unemployment2022_2025Input.type = 'text';
+    // unemployment2022_2025Input.id = 'w2Unemployment2022_2025_' + w2Counter;
+    // unemployment2022_2025Input.name = 'w2Unemployment2022_2025_' + w2Counter;
+    // unemployment2022_2025Input.classList.add('currency-field');
+    // unemployment2022_2025Input.readOnly = true;  // Make it read-only
+    // unemployment2022_2025Group.appendChild(unemployment2022_2025Input);
+    // collapsibleContent.appendChild(unemployment2022_2025Group);
 
     // --- Employer State Unemployment Tax Question ---
     const stateTaxGroup = document.createElement('div');
@@ -4153,21 +4143,22 @@ function addW2Block() {
     stateTaxGroup.appendChild(stateTaxSelect);
     collapsibleContent.appendChild(stateTaxGroup);
 
-    // --- Unemployment Tax (FUTA) --- 
-    const unemploymentTaxGroup = document.createElement('div');
-    unemploymentTaxGroup.classList.add('form-group');
-    const unemploymentTaxLabel = document.createElement('label');
-    unemploymentTaxLabel.setAttribute('for', 'w2UnemploymentTax_' + w2Counter);
-    unemploymentTaxLabel.textContent = 'FUTA:';
-    unemploymentTaxGroup.appendChild(unemploymentTaxLabel);
-    const unemploymentTaxInput = document.createElement('input');
-    unemploymentTaxInput.type = 'text';
-    unemploymentTaxInput.id = 'w2UnemploymentTax_' + w2Counter;
-    unemploymentTaxInput.name = 'w2UnemploymentTax_' + w2Counter;
-    unemploymentTaxInput.classList.add('currency-field');
-    unemploymentTaxInput.readOnly = true;  // Make it read-only
-    unemploymentTaxGroup.appendChild(unemploymentTaxInput);
-    collapsibleContent.appendChild(unemploymentTaxGroup);
+    // // --- Unemployment Tax (FUTA) --- 
+    // const unemploymentTaxGroup = document.createElement('div');
+    // unemploymentTaxGroup.classList.add('form-group');
+    // const unemploymentTaxLabel = document.createElement('label');
+    // unemploymentTaxLabel.setAttribute('for', 'w2UnemploymentTax_' + w2Counter);
+    // unemploymentTaxLabel.textContent = 'Unemployment Tax (FUTA):';
+    // unemploymentTaxLabel.textContent = 'FUTA:';
+    // unemploymentTaxGroup.appendChild(unemploymentTaxLabel);
+    // const unemploymentTaxInput = document.createElement('input');
+    // unemploymentTaxInput.type = 'text';
+    // unemploymentTaxInput.id = 'w2UnemploymentTax_' + w2Counter;
+    // unemploymentTaxInput.name = 'w2UnemploymentTax_' + w2Counter;
+    // unemploymentTaxInput.classList.add('currency-field');
+    // unemploymentTaxInput.readOnly = true;  // Make it read-only
+    // unemploymentTaxGroup.appendChild(unemploymentTaxInput);
+    // collapsibleContent.appendChild(unemploymentTaxGroup);
 
        // Add an event listener for the dropdown to change the FUTA rate
        stateTaxSelect.addEventListener('change', function() {
@@ -4189,7 +4180,7 @@ function addW2Block() {
     stateWagesInput.classList.add('currency-field');
     stateWagesGroup.appendChild(stateWagesInput);
     collapsibleContent.appendChild(stateWagesGroup);   
-    
+
     // --- State Income Tax ---
     const stateIncomeTaxGroup = document.createElement('div');
     stateIncomeTaxGroup.classList.add('form-group');
@@ -4241,7 +4232,7 @@ function addW2Block() {
     removeBtn.type = 'button';
     removeBtn.textContent = 'Remove this W-2?';
     removeBtn.classList.add('remove-w2-btn');
-    
+
     // Updated event listener: when the W-2 block is removed, also remove its wage mapping.
     removeBtn.addEventListener('click', function() {
         // If a mapping exists for this W-2 block in w2WageMap, delete it to reset its value
@@ -4253,7 +4244,7 @@ function addW2Block() {
         // Recalculate totals so that the removal is reflected (including Reasonable Compensation)
         recalculateTotals();
     });
-    
+
     collapsibleContent.appendChild(removeBtn);
 
     // Append the new W-2 block to the container
@@ -4582,14 +4573,10 @@ function calculateEmployerEmployeeTaxes() {
         employerTotalTax += calculateFUTA(rcValue, stateTaxValue);
     }
         // 5.2. Sum up all the "Unemployment 2022 - 2025:" field values from all W-2 blocks.
-        let unemployment2022_2025Total = 0;
-        const unemploymentFields = document.querySelectorAll("input[id^='w2Unemployment2022_2025_']");
-        unemploymentFields.forEach(field => {
-          const val = unformatCurrency(field.value || '');
-          unemployment2022_2025Total += val;
-        });
-        // Add that total to the employer tax calculation.
-        employerTotalTax += unemployment2022_2025Total;
+        const unemploymentTotal = unformatCurrency(
+            document.getElementById('staticUnemployment2022_2025').value || '0'
+          );
+          employerTotalTax += unemploymentTotal;          
 
     // Otherwise, if no reasonable compensation is reported, employer taxes remain zero.
 
@@ -4875,3 +4862,26 @@ function calculateUnemploymentTax(year, stateTax, wageAmount, isClientBusiness) 
     const { limit, rate } = mapping[stateTax];
     return Math.min(wageAmount, limit) * rate;
 }  
+
+function updateStaticUnemploymentFields() {
+    let totalFUTA = 0;
+    let totalUnemployment = 0;
+    for (let key in w2WageMap) {
+      if (w2WageMap.hasOwnProperty(key)) {
+        let mapping = w2WageMap[key];
+        if (mapping.isBusinessRelated) {
+          totalFUTA += mapping.futaValue || 0;
+          totalUnemployment += mapping.unemploymentTax ?? 0;
+        }
+      }
+    }
+    const futaField = document.getElementById('staticFUTA');
+    if (futaField) {
+      futaField.value = formatCurrency(totalFUTA.toFixed(2));
+    }
+    const unemploymentField = document.getElementById('staticUnemployment2022_2025');
+    if (unemploymentField) {
+      unemploymentField.value = formatCurrency(totalUnemployment.toFixed(2));
+    }
+}
+  
