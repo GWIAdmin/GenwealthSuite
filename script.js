@@ -4547,64 +4547,119 @@ function calculateEmployerEmployeeTaxes() {
     };
     const SOCIAL_SECURITY_WAGE_BASE = wageBaseMap[taxYear] || 0;
 
-    // 2. Sum total W-2 wages using your existing helper function.
-    const { totalW2Wages } = sumW2Wages();
-
-    // 3. Calculate employee payroll taxes.
-    const employeeSocialSecurityTax = Math.min(totalW2Wages, SOCIAL_SECURITY_WAGE_BASE) * 0.062;
-    const employeeMedicareTax = totalW2Wages * 0.0145;
-    const employeeTotalTax = employeeSocialSecurityTax + employeeMedicareTax;
-
-    // 4. Determine if Reasonable Compensation is reported.
-    //    (Assumes you have an input field with id "reasonableCompensation" that aggregates RC values.)
-    const rcValue = getFieldValue('reasonableCompensation');
-
-    // 5. Calculate employer payroll taxes only if RC is greater than 0.
-    let employerTotalTax = 0;
-    if (rcValue > 0) {
-        const employerSocialSecurityTax = Math.min(rcValue, SOCIAL_SECURITY_WAGE_BASE) * 0.062;
-        const employerMedicareTax = rcValue * 0.0145;
-        employerTotalTax = employerSocialSecurityTax + employerMedicareTax;
-        console.log("Employer Social Security Tax:", employerSocialSecurityTax);
-        console.log("Employer Medicare Tax:", employerMedicareTax);
-
-        // 5.1. Add the value from "Unemployment Tax (FUTA):"
-        const stateTaxValue = document.getElementById('w2StateUnemploymentTax_' + w2Counter).value;
-        employerTotalTax += calculateFUTA(rcValue, stateTaxValue);
+    // 2. Calculate Employee Payroll Taxes
+    const filingStatus = document.getElementById('filingStatus').value;
+    let employeeSocialSecurityTax = 0;
+    let employeeMedicareTax = 0;
+    if (filingStatus === 'Married Filing Jointly') {
+        const clientName = document.getElementById('firstName').value.trim() || 'Client 1';
+        const spouseName = document.getElementById('spouseFirstName').value.trim() || 'Client 2';
+        let clientW2Total = 0;
+        let spouseW2Total = 0;
+        for (let key in w2WageMap) {
+            if (!w2WageMap.hasOwnProperty(key)) continue;
+            const mapping = w2WageMap[key];
+            if (mapping.client === clientName) {
+                clientW2Total += mapping.wage;
+            } else if (mapping.client === spouseName) {
+                spouseW2Total += mapping.wage;
+            }
+        }
+        const clientSSTax = Math.min(clientW2Total, SOCIAL_SECURITY_WAGE_BASE) * 0.062;
+        const spouseSSTax = Math.min(spouseW2Total, SOCIAL_SECURITY_WAGE_BASE) * 0.062;
+        const clientMedTax = clientW2Total * 0.0145;
+        const spouseMedTax = spouseW2Total * 0.0145;
+        employeeSocialSecurityTax = clientSSTax + spouseSSTax;
+        employeeMedicareTax = clientMedTax + spouseMedTax;
+    } else {
+        const { totalW2Wages } = sumW2Wages();
+        employeeSocialSecurityTax = Math.min(totalW2Wages, SOCIAL_SECURITY_WAGE_BASE) * 0.062;
+        employeeMedicareTax = totalW2Wages * 0.0145;
     }
-        // 5.2. Sum up all the "Unemployment 2022 - 2025:" field values from all W-2 blocks.
-        const unemploymentTotal = unformatCurrency(
-            document.getElementById('staticUnemployment2022_2025').value || '0'
-          );
-          employerTotalTax += unemploymentTotal;          
+    const totalEmployeeTax = employeeSocialSecurityTax + employeeMedicareTax;
 
-    // Otherwise, if no reasonable compensation is reported, employer taxes remain zero.
+    // 3. Calculate Employer Payroll Taxes (based on Reasonable Compensation)
+    let employerTotalTax = 0;
+    // Declare clientRC and spouseRC in the outer scope so they are available later.
+    let clientRC = 0, spouseRC = 0;
+    if (filingStatus === 'Married Filing Jointly') {
+        const clientName = document.getElementById('firstName').value.trim() || 'Client 1';
+        const spouseName = document.getElementById('spouseFirstName').value.trim() || 'Client 2';
+        const rcInputs = document.querySelectorAll("input[id^='business'][id*='OwnerComp']");
+        rcInputs.forEach(input => {
+            const compValue = unformatCurrency(input.value);
+            const match = input.id.match(/business(\d+)OwnerComp(\d+)/);
+            if (match) {
+                const bizIndex = match[1];
+                const ownerIndex = match[2];
+                const ownerNameField = document.getElementById(`business${bizIndex}OwnerName${ownerIndex}`);
+                if (ownerNameField) {
+                    const ownerName = ownerNameField.value.trim();
+                    if (ownerName === clientName) {
+                        clientRC += compValue;
+                    } else if (ownerName === spouseName) {
+                        spouseRC += compValue;
+                    }
+                }
+            }
+        });
+        const clientSSTax_RC = Math.min(clientRC, SOCIAL_SECURITY_WAGE_BASE) * 0.062;
+        const spouseSSTax_RC = Math.min(spouseRC, SOCIAL_SECURITY_WAGE_BASE) * 0.062;
+        const clientMedTax_RC = clientRC * 0.0145;
+        const spouseMedTax_RC = spouseRC * 0.0145;
+        employerTotalTax = clientSSTax_RC + clientMedTax_RC + spouseSSTax_RC + spouseMedTax_RC;
+    } else {
+        const rcValue = getFieldValue('reasonableCompensation');
+        if (rcValue > 0) {
+            const employerSS = Math.min(rcValue, SOCIAL_SECURITY_WAGE_BASE) * 0.062;
+            const employerMed = rcValue * 0.0145;
+            employerTotalTax = employerSS + employerMed;
+        }
+    }
 
-    // 6. Update the UI summary fields.
+    // 4. Add FUTA and Unemployment Taxes
+    // FUTA is normally computed on aggregated wages, but here,
+    // it iterate over each RC wage input and calculate FUTA for each separately.
+    const stateTaxElement = document.getElementById('w2StateUnemploymentTax_' + w2Counter);
+    const unemploymentTotal = unformatCurrency(
+        document.getElementById('staticUnemployment2022_2025').value || '0'
+    );
+    if (stateTaxElement) {
+        let totalFUTA = 0;
+        // Select all RC wage fields; adjust the selector as needed to only target the relevant fields.
+        const rcInputs = document.querySelectorAll("input[id*='OwnerComp']");
+        rcInputs.forEach(function(input) {
+            let compValue = unformatCurrency(input.value);
+            // Compute FUTA for each RC wage independently (each gets its own $7,000 base)
+            totalFUTA += calculateFUTA(compValue, stateTaxElement.value);
+        });
+        employerTotalTax += totalFUTA;
+        employerTotalTax += unemploymentTotal;
+    }
+
+    // 5. Update UI fields.
     const employeeTaxField = document.getElementById('employeeTaxes');
     if (employeeTaxField) {
-        employeeTaxField.value = formatCurrency(String(Math.round(employeeTotalTax)));
+        employeeTaxField.value = formatCurrency(String(Math.round(totalEmployeeTax)));
     }
     const employerTaxField = document.getElementById('employerTaxes');
     if (employerTaxField) {
         employerTaxField.value = formatCurrency(String(Math.round(employerTotalTax)));
     }
 
-    // Optional: Log values for debugging.
     console.log("---------------------------------------------------------------------");
     console.log("Employee Payroll Taxes:");
     console.log("  Social Security Tax =", employeeSocialSecurityTax);
     console.log("  Medicare Tax =", employeeMedicareTax);
-    console.log("  Total =", employeeTotalTax);
-    console.log("Employer Payroll Taxes (RC > 0 ?):", rcValue > 0 ? employerTotalTax : 0);
+    console.log("  Total =", totalEmployeeTax);
+    console.log("Employer Payroll Taxes:", employerTotalTax);
     console.log("---------------------------------------------------------------------");
 
-    // Return an object with the calculated values if needed.
     return {
         employee: {
             socialSecurity: employeeSocialSecurityTax,
             medicare: employeeMedicareTax,
-            total: employeeTotalTax
+            total: totalEmployeeTax
         },
         employer: {
             total: employerTotalTax
