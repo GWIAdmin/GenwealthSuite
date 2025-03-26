@@ -455,6 +455,115 @@ function getStateTaxKey(stateAbbrev) {
  * @property {number} [unemploymentValue]
  */
 
+function validateW2StateBreakdownSum(w2Id) {
+    let sum = 0;
+    for (let i = 1; i <= 4; i++) {
+      const amtEl = document.getElementById(`w2StateBreakdownAmount_${w2Id}_${i}`);
+      if (amtEl) {
+        const amt = unformatCurrency(amtEl.value || "0");
+        sum += amt;
+      }
+    }
+    const wagesEl = document.getElementById(`w2Wages_${w2Id}`);
+    const wagesVal = wagesEl ? unformatCurrency(wagesEl.value || "0") : 0;
+    const errorEl = document.getElementById(`w2StateBreakdownError_${w2Id}`);
+    if (Math.abs(sum - wagesVal) > 1) {
+      errorEl.textContent = "The sum of the state breakdown amounts (" + formatCurrency(String(sum)) + ") does not match Wages, Salaries, Tips, and Other Compensation (" + formatCurrency(String(wagesVal)) + ").";
+    } else {
+      errorEl.textContent = "";
+    }
+}
+
+function updateStateBreakdownDropdowns(w2Id) {
+    // Select all dropdowns in the state breakdown section for this W-2 block
+    const dropdowns = document.querySelectorAll(`[id^="w2StateBreakdownDropdown_${w2Id}_"]`);
+    
+    // Gather all current selections (non-empty)
+    let selectedStates = Array.from(dropdowns).map(dd => dd.value).filter(val => val !== "");
+    
+    // For each dropdown, repopulate its options based on STATES_ARRAY and other selections
+    dropdowns.forEach(dd => {
+      const currentValue = dd.value; // may be "" if not selected
+      dd.innerHTML = "";
+      // Add default option first:
+      const defaultOpt = document.createElement('option');
+      defaultOpt.value = "";
+      defaultOpt.textContent = "Please Select";
+      defaultOpt.disabled = true;
+      defaultOpt.selected = (currentValue === "");
+      dd.appendChild(defaultOpt);
+      
+      STATES_ARRAY.forEach(function(optData) {
+        // Skip a state if it's selected in another dropdown and is not the current value.
+        if (optData.value !== "" && selectedStates.includes(optData.value) && optData.value !== currentValue) {
+          return;
+        }
+        const opt = document.createElement('option');
+        opt.value = optData.value;
+        opt.textContent = optData.text;
+        if (optData.value === currentValue) {
+          opt.selected = true;
+        }
+        dd.appendChild(opt);
+      });
+    });
+}  
+
+const STATES_ARRAY = [
+    { value: "", text: "Please Select" },
+    { value: "AL", text: "Alabama" },
+    { value: "AK", text: "Alaska" },
+    { value: "AZ", text: "Arizona" },
+    { value: "AR", text: "Arkansas" },
+    { value: "CA", text: "California" },
+    { value: "CO", text: "Colorado" },
+    { value: "CT", text: "Connecticut" },
+    { value: "DE", text: "Delaware" },
+    { value: "FL", text: "Florida" },
+    { value: "GA", text: "Georgia" },
+    { value: "HI", text: "Hawaii" },
+    { value: "ID", text: "Idaho" },
+    { value: "IL", text: "Illinois" },
+    { value: "IN", text: "Indiana" },
+    { value: "IA", text: "Iowa" },
+    { value: "KS", text: "Kansas" },
+    { value: "KY", text: "Kentucky" },
+    { value: "LA", text: "Louisiana" },
+    { value: "ME", text: "Maine" },
+    { value: "MD", text: "Maryland" },
+    { value: "MA", text: "Massachusetts" },
+    { value: "MI", text: "Michigan" },
+    { value: "MN", text: "Minnesota" },
+    { value: "MS", text: "Mississippi" },
+    { value: "MO", text: "Missouri" },
+    { value: "MT", text: "Montana" },
+    { value: "NE", text: "Nebraska" },
+    { value: "NV", text: "Nevada" },
+    { value: "NH", text: "New Hampshire" },
+    { value: "NJ", text: "New Jersey" },
+    { value: "NM", text: "New Mexico" },
+    { value: "NY", text: "New York" },
+    { value: "NC", text: "North Carolina" },
+    { value: "ND", text: "North Dakota" },
+    { value: "OH", text: "Ohio" },
+    { value: "OK", text: "Oklahoma" },
+    { value: "OR", text: "Oregon" },
+    { value: "PA", text: "Pennsylvania" },
+    { value: "RI", text: "Rhode Island" },
+    { value: "SC", text: "South Carolina" },
+    { value: "SD", text: "South Dakota" },
+    { value: "TN", text: "Tennessee" },
+    { value: "TX", text: "Texas" },
+    { value: "UT", text: "Utah" },
+    { value: "VT", text: "Vermont" },
+    { value: "VA", text: "Virginia" },
+    { value: "WA", text: "Washington" },
+    { value: "DC", text: "Washington D.C." },
+    { value: "WV", text: "West Virginia" },
+    { value: "WI", text: "Wisconsin" },
+    { value: "WY", text: "Wyoming" }
+];  
+  
 //--------------------------------//
 // 4. DYNAMIC DEPENDENTS CREATION //
 //--------------------------------//
@@ -4143,28 +4252,97 @@ function addW2Block() {
     stateTaxGroup.appendChild(stateTaxSelect);
     collapsibleContent.appendChild(stateTaxGroup);
 
-    // // --- Unemployment Tax (FUTA) --- 
-    // const unemploymentTaxGroup = document.createElement('div');
-    // unemploymentTaxGroup.classList.add('form-group');
-    // const unemploymentTaxLabel = document.createElement('label');
-    // unemploymentTaxLabel.setAttribute('for', 'w2UnemploymentTax_' + w2Counter);
-    // unemploymentTaxLabel.textContent = 'Unemployment Tax (FUTA):';
-    // unemploymentTaxLabel.textContent = 'FUTA:';
-    // unemploymentTaxGroup.appendChild(unemploymentTaxLabel);
-    // const unemploymentTaxInput = document.createElement('input');
-    // unemploymentTaxInput.type = 'text';
-    // unemploymentTaxInput.id = 'w2UnemploymentTax_' + w2Counter;
-    // unemploymentTaxInput.name = 'w2UnemploymentTax_' + w2Counter;
-    // unemploymentTaxInput.classList.add('currency-field');
-    // unemploymentTaxInput.readOnly = true;  // Make it read-only
-    // unemploymentTaxGroup.appendChild(unemploymentTaxInput);
-    // collapsibleContent.appendChild(unemploymentTaxGroup);
-
        // Add an event listener for the dropdown to change the FUTA rate
        stateTaxSelect.addEventListener('change', function() {
         updateW2Mapping();  // Recalculate W-2 mapping, including unemployment tax
         recalculateTotals(); // Update totals after recalculation
     });
+
+    // --- New: State Breakdown Section ---
+    const stateBreakdownContainer = document.createElement('div');
+    stateBreakdownContainer.classList.add('form-group');
+    
+    const stateBreakdownLabel = document.createElement('label');
+    stateBreakdownLabel.textContent = "State Breakdown of Wages (if different from primary state):";
+    stateBreakdownContainer.appendChild(stateBreakdownLabel);
+    
+    const stateBreakdownRowsContainer = document.createElement('div');
+    stateBreakdownRowsContainer.classList.add('state-breakdown-rows-container');
+
+    // Error message container for the state breakdown validation
+    const stateBreakdownError = document.createElement('div');
+    stateBreakdownError.id = `w2StateBreakdownError_${w2Counter}`;
+    stateBreakdownError.classList.add('red-disclaimer');
+    stateBreakdownError.style.marginTop = '12px';
+
+    // Create four rows
+    for (let i = 1; i <= 4; i++) {
+        const rowDiv = document.createElement('div');
+        rowDiv.classList.add('state-breakdown-row');
+
+        // Left column: state dropdown
+        const leftCol = document.createElement('div');
+        leftCol.classList.add('state-breakdown-left');
+        const dropdown = document.createElement('select');
+        dropdown.id = `w2StateBreakdownDropdown_${w2Counter}_${i}`;
+        dropdown.name = `w2StateBreakdownDropdown_${w2Counter}_${i}`;
+
+        // Initially populate dropdown from STATES_ARRAY
+        STATES_ARRAY.forEach(function(optData) {
+            const opt = document.createElement('option');
+            opt.value = optData.value;
+            opt.textContent = optData.text;
+            dropdown.appendChild(opt);
+        });
+
+        // Store the initial value (empty) for later comparison
+        dropdown.dataset.prevValue = dropdown.value;
+
+        leftCol.appendChild(dropdown);
+
+        // Right column: currency input
+        const rightCol = document.createElement('div');
+        rightCol.classList.add('state-breakdown-right');
+        const currencyInput = document.createElement('input');
+        currencyInput.type = 'text';
+        currencyInput.id = `w2StateBreakdownAmount_${w2Counter}_${i}`;
+        currencyInput.name = `w2StateBreakdownAmount_${w2Counter}_${i}`;
+        currencyInput.classList.add('currency-field');
+        currencyInput.addEventListener('blur', function() {
+            currencyInput.value = formatCurrency(String(unformatCurrency(currencyInput.value)));
+            validateW2StateBreakdownSum(w2Counter);
+        });
+        currencyInput.addEventListener('input', function() {
+            validateW2StateBreakdownSum(w2Counter);
+        });
+        rightCol.appendChild(currencyInput);
+
+        rowDiv.appendChild(leftCol);
+        rowDiv.appendChild(rightCol);
+        stateBreakdownRowsContainer.appendChild(rowDiv);
+
+        // Attach a change event listener to each dropdown:
+        dropdown.addEventListener('change', function() {
+            // If the state has changed, clear the corresponding currency input.
+            if (dropdown.dataset.prevValue !== dropdown.value) {
+                const amtInput = document.getElementById(`w2StateBreakdownAmount_${w2Counter}_${i}`);
+                if (amtInput) {
+                    amtInput.value = "";
+                }
+            }
+            // Update stored value
+            dropdown.dataset.prevValue = dropdown.value;
+            // Refresh available options in all dropdowns for this W-2 block.
+            updateStateBreakdownDropdowns(w2Counter);
+            validateW2StateBreakdownSum(w2Counter);
+        });
+    
+    stateBreakdownContainer.appendChild(stateBreakdownRowsContainer);
+    stateBreakdownContainer.appendChild(stateBreakdownError);
+
+    // Append the new section before the State Wages group
+    collapsibleContent.appendChild(stateBreakdownContainer);
+    }
 
     // --- State Wages, Tips, etc. ---
     const stateWagesGroup = document.createElement('div');
@@ -4260,7 +4438,6 @@ function addW2Block() {
     header.addEventListener('click', () => {
         collapsibleContent.classList.toggle('active');
     });
-
 }
 
 function updateAllBusinessReasonableComp() {
