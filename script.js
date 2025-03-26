@@ -832,6 +832,7 @@ function createLabelAndInput(container, id, labelText, type) {
     input.name = id;
     input.required = true;
     container.appendChild(input);
+    return input;
 }
 
 //----------------------//
@@ -1073,8 +1074,18 @@ function createBusinessNameFields(container, uniqueId) {
     businessNameDiv.id = `businessNameEntry_${uniqueId}`;
     businessNameDiv.dataset.uniqueId = uniqueId;
 
-    createLabelAndInput(businessNameDiv, `businessName_${uniqueId}`, `Business ${uniqueId} Name:`, 'text');
-    
+    const nameInput = createLabelAndInput(businessNameDiv, `businessName_${uniqueId}`, `Business ${uniqueId} Name:`, 'text');
+    container.appendChild(businessNameDiv);
+
+    // Add event listener to update dropdowns when the name is changed.
+    if (nameInput) {
+        nameInput.addEventListener('input', function() {
+          // update the store with the current input value
+          businessNameStore[`businessName_${uniqueId}`] = nameInput.value;
+          updateAllW2BusinessDropdowns();
+        });
+      }
+
     const checkboxContainerReports = document.createElement('div');
     checkboxContainerReports.classList.add('checkbox-container');
 
@@ -2973,7 +2984,7 @@ function updateBusinessOwnerResCom(businessIndex) {
           }
         }
       } else {
-        console.warn(`[updateBusinessOwnerResCom] Missing element for owner ${i} in business ${businessIndex}`);
+        //console.warn(`[updateBusinessOwnerResCom] Missing element for owner ${i} in business ${businessIndex}`);
       }
     }
     updateAggregateResComp();
@@ -3875,6 +3886,50 @@ function updateW2CodeDropdowns() {
     });
 }
 
+function updateAllW2BusinessDropdowns() {
+    const businessNameDropdowns = document.querySelectorAll("select[id^='w2BusinessName_']");
+    businessNameDropdowns.forEach(dropdown => {
+        // Only update dropdowns that are visible.
+        if (dropdown.parentElement && dropdown.parentElement.style.display !== 'none') {
+            populateBusinessNameDropdown(dropdown);
+        }
+    });
+}
+
+function populateBusinessNameDropdown(dropdown) {
+    // Remember the current selected value.
+    const currentValue = dropdown.value;
+    dropdown.innerHTML = '';
+    
+    // Create the default option.
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = 'Please Select';
+    defaultOption.disabled = true;
+    defaultOption.selected = true;
+    dropdown.appendChild(defaultOption);
+    
+    const numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
+    let optionExists = false;
+    for (let i = 1; i <= numBusinesses; i++) {
+        const businessName = document.getElementById(`businessName_${i}`)?.value || `Business ${i}`;
+        const option = document.createElement('option');
+        option.value = businessName;
+        option.textContent = businessName;
+        dropdown.appendChild(option);
+        
+        // Check if the current option matches the stored value.
+        if (businessName === currentValue) {
+            optionExists = true;
+        }
+    }
+    
+    // Restore previous selection if it still exists.
+    if (optionExists) {
+        dropdown.value = currentValue;
+    }
+}   
+
 function addW2Block() {
     w2Counter++;
     // Create container for one W-2 block
@@ -4037,25 +4092,10 @@ function addW2Block() {
         }
     });
 
-    function populateBusinessNameDropdown(dropdown) {
-        dropdown.innerHTML = '';
-        const defaultOption = document.createElement('option');
-        defaultOption.value = '';
-        defaultOption.textContent = 'Please Select';
-        defaultOption.disabled = true;
-        defaultOption.selected = true;
-        dropdown.appendChild(defaultOption);
-
-        const numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
-        for (let i = 1; i <= numBusinesses; i++) {
-            const businessName = document.getElementById(`businessName_${i}`)?.value || `Business ${i}`;
-            const option = document.createElement('option');
-            option.value = businessName;
-            option.textContent = businessName;
-            dropdown.appendChild(option);
-        }
-    }
-
+    document.getElementById('numOfBusinesses').addEventListener('input', function() {
+        updateAllW2BusinessDropdowns();
+    });
+    
     // --- Wages, Salaries, Tips, and Other Compensation ---
     const wagesGroup = document.createElement('div');
     wagesGroup.classList.add('form-group');
