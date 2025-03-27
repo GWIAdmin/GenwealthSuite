@@ -4248,22 +4248,6 @@ function addW2Block() {
     medicareTaxGroup.appendChild(medicareTaxInput);
     collapsibleContent.appendChild(medicareTaxGroup);  
 
-    // // --- Unemployment 2022 - 2025 ---
-    // const unemployment2022_2025Group = document.createElement('div');
-    // unemployment2022_2025Group.classList.add('form-group');
-    // const unemployment2022_2025Label = document.createElement('label');
-    // unemployment2022_2025Label.setAttribute('for', 'w2Unemployment2022_2025_' + w2Counter);
-    // unemployment2022_2025Label.textContent = 'Unemployment 2022 - 2025:';
-    // unemployment2022_2025Group.appendChild(unemployment2022_2025Label);
-    // const unemployment2022_2025Input = document.createElement('input');
-    // unemployment2022_2025Input.type = 'text';
-    // unemployment2022_2025Input.id = 'w2Unemployment2022_2025_' + w2Counter;
-    // unemployment2022_2025Input.name = 'w2Unemployment2022_2025_' + w2Counter;
-    // unemployment2022_2025Input.classList.add('currency-field');
-    // unemployment2022_2025Input.readOnly = true;  // Make it read-only
-    // unemployment2022_2025Group.appendChild(unemployment2022_2025Input);
-    // collapsibleContent.appendChild(unemployment2022_2025Group);
-
     // --- Employer State Unemployment Tax Question ---
     const stateTaxGroup = document.createElement('div');
     stateTaxGroup.classList.add('form-group');
@@ -4347,6 +4331,7 @@ function addW2Block() {
         currencyInput.type = 'text';
         currencyInput.id = `w2StateBreakdownAmount_${w2Counter}_${i}`;
         currencyInput.name = `w2StateBreakdownAmount_${w2Counter}_${i}`;
+        currencyInput.placeholder = '$0';
         currencyInput.classList.add('currency-field');
         currencyInput.addEventListener('blur', function() {
             currencyInput.value = formatCurrency(String(unformatCurrency(currencyInput.value)));
