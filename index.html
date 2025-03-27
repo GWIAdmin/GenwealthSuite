@@ -125,8 +125,6 @@
             <input type="text" id="currentAge" name="currentAge">
           </div>
 
-          <section id="spouseSectionID">
-
         <div class="form-group spouseSection" id="spouseSection" style="display:none;">
            <h1>Spouse Information</h1>
 
@@ -151,7 +149,6 @@
           </div>
           
         </div>
-        </section> 
 
           <div class="form-group">
             <label for="state">State:</label>
@@ -246,9 +243,9 @@
             <input type="number" id="numOfBusinesses" name="numOfBusinesses" min="0" required>
           </div>
 
-          <section id="numOfBusinessesSection" >
+          <!-- <section id="numOfBusinessesSection" > -->
             <div id="numOfBusinessesContainer"></div>
-          </section>
+          <!-- </section> -->
           
           <!-- Combined Children/Dependents -->
           <div class="form-group">
@@ -694,16 +691,24 @@
         </div>
 
         <div class="form-group">
-          <label for="totalTax">Total Tax:</label>
-          <input type="text" id="totalTax" name="totalTax" class="currency-field" readonly required>
-        </div>
-
-        <div class="form-group">
           <label for="totalEstimatedDifferenceInFederalAndStateTaxesSaved">Total Estimated Difference in Federal & State Taxes Saved:</label>
           <input type="text" id="totalEstimatedDifferenceInFederalAndStateTaxesSaved" name="totalEstimatedDifferenceInFederalAndStateTaxesSaved" class="currency-field" readonly required>
         </div>
 
       </div>
+      </section>
+
+      <!-- Total Tax -->
+       <section id="totalTaxSection">
+        <h2 onclick="toggleCollapsible('totalTaxContent')">Total Tax:</h2>
+        <div id="totalTaxContent" class="collapsible">
+
+        <div class="form-group">
+          <label for="totalTax">Total Tax:</label>
+          <input type="text" id="totalTax" name="totalTax" class="currency-field" readonly required>
+        </div>
+
+        </div>
       </section>
 
       <!-- Submit Button -->
