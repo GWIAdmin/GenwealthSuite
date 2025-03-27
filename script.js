@@ -569,7 +569,7 @@ const STATES_ARRAY = [
 //--------------------------------//
 
 function saveDependentsData() {
-    const dependentsContainer = document.getElementById('dependentsSection');
+    const dependentsContainer = document.getElementById('dependentsContainer');
     if (!dependentsContainer) return;
     const inputs = dependentsContainer.querySelectorAll('input, select');
     inputs.forEach(input => {
@@ -598,7 +598,7 @@ document.getElementById('numberOfDependents').addEventListener('input', function
     saveDependentsData();
 
     const numDependents = parseInt(this.value, 10);
-    const dependentsContainer = document.getElementById('dependentsSection');
+    const dependentsContainer = document.getElementById('dependentsContainer');
     dependentsContainer.innerHTML = '';
 
     if (!isNaN(numDependents) && numDependents > 0) {

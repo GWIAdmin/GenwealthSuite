@@ -809,11 +809,15 @@ body.dark-mode .w2-code-box {
 /* Dark Mode Overrides for h2 and h3 */
 body.dark-mode h2,
 body.dark-mode h3 {
-  background-color: transparent;
+  background-color: #552583;
   border: none;
-  padding-bottom: 0;
-  border-radius: 0;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  border-radius: 20px;
   border-bottom: 4px solid #552583;
+  border-top: 4px solid #552583;
+  border-right: 4px solid #552583;
+  border-left: 4px solid #552583;
 }
 
 /* Dark Mode Hover Effects for h2 and h3 */
