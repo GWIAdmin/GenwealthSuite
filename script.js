@@ -3124,11 +3124,9 @@ function recalculateTotals() {
     updateStaticUnemploymentFields();
 
     const reasonableCompensation = getFieldValue('reasonableCompensation');
-    const taxExemptInterest = getFieldValue('taxExemptInterest');
     const taxableInterest = getFieldValue('taxableInterest');
     const taxableIRA = getFieldValue('taxableIRA');
     const taxableDividends = getFieldValue('taxableDividends');
-    const qualifiedDividends = getFieldValue('qualifiedDividends');
     const iraDistributions = getFieldValue('iraDistributions');
     const pensions = getFieldValue('pensions');
     const longTermCapitalGains = getFieldValue('longTermCapitalGains');
@@ -3136,7 +3134,6 @@ function recalculateTotals() {
     const otherIncome = getFieldValue('otherIncome');
     const interestPrivateBonds = getFieldValue('interestPrivateBonds');
     const passiveActivityLossAdjustments = getFieldValue('passiveActivityLossAdjustments');
-    const qualifiedBusinessDeduction = getFieldValue('qualifiedBusinessDeduction');
 
     let businessesNetTotal = 0;
     const numBusinessesVal = parseInt(document.getElementById('numOfBusinesses').value || '0', 10);
@@ -3177,11 +3174,9 @@ function recalculateTotals() {
     const totalIncomeVal = 
         finalWages +
         reasonableCompensation +
-        taxExemptInterest +
         taxableInterest +
         taxableIRA +
         taxableDividends +
-        qualifiedDividends +
         iraDistributions +
         pensions +
         longTermCapitalGains +
@@ -3190,8 +3185,7 @@ function recalculateTotals() {
         scheduleEsNetTotal +
         otherIncome +
         interestPrivateBonds +
-        passiveActivityLossAdjustments +
-        qualifiedBusinessDeduction;
+        passiveActivityLossAdjustments;
 
     document.getElementById('totalIncome').value = 
         isNaN(totalIncomeVal) 
@@ -3221,7 +3215,7 @@ function recalculateTotals() {
 
     document.getElementById('totalAdjustedGrossIncome').value = isNaN(totalAdjustedGrossIncomeVal)
         ? ''
-        : parseInt(totalAdjustedGrossIncomeVal);
+        : formatCurrency(String(parseInt(totalAdjustedGrossIncomeVal, 10)));
 
         updateSelfEmploymentTax();
         updateTaxableIncome();
@@ -3262,10 +3256,23 @@ function recalculateDeductions() {
 }
 
 function updateTaxableIncome() {
-    const totalAdjustedGrossIncome = getFieldValue('totalAdjustedGrossIncome');
+    // 1. AGI as raw number
+    const agi = getFieldValue('totalAdjustedGrossIncome');
+
+    // 2. Total deductions (standard or itemized)
     const totalDeductions = getFieldValue('totalDeductions');
-    const taxableIncome = totalAdjustedGrossIncome - totalDeductions;
-    document.getElementById('taxableIncome').value = isNaN(taxableIncome) ? '' : parseInt(taxableIncome);
+
+    // 3. Qualified Business Deduction ONLY pulled here
+    const qbd = getFieldValue('qualifiedBusinessDeduction');
+
+    // 4. Final taxable income
+    const taxableIncome = agi - totalDeductions - qbd;
+
+    // 5. Display as integer
+    document.getElementById('taxableIncome').value =
+        isNaN(taxableIncome)
+            ? ''
+            : formatCurrency(String(parseInt(taxableIncome, 10)));
 }
 
 //-----------------------------------------------------------//
