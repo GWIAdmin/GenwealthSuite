@@ -1,3 +1,5 @@
+import { computeStateTax } from './stateTax.js';
+
 //-------------------------------//
 // 1. SUBMIT HANDLER AND RESULTS //
 //-------------------------------//
@@ -330,6 +332,17 @@ function createResCompSection(businessIndex, ownerIndex, isOtherOwner = false) {
     return container;
 }
 
+/**
+ * Pull taxable income from the form, run it through
+ * computeStateTax, and render into #stateTotalTax.
+ */
+function recalcStateTax() {
+    const taxableIncome = getFieldValue('taxableIncome');
+    const stateAbbrev    = document.getElementById('state').value;      // e.g. "CA", "NY", etc.
+    const year           = parseInt(document.getElementById('year').value, 10) || 2023;
+    const tax            = computeStateTax(taxableIncome, stateAbbrev, year);
+    document.getElementById('stateTotalTax').value = formatCurrency(String(tax));
+}
 
 function updateRCSectionForOwner(businessIndex, ownerIndex, isOther) {
     const rcSection = document.getElementById(`rcSection_${businessIndex}_${ownerIndex}`);
@@ -3139,6 +3152,8 @@ function sumW2Wages() {
 
 function recalculateTotals() {
 
+    recalcStateTax();
+
     // 1. Get updated wage values.
     let {totalW2Wages} = sumW2Wages();
 
@@ -3248,6 +3263,7 @@ function recalculateTotals() {
         document.getElementById('totalAdjustedGrossIncome').value = formatCurrency(String(parseInt(totalAdjustedGrossIncomeVal)));
 
         updateTaxableIncome();
+        recalcStateTax();
         updateNetInvestmentTax();
         updateAggregateResComp();
         calculateEmployerEmployeeTaxes();
@@ -3282,7 +3298,25 @@ function recalculateDeductions() {
         miscellaneousDeductions +
         standardOrItemizedDeduction;
 
-    document.getElementById('totalDeductions').value = isNaN(totalDeductionsVal) ? '' : parseInt(totalDeductionsVal);
+      // ←—— if nothing was entered, fall back to the IRS standard deduction
+    if (totalDeductionsVal === 0) {
+      const year   = parseInt(document.getElementById('year').value, 10);
+      const status = document.getElementById('filingStatus').value;
+      const STD = {
+        2023: {
+          "Single":                   13850,
+          "Married Filing Jointly":   27700,
+          "Married Filing Separately":13850,
+          "Head of Household":        20800
+        }
+        // later years go here…
+      };
+      totalDeductionsVal = STD[year]?.[status] || 0;
+    }
+
+    document.getElementById('totalDeductions').value =
+      isNaN(totalDeductionsVal) ? '' : parseInt(totalDeductionsVal, 10);
+
     updateTaxableIncome();
 }
 
@@ -3389,6 +3423,11 @@ document.addEventListener('blur', function(event) {
 //------------------------------------------//
 
 document.addEventListener('DOMContentLoaded', function() {
+
+    document.getElementById('taxableIncome').addEventListener('input', recalcStateTax);
+    document.getElementById('state').addEventListener('change',   recalcStateTax);
+    document.getElementById('year').addEventListener('change',    recalcStateTax);
+
     recalculateTotals();
     recalculateDeductions();
     updateBlindOptions();
@@ -5257,7 +5296,7 @@ function computeOrdinaryTax(income, filingStatus, year) {
    *   • Step 19–22: apply the 0/15/20% rates to the capital‑gain portion
    *   • Sum them all
    */
-  function computeCapitalGainTax(taxableIncome, qualifiedDividends, longTermGains, filingStatus, year) {
+function computeCapitalGainTax(taxableIncome, qualifiedDividends, longTermGains, filingStatus, year) {
     // 0 – net capital gain
     const netGain = Math.max(0, qualifiedDividends + longTermGains);
   
@@ -5290,80 +5329,86 @@ function computeOrdinaryTax(income, filingStatus, year) {
                   + twentyAmt * 0.20;
   
     return ordinaryTax + gainTax;
-  }
+}
   
-
 /**
- * Recalculates:
- * 1) the “tax” field (via Schedule D worksheet),
- * 2) totalFederalTax = tax + add’l Medicare + netInvestment + SE + otherTaxes − credits,
- * 3) totalTax = totalFederalTax + stateTotalTax,
- * and writes them all (formatted) back to the form.
+ * Recalculates and writes:
+ *   • tax (ordinary + cap‑gain, Schedule D)
+ *   • totalFederalTax
+ *   • totalTax = totalFederalTax + stateTotalTax + employeeTaxes
  */
 function updateTotalTax() {
-    // Basic inputs
-    const taxableIncome               = getFieldValue('taxableIncome');
-    const qualifiedDividends          = getFieldValue('qualifiedDividends');
-    const longTermCapitalGains        = getFieldValue('longTermCapitalGains');
-    const filingStatus                = document.getElementById('filingStatus').value;
-    const year                        = parseInt(document.getElementById('year').value, 10);
-  
-    // 1) Compute “tax” from Schedule D
+    // 1) Gather the inputs you already have
+    const taxableIncome        = getFieldValue('taxableIncome');
+    const qualifiedDividends   = getFieldValue('qualifiedDividends');
+    const longTermGains        = getFieldValue('longTermCapitalGains');
+    const filingStatus         = document.getElementById('filingStatus').value;
+    const year                 = parseInt(document.getElementById('year').value, 10);
+
+    // 2) Compute “tax” via your Schedule D function
     const computedTax = Math.round(
       computeCapitalGainTax(
         taxableIncome,
         qualifiedDividends,
-        longTermCapitalGains,
+        longTermGains,
         filingStatus,
         year
       )
     );
-  
-    // 2) Other components
-    const additionalMedicare        = getFieldValue('additionalMedicareTax');
-    const netInvestment             = getFieldValue('netInvestmentTax');
-    const selfEmployment            = getFieldValue('selfEmploymentTax');
-    const otherTaxes                = getFieldValue('otherTaxes');
-  
-    // 3) Credits
-    const foreignTaxCredit             = getFieldValue('foreignTaxCredit');
-    const priorYearMinTaxCredit        = getFieldValue('priorYearMinimumTaxCredit');
-    const nonRefundableCredits         = getFieldValue('nonrefundablePersonalCredits');
-    const generalBusinessCredit        = getFieldValue('generalBusinessCredit');
-    const childTaxCredit               = getFieldValue('childTaxCredit');
-    const otherCredits                 = getFieldValue('otherCredits');
-  
-    // 4) State tax
-    const stateTotalTax             = getFieldValue('stateTotalTax');
-  
-    // 5) Total Federal Tax
+
+    // 3) Other income‑tax pieces
+    const additionalMedicare   = getFieldValue('additionalMedicareTax');
+    const netInvestment        = getFieldValue('netInvestmentTax');
+    const selfEmployment       = getFieldValue('selfEmploymentTax');
+    const otherTaxes           = getFieldValue('otherTaxes');
+
+    // 4) Credits
+    const foreignCredit        = getFieldValue('foreignTaxCredit');
+    const minTaxCredit         = getFieldValue('priorYearMinimumTaxCredit');
+    const personalCredits      = getFieldValue('nonrefundablePersonalCredits');
+    const businessCredit       = getFieldValue('generalBusinessCredit');
+    const childCredit          = getFieldValue('childTaxCredit');
+    const otherCredits         = getFieldValue('otherCredits');
+
+    // 5) State tax (California in your case)
+    const stateTotalTax        = getFieldValue('stateTotalTax');
+
+    // 6) Payroll tax lines (FICA)
+    const employeeFICA         = getFieldValue('employeeTaxes');
+    const employerFICA         = getFieldValue('employerTaxes');
+
+    // 7) Build your Total Federal Tax (income‑tax only)
     let totalFed =
         computedTax
       + additionalMedicare
       + netInvestment
       + selfEmployment
       + otherTaxes
-      - foreignTaxCredit
-      - priorYearMinTaxCredit
-      - nonRefundableCredits
-      - generalBusinessCredit
-      - childTaxCredit
+      - foreignCredit
+      - minTaxCredit
+      - personalCredits
+      - businessCredit
+      - childCredit
       - otherCredits;
-  
-    // 6) Formatting helper
+
+    // 8) Formatting helper
     function fmt(amount) {
       const rounded = Math.round(amount);
       const str     = formatCurrency(String(Math.abs(rounded)));
-      return (rounded < 0) ? `(${str})` : str;
+      return rounded < 0 ? `(${str})` : str;
     }
-  
-    // 7) Write back to the form
-    const taxField          = document.getElementById('tax');
-    const fedField          = document.getElementById('totalFederalTax');
-    const totalField        = document.getElementById('totalTax');
-  
+
+    // 9) Write everything back to the form
+    const taxField   = document.getElementById('tax');
+    const fedField   = document.getElementById('totalFederalTax');
+    const totalField = document.getElementById('totalTax');
+
     if (taxField)   taxField.value   = fmt(computedTax);
     if (fedField)   fedField.value   = fmt(totalFed);
-    if (totalField) totalField.value = fmt(totalFed + stateTotalTax);
+
+    if (totalField) {
+      const grandTotal = totalFed + stateTotalTax + employeeFICA + employerFICA;
+      totalField.value = fmt(grandTotal);
+    }
 }
   
