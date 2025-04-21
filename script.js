@@ -3050,6 +3050,36 @@ function updateScheduleENet(index) {
     document.getElementById(`scheduleE${index}Net`).value = formatCurrency(netVal.toString());
 }
 
+/**
+ * Computes your 3.8% Net Investment Income Tax.
+ * NIIT = 3.8% × min( netInvIncome, max(0, MAGI − threshold) )
+ */
+function updateNetInvestmentTax() {
+    // 1) Gather investment lines:
+    const qd    = getFieldValue('qualifiedDividends');
+    const stcg  = getFieldValue('shortTermCapitalGains');
+    const ltcg  = getFieldValue('longTermCapitalGains');
+    const intI  = getFieldValue('taxableInterest');
+    const other = getFieldValue('otherIncome');  // tweak if you have more categories
+    const netInvIncome = qd + stcg + ltcg + intI + other;
+  
+    // 2) Get your Modified AGI and filing‑status threshold
+    const magi = getFieldValue('totalAdjustedGrossIncome');
+    const status = document.getElementById('filingStatus').value;
+    const THRESHOLDS = {
+      "Single": 200000,
+      "Head of Household": 200000,
+      "Married Filing Jointly": 250000,
+      "Married Filing Separately": 125000
+    };
+    const thresh = THRESHOLDS[status] || THRESHOLDS["Single"];
+    const excess = Math.max(0, magi - thresh);
+  
+    // 3) NIIT = 3.8% × min(income, excess)
+    const niit = Math.min(netInvIncome, excess) * 0.038;
+    document.getElementById('netInvestmentTax').value = formatCurrency(String(Math.round(niit)));
+}
+
 //---------------------------------------------------//
 // 11. REAL-TIME CALCULATIONS FOR INCOME/ADJUSTMENTS //
 //---------------------------------------------------//
@@ -3197,6 +3227,8 @@ function recalculateTotals() {
             ? '' 
             : formatCurrency(String(parseInt(totalOfAllIncomeVal)));
 
+    updateSelfEmploymentTax();
+
     const halfSETax = getFieldValue('halfSETax');
     const retirementDeduction = getFieldValue('retirementDeduction');
     const medicalReimbursementPlan = getFieldValue('medicalReimbursementPlan');
@@ -3213,12 +3245,10 @@ function recalculateTotals() {
         alimonyPaid -
         otherAdjustments;
 
-    document.getElementById('totalAdjustedGrossIncome').value = isNaN(totalAdjustedGrossIncomeVal)
-        ? ''
-        : formatCurrency(String(parseInt(totalAdjustedGrossIncomeVal, 10)));
+        document.getElementById('totalAdjustedGrossIncome').value = formatCurrency(String(parseInt(totalAdjustedGrossIncomeVal)));
 
-        updateSelfEmploymentTax();
         updateTaxableIncome();
+        updateNetInvestmentTax();
         updateAggregateResComp();
         calculateEmployerEmployeeTaxes();
         updateTotalTax();
@@ -5150,57 +5180,190 @@ function updateStaticUnemploymentFields() {
     }
 }
 
+//---------------------------------------------//
+// 28. TOTAL FEDERAL AND STATE TAX CALCULATION //
+//---------------------------------------------//
+
 /**
- * Computes:
- *   totalFederalTax = (Tax + Add’l Medicare + Net Investment + SE Tax + Other Taxes)
- *                    − (Foreign Tax Credit + Prior‐Year AMT Credit
- *                       + Nonrefundable Credits + General Business Credit
- *                       + Child Tax Credit + Other Credits)
- *   totalTax        = totalFederalTax + stateTotalTax
- *
- * Writes both #totalFederalTax and #totalTax, formatted as USD.
+ * Compute ordinary-income tax on `income` for given filing status & year.
+ * Uses 2023 IRS brackets; you can extend to 2024+ by adding entries.
+ */
+function computeOrdinaryTax(income, filingStatus, year) {
+    // --- bracket tables keyed by year → status → [ { threshold, rate }, ... ] ---
+    const BRACKETS = {
+      2023: {
+        "Single": [
+          { threshold: 11000, rate: 0.10 },
+          { threshold: 44725, rate: 0.12 },
+          { threshold: 95375, rate: 0.22 },
+          { threshold: 182100, rate: 0.24 },
+          { threshold: 231250, rate: 0.32 },
+          { threshold: 578125, rate: 0.35 },
+          { threshold: Infinity, rate: 0.37 }
+        ],
+        "Married Filing Jointly": [
+          { threshold: 22000, rate: 0.10 },
+          { threshold: 89450, rate: 0.12 },
+          { threshold: 190750, rate: 0.22 },
+          { threshold: 364200, rate: 0.24 },
+          { threshold: 462500, rate: 0.32 },
+          { threshold: 693750, rate: 0.35 },
+          { threshold: Infinity, rate: 0.37 }
+        ],
+        "Married Filing Separately": [
+          { threshold: 11000, rate: 0.10 },
+          { threshold: 44725, rate: 0.12 },
+          { threshold: 95375, rate: 0.22 },
+          { threshold: 182100, rate: 0.24 },
+          { threshold: 231250, rate: 0.32 },
+          { threshold: 346875, rate: 0.35 },
+          { threshold: Infinity, rate: 0.37 }
+        ],
+        "Head of Household": [
+          { threshold: 15700, rate: 0.10 },
+          { threshold: 59750, rate: 0.12 },
+          { threshold: 95350, rate: 0.22 },
+          { threshold: 182100, rate: 0.24 },
+          { threshold: 231250, rate: 0.32 },
+          { threshold: 578100, rate: 0.35 },
+          { threshold: Infinity, rate: 0.37 }
+        ]
+      }
+      // you can add 2024, 2025 here later...
+    };
+  
+    const statusBrackets = (BRACKETS[year] || BRACKETS[2023])[filingStatus];
+    if (!statusBrackets) return 0;
+  
+    let remaining = income, lastThreshold = 0, tax = 0;
+    for (let { threshold, rate } of statusBrackets) {
+      const chunk = Math.max(0, Math.min(remaining, threshold - lastThreshold));
+      tax += chunk * rate;
+      remaining -= chunk;
+      lastThreshold = threshold;
+      if (remaining <= 0) break;
+    }
+    return tax;
+  }
+  
+  
+  /**
+   * Implements IRS Schedule D worksheet (steps 1–47):
+   *   • Step 1: Form‑computed taxableIncome
+   *   • Step 2: netCapitalGain = qualifiedDividends + netLongTermGains
+   *   • Step 3: ordinaryPortion = max(0, taxableIncome − netCapitalGain)
+   *   • Step 4: ordinaryTax = computeOrdinaryTax(ordinaryPortion, …)
+   *   • Step 8–18: compute 0%/15%/20% thresholds
+   *   • Step 19–22: apply the 0/15/20% rates to the capital‑gain portion
+   *   • Sum them all
+   */
+  function computeCapitalGainTax(taxableIncome, qualifiedDividends, longTermGains, filingStatus, year) {
+    // 0 – net capital gain
+    const netGain = Math.max(0, qualifiedDividends + longTermGains);
+  
+    // 1 – ordinary portion
+    const ordinaryPortion = Math.max(0, taxableIncome - netGain);
+    const ordinaryTax = computeOrdinaryTax(ordinaryPortion, filingStatus, year);
+  
+    // 2 – thresholds per filing status & year
+    // IRS 2023 thresholds for 0% and 15% capital‑gain brackets:
+    const CG_THRESHOLDS = {
+      2023: {
+        "Single":                  { zero: 44625, fifteen: 492300 },
+        "Married Filing Jointly":  { zero: 89250, fifteen: 553850 },
+        "Married Filing Separately": { zero: 44625, fifteen: 276900 },
+        "Head of Household":       { zero: 59750, fifteen: 523050 }
+      }
+      // add other years here as needed...
+    };
+    const t = (CG_THRESHOLDS[year] || CG_THRESHOLDS[2023])[filingStatus] ||
+              CG_THRESHOLDS[2023]["Single"];
+    const { zero: z, fifteen: f } = t;
+  
+    // 3 – how much gains taxed at 0% / 15% / 20%
+    const zeroAmt      = Math.max(0, Math.min(netGain, Math.max(0, z - ordinaryPortion)));
+    const fifteenAmt   = Math.max(0, Math.min(netGain - zeroAmt, f - z));
+    const twentyAmt    = Math.max(0, netGain - zeroAmt - fifteenAmt);
+  
+    const gainTax = zeroAmt * 0
+                  + fifteenAmt * 0.15
+                  + twentyAmt * 0.20;
+  
+    return ordinaryTax + gainTax;
+  }
+  
+
+/**
+ * Recalculates:
+ * 1) the “tax” field (via Schedule D worksheet),
+ * 2) totalFederalTax = tax + add’l Medicare + netInvestment + SE + otherTaxes − credits,
+ * 3) totalTax = totalFederalTax + stateTotalTax,
+ * and writes them all (formatted) back to the form.
  */
 function updateTotalTax() {
-    // 1) Gather raw numbers
-    const baseTax                      = getFieldValue('tax');
-    const additionalMedicare           = getFieldValue('additionalMedicareTax');
-    const netInvestment                = getFieldValue('netInvestmentTax');
-    const selfEmployment               = getFieldValue('selfEmploymentTax');
-    const otherTaxes                   = getFieldValue('otherTaxes');
-
+    // Basic inputs
+    const taxableIncome               = getFieldValue('taxableIncome');
+    const qualifiedDividends          = getFieldValue('qualifiedDividends');
+    const longTermCapitalGains        = getFieldValue('longTermCapitalGains');
+    const filingStatus                = document.getElementById('filingStatus').value;
+    const year                        = parseInt(document.getElementById('year').value, 10);
+  
+    // 1) Compute “tax” from Schedule D
+    const computedTax = Math.round(
+      computeCapitalGainTax(
+        taxableIncome,
+        qualifiedDividends,
+        longTermCapitalGains,
+        filingStatus,
+        year
+      )
+    );
+  
+    // 2) Other components
+    const additionalMedicare        = getFieldValue('additionalMedicareTax');
+    const netInvestment             = getFieldValue('netInvestmentTax');
+    const selfEmployment            = getFieldValue('selfEmploymentTax');
+    const otherTaxes                = getFieldValue('otherTaxes');
+  
+    // 3) Credits
     const foreignTaxCredit             = getFieldValue('foreignTaxCredit');
-    const priorYearMinimumTaxCredit    = getFieldValue('priorYearMinimumTaxCredit');
-    const nonrefundablePersonalCredits = getFieldValue('nonrefundablePersonalCredits');
+    const priorYearMinTaxCredit        = getFieldValue('priorYearMinimumTaxCredit');
+    const nonRefundableCredits         = getFieldValue('nonrefundablePersonalCredits');
     const generalBusinessCredit        = getFieldValue('generalBusinessCredit');
     const childTaxCredit               = getFieldValue('childTaxCredit');
     const otherCredits                 = getFieldValue('otherCredits');
-
-    const stateTotalTax                = getFieldValue('stateTotalTax');
-
-    // 2) Compute total federal tax (allow negative for refunds)
-    let totalFed = 
-          baseTax
-        + additionalMedicare
-        + netInvestment
-        + selfEmployment
-        + otherTaxes
-        - foreignTaxCredit
-        - priorYearMinimumTaxCredit
-        - nonrefundablePersonalCredits
-        - generalBusinessCredit
-        - childTaxCredit
-        - otherCredits;
-
-    // 3) Helper to format and wrap negatives in ()
+  
+    // 4) State tax
+    const stateTotalTax             = getFieldValue('stateTotalTax');
+  
+    // 5) Total Federal Tax
+    let totalFed =
+        computedTax
+      + additionalMedicare
+      + netInvestment
+      + selfEmployment
+      + otherTaxes
+      - foreignTaxCredit
+      - priorYearMinTaxCredit
+      - nonRefundableCredits
+      - generalBusinessCredit
+      - childTaxCredit
+      - otherCredits;
+  
+    // 6) Formatting helper
     function fmt(amount) {
-        const rounded = Math.round(amount);
-        const str     = formatCurrency(String(Math.abs(rounded)));
-        return (rounded < 0) ? `(${str})` : str;
+      const rounded = Math.round(amount);
+      const str     = formatCurrency(String(Math.abs(rounded)));
+      return (rounded < 0) ? `(${str})` : str;
     }
-
-    // 4) Update the DOM
-    const fedField   = document.getElementById('totalFederalTax');
-    const totalField = document.getElementById('totalTax');
+  
+    // 7) Write back to the form
+    const taxField          = document.getElementById('tax');
+    const fedField          = document.getElementById('totalFederalTax');
+    const totalField        = document.getElementById('totalTax');
+  
+    if (taxField)   taxField.value   = fmt(computedTax);
     if (fedField)   fedField.value   = fmt(totalFed);
     if (totalField) totalField.value = fmt(totalFed + stateTotalTax);
 }
+  
