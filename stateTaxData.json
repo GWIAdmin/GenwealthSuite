@@ -1,0 +1,30 @@
+{
+    "2023": {
+      "AL": [
+        { "threshold":   500, "rate": 0.02 },
+        { "threshold":  3000, "rate": 0.04 },
+        { "threshold":  5000, "rate": 0.05 },
+        { "threshold":   null, "rate": 0.0575 }  // null → Infinity
+      ],
+      "AK": [
+        { "threshold":   null, "rate": 0.0 }
+      ],
+      "AZ": [
+        { "threshold":  2850, "rate": 0.0259 },
+        { "threshold":  5700, "rate": 0.0287 },
+        { "threshold": 16960, "rate": 0.0334 },
+        { "threshold":   null, "rate": 0.0425 }
+      ],
+      "WY": [
+        { "threshold": null, "rate": 0.0 }
+      ],
+      "DC": [
+        { "threshold":  10000, "rate": 0.04 },
+        { "threshold":  40000, "rate": 0.06 },
+        { "threshold":  60000, "rate": 0.065 },
+        { "threshold": 250000, "rate": 0.085 },
+        { "threshold":   null, "rate": 0.089 }
+      ]
+    }
+  }
+  
