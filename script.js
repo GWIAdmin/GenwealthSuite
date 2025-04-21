@@ -437,7 +437,7 @@ function getStateTaxKey(stateAbbrev) {
       "VT": "Vermont Taxes",
       "VA": "Virginia Taxes",
       "WA": "Washington Taxes",
-      "DC": "Washington D.C. Taxes", // if applicable
+      "DC": "District of Columbia Taxes", // if applicable
       "WV": "West Virginia Taxes",
       "WI": "Wisconsin Taxes",
       "WY": "Wyoming Taxes"
@@ -453,7 +453,7 @@ function getStateTaxKey(stateAbbrev) {
  * @property {number} unemploymentTax
  * @property {number} [futaValue]
  * @property {number} [unemploymentValue]
- */
+*/
 
 function validateW2StateBreakdownSum(w2Id) {
     let sum = 0;
@@ -3221,6 +3221,7 @@ function recalculateTotals() {
         updateTaxableIncome();
         updateAggregateResComp();
         calculateEmployerEmployeeTaxes();
+        updateTotalTax();
 }
 
 //-----------------------------------------------------//
@@ -5148,4 +5149,58 @@ function updateStaticUnemploymentFields() {
       unemploymentField.value = formatCurrency(totalUnemployment.toFixed(2));
     }
 }
-  
+
+/**
+ * Computes:
+ *   totalFederalTax = (Tax + Add’l Medicare + Net Investment + SE Tax + Other Taxes)
+ *                    − (Foreign Tax Credit + Prior‐Year AMT Credit
+ *                       + Nonrefundable Credits + General Business Credit
+ *                       + Child Tax Credit + Other Credits)
+ *   totalTax        = totalFederalTax + stateTotalTax
+ *
+ * Writes both #totalFederalTax and #totalTax, formatted as USD.
+ */
+function updateTotalTax() {
+    // 1) Gather raw numbers
+    const baseTax                      = getFieldValue('tax');
+    const additionalMedicare           = getFieldValue('additionalMedicareTax');
+    const netInvestment                = getFieldValue('netInvestmentTax');
+    const selfEmployment               = getFieldValue('selfEmploymentTax');
+    const otherTaxes                   = getFieldValue('otherTaxes');
+
+    const foreignTaxCredit             = getFieldValue('foreignTaxCredit');
+    const priorYearMinimumTaxCredit    = getFieldValue('priorYearMinimumTaxCredit');
+    const nonrefundablePersonalCredits = getFieldValue('nonrefundablePersonalCredits');
+    const generalBusinessCredit        = getFieldValue('generalBusinessCredit');
+    const childTaxCredit               = getFieldValue('childTaxCredit');
+    const otherCredits                 = getFieldValue('otherCredits');
+
+    const stateTotalTax                = getFieldValue('stateTotalTax');
+
+    // 2) Compute total federal tax (allow negative for refunds)
+    let totalFed = 
+          baseTax
+        + additionalMedicare
+        + netInvestment
+        + selfEmployment
+        + otherTaxes
+        - foreignTaxCredit
+        - priorYearMinimumTaxCredit
+        - nonrefundablePersonalCredits
+        - generalBusinessCredit
+        - childTaxCredit
+        - otherCredits;
+
+    // 3) Helper to format and wrap negatives in ()
+    function fmt(amount) {
+        const rounded = Math.round(amount);
+        const str     = formatCurrency(String(Math.abs(rounded)));
+        return (rounded < 0) ? `(${str})` : str;
+    }
+
+    // 4) Update the DOM
+    const fedField   = document.getElementById('totalFederalTax');
+    const totalField = document.getElementById('totalTax');
+    if (fedField)   fedField.value   = fmt(totalFed);
+    if (totalField) totalField.value = fmt(totalFed + stateTotalTax);
+}
