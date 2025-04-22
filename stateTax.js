@@ -12,8 +12,21 @@ function resolveJsonPointer(obj, pointer) {
 }
 
 // 2) Pull out & normalize one state's one filing‑status bracket array
-function getBrackets(rawData, stateAbbrev, year, filingStatus) {
+export function getBrackets(rawData, stateAbbrev, year, filingStatus) {
+
   const STATUSES = ['Single','MFS','MFJ','HOH','QW'];
+
+  //  ↙— bail out if someone passed the placeholder
+  if (!STATUSES.includes(filingStatus)) {
+    console.warn(`getBrackets: invalid status “${filingStatus}”, returning empty brackets`);
+    return [];
+  }
+
+  if (!STATUSES.includes(stateAbbrev)) {
+    console.warn(`stateAbbrev: invalid status “${stateAbbrev}”`);
+    return [];
+  }
+
   let yearData = rawData[stateAbbrev]?.[year];
   if (!yearData) return [];
 
@@ -65,3 +78,6 @@ export function calculateStateTax(
 
   return Math.round(tax);
 }
+
+window.getBrackets    = getBrackets;
+window.calculateStateTax = calculateStateTax;
