@@ -1,17 +1,34 @@
-import { calculateStateTax } from './stateTax.js';
+import { calculateStateTax, getBrackets } from './stateTax.js';
 
+const FS_MAP = {
+    "Single":                   "Single",
+    "Married Filing Jointly":   "MFJ",
+    "Married Filing Separately":"MFS",
+    "Head of Household":        "HOH",
+    "Qualifying Widow(er)":     "QW"
+};
+  
 let stateTaxData;
 window.addEventListener('DOMContentLoaded', async () => {
   try {
     const res = await fetch('./state_tax_data.json');
     if (!res.ok) throw new Error(res.status);
     stateTaxData = await res.json();
+        // ─── Add these three lines ───
+        window.stateTaxData       = stateTaxData;
+        window.getBrackets        = getBrackets;
+        window.calculateStateTax  = calculateStateTax;
+        // ─────────────────────────────
     initCollapsibles();
     initUI();
   } catch (e) {
     console.error('Failed to load stateTaxData:', e);
   }
 });
+
+window.stateTaxData       = stateTaxData;
+window.getBrackets        = getBrackets;
+window.calculateStateTax  = calculateStateTax;
 
 function initCollapsibles() {
   document
@@ -36,13 +53,7 @@ function initUI() {
   const stateSelect = document.getElementById('state');
   const stateTotalField = document.getElementById('stateTotalTax');
 
-  stateSelect.addEventListener('change', () => {
-    const st = stateSelect.value;
-    const agi = parseFloat(document.getElementById('totalAdjustedGrossIncome').value) || 0;
-    // use your imported function
-    const owed = calculateStateTax(stateTaxData, st, agi);
-    stateTotalField.value = owed.toFixed(2);
-  });
+  stateSelect.addEventListener('change', recalcStateTax);
 
   // Back‑to‑top button
   const backBtn = document.getElementById('backToTopBtn');
@@ -399,13 +410,37 @@ function createResCompSection(businessIndex, ownerIndex, isOtherOwner = false) {
  * computeStateTax, and render into #stateTotalTax.
  */
 function recalcStateTax() {
-    const taxableIncome = getFieldValue('taxableIncome');
-    const stateAbbrev    = document.getElementById('state').value;      // e.g. "CA", "NY", etc.
-    const year           = parseInt(document.getElementById('year').value, 10) || 2023;
-    const filingStatus  = document.getElementById('filingStatus').value; // e.g. "Single", "Married Filing Jointly", etc.
-    const tax           = calculateStateTax(taxableIncome, stateAbbrev, year, filingStatus);
-    document.getElementById('stateTotalTax').value = formatCurrency(String(tax));
+    const state = document.getElementById('state').value;
+    if (!state) {
+      document.getElementById('stateTotalTax').value = '';
+      return;
+    }
+  
+    const agi = getFieldValue('totalAdjustedGrossIncome');
+  
+    // grab the year & filing‑status from the form
+    const yearInput = document.getElementById('year').value;          // e.g. "2024"
+    const uiStatus = document.getElementById('filingStatus').value;   // e.g. "Married Filing Jointly"
+    const statusKey = FS_MAP[uiStatus] || 'Single';
+  
+    console.log(
+      `calculating state tax for ${state} / ${yearInput} / ${statusKey} @ ${agi}`
+    );
+  
+    const owed = calculateStateTax(
+      stateTaxData,
+      state,
+      agi,
+      yearInput,
+      statusKey
+    );
+  
+    document.getElementById('stateTotalTax').value = owed.toFixed(2);
 }
+  
+document.getElementById('state').addEventListener('change', recalcStateTax);
+document.getElementById('year').addEventListener ('change', recalcStateTax);
+document.getElementById('filingStatus').addEventListener('change', recalcStateTax);
 
 function updateRCSectionForOwner(businessIndex, ownerIndex, isOther) {
     const rcSection = document.getElementById(`rcSection_${businessIndex}_${ownerIndex}`);
@@ -3366,13 +3401,35 @@ function recalculateDeductions() {
       const year   = parseInt(document.getElementById('year').value, 10);
       const status = document.getElementById('filingStatus').value;
       const STD = {
+        2022: {
+            "Single":                   12950,
+            "Married Filing Jointly":   25900,
+            "Married Filing Separately":12950,
+            "Head of Household":        19400,
+            "Qualifying Widow(er)":     25900
+          },
         2023: {
           "Single":                   13850,
           "Married Filing Jointly":   27700,
           "Married Filing Separately":13850,
-          "Head of Household":        20800
+          "Head of Household":        20800,
+          "Qualifying Widow(er)":     27700
+        },
+        2024: {
+          "Single":                   14600,
+          "Married Filing Jointly":   29200,
+          "Married Filing Separately":14600,
+          "Head of Household":        21900,
+          "Qualifying Widow(er)":     29200
+        },
+        2025: {
+            "Single":                   15000,
+            "Married Filing Jointly":   30000,
+            "Married Filing Separately":15000,
+            "Head of Household":        22500,
+            "Qualifying Widow(er)":     30000
         }
-        // later years go here…
+        
       };
       totalDeductionsVal = STD[year]?.[status] || 0;
     }
@@ -5295,6 +5352,53 @@ function updateStaticUnemploymentFields() {
 function computeOrdinaryTax(income, filingStatus, year) {
     // --- bracket tables keyed by year → status → [ { threshold, rate }, ... ] ---
     const BRACKETS = {
+      2022: {
+            "Single": [
+              { threshold: 10275, rate: 0.10 },
+              { threshold: 41775, rate: 0.12 },
+              { threshold: 89075, rate: 0.22 },
+              { threshold: 170050, rate: 0.24 },
+              { threshold: 215950, rate: 0.32 },
+              { threshold: 539900, rate: 0.35 },
+              { threshold: Infinity, rate: 0.37 }
+            ],
+            "Married Filing Jointly": [
+              { threshold: 22550, rate: 0.10 },
+              { threshold: 83550, rate: 0.12 },
+              { threshold: 178150, rate: 0.22 },
+              { threshold: 340100, rate: 0.24 },
+              { threshold: 431900, rate: 0.32 },
+              { threshold: 647850, rate: 0.35 },
+              { threshold: Infinity, rate: 0.37 }
+            ],
+            "Married Filing Separately": [
+                { threshold: 10275, rate: 0.10 },
+                { threshold: 41775, rate: 0.12 },
+                { threshold: 89075, rate: 0.22 },
+                { threshold: 170050, rate: 0.24 },
+                { threshold: 215950, rate: 0.32 },
+                { threshold: 539900, rate: 0.35 },
+                { threshold: Infinity, rate: 0.37 }
+            ],
+            "Head of Household": [
+              { threshold: 14650, rate: 0.10 },
+              { threshold: 55900, rate: 0.12 },
+              { threshold: 89050, rate: 0.22 },
+              { threshold: 170050, rate: 0.24 },
+              { threshold: 215950, rate: 0.32 },
+              { threshold: 539900, rate: 0.35 },
+              { threshold: Infinity, rate: 0.37 }
+            ],
+            "Qualifying Widow(er)": [
+                { threshold: 22550, rate: 0.10 },
+                { threshold: 83550, rate: 0.12 },
+                { threshold: 178150, rate: 0.22 },
+                { threshold: 340100, rate: 0.24 },
+                { threshold: 431900, rate: 0.32 },
+                { threshold: 647850, rate: 0.35 },
+                { threshold: Infinity, rate: 0.37 }
+            ]
+      },
       2023: {
         "Single": [
           { threshold: 11000, rate: 0.10 },
@@ -5315,25 +5419,127 @@ function computeOrdinaryTax(income, filingStatus, year) {
           { threshold: Infinity, rate: 0.37 }
         ],
         "Married Filing Separately": [
-          { threshold: 11000, rate: 0.10 },
-          { threshold: 44725, rate: 0.12 },
-          { threshold: 95375, rate: 0.22 },
-          { threshold: 182100, rate: 0.24 },
-          { threshold: 231250, rate: 0.32 },
-          { threshold: 346875, rate: 0.35 },
-          { threshold: Infinity, rate: 0.37 }
+            { threshold: 11000, rate: 0.10 },
+            { threshold: 44725, rate: 0.12 },
+            { threshold: 95375, rate: 0.22 },
+            { threshold: 182100, rate: 0.24 },
+            { threshold: 231250, rate: 0.32 },
+            { threshold: 578125, rate: 0.35 },
+            { threshold: Infinity, rate: 0.37 }
         ],
         "Head of Household": [
           { threshold: 15700, rate: 0.10 },
-          { threshold: 59750, rate: 0.12 },
+          { threshold: 59850, rate: 0.12 },
           { threshold: 95350, rate: 0.22 },
           { threshold: 182100, rate: 0.24 },
           { threshold: 231250, rate: 0.32 },
           { threshold: 578100, rate: 0.35 },
           { threshold: Infinity, rate: 0.37 }
+        ],
+        "Qualifying Widow(er)": [
+            { threshold: 22000, rate: 0.10 },
+            { threshold: 89450, rate: 0.12 },
+            { threshold: 190750, rate: 0.22 },
+            { threshold: 364200, rate: 0.24 },
+            { threshold: 462500, rate: 0.32 },
+            { threshold: 693750, rate: 0.35 },
+            { threshold: Infinity, rate: 0.37 }
+        ]
+      },
+      2024: {
+        "Single": [
+          { threshold: 11600, rate: 0.10 },
+          { threshold: 47150, rate: 0.12 },
+          { threshold: 100525, rate: 0.22 },
+          { threshold: 191950, rate: 0.24 },
+          { threshold: 243725, rate: 0.32 },
+          { threshold: 609350, rate: 0.35 },
+          { threshold: Infinity, rate: 0.37 }
+        ],
+        "Married Filing Jointly": [
+          { threshold: 23200, rate: 0.10 },
+          { threshold: 94300, rate: 0.12 },
+          { threshold: 201050, rate: 0.22 },
+          { threshold: 383900, rate: 0.24 },
+          { threshold: 487450, rate: 0.32 },
+          { threshold: 731200, rate: 0.35 },
+          { threshold: Infinity, rate: 0.37 }
+        ],
+        "Married Filing Separately": [
+            { threshold: 11600, rate: 0.10 },
+            { threshold: 47150, rate: 0.12 },
+            { threshold: 100525, rate: 0.22 },
+            { threshold: 191950, rate: 0.24 },
+            { threshold: 243725, rate: 0.32 },
+            { threshold: 609350, rate: 0.35 },
+            { threshold: Infinity, rate: 0.37 }
+        ],
+        "Head of Household": [
+          { threshold: 16550, rate: 0.10 },
+          { threshold: 63100, rate: 0.12 },
+          { threshold: 100500, rate: 0.22 },
+          { threshold: 191950, rate: 0.24 },
+          { threshold: 243700, rate: 0.32 },
+          { threshold: 609350, rate: 0.35 },
+          { threshold: Infinity, rate: 0.37 }
+        ],
+        "Qualifying Widow(er)": [
+            { threshold: 23200, rate: 0.10 },
+            { threshold: 94300, rate: 0.12 },
+            { threshold: 201050, rate: 0.22 },
+            { threshold: 383900, rate: 0.24 },
+            { threshold: 487450, rate: 0.32 },
+            { threshold: 731200, rate: 0.35 },
+            { threshold: Infinity, rate: 0.37 }
+        ]
+      },
+      2025: {
+        "Single": [
+          { threshold: 11925, rate: 0.10 },
+          { threshold: 48475, rate: 0.12 },
+          { threshold: 103350, rate: 0.22 },
+          { threshold: 197300, rate: 0.24 },
+          { threshold: 250525, rate: 0.32 },
+          { threshold: 626350, rate: 0.35 },
+          { threshold: Infinity, rate: 0.37 }
+        ],
+        "Married Filing Jointly": [
+          { threshold: 23850, rate: 0.10 },
+          { threshold: 96950, rate: 0.12 },
+          { threshold: 206700, rate: 0.22 },
+          { threshold: 394600, rate: 0.24 },
+          { threshold: 501050, rate: 0.32 },
+          { threshold: 751600, rate: 0.35 },
+          { threshold: Infinity, rate: 0.37 }
+        ],
+        "Married Filing Separately": [
+            { threshold: 11925, rate: 0.10 },
+            { threshold: 48475, rate: 0.12 },
+            { threshold: 103350, rate: 0.22 },
+            { threshold: 197300, rate: 0.24 },
+            { threshold: 250525, rate: 0.32 },
+            { threshold: 626350, rate: 0.35 },
+            { threshold: Infinity, rate: 0.37 }
+        ],
+        "Head of Household": [
+          { threshold: 17000, rate: 0.10 },
+          { threshold: 64850, rate: 0.12 },
+          { threshold: 103350, rate: 0.22 },
+          { threshold: 197300, rate: 0.24 },
+          { threshold: 250500, rate: 0.32 },
+          { threshold: 626350, rate: 0.35 },
+          { threshold: Infinity, rate: 0.37 }
+        ],
+        "Qualifying Widow(er)": [
+            { threshold: 23850, rate: 0.10 },
+            { threshold: 96950, rate: 0.12 },
+            { threshold: 206700, rate: 0.22 },
+            { threshold: 394600, rate: 0.24 },
+            { threshold: 501050, rate: 0.32 },
+            { threshold: 751600, rate: 0.35 },
+            { threshold: Infinity, rate: 0.37 }
         ]
       }
-      // you can add 2024, 2025 here later...
     };
   
     const statusBrackets = (BRACKETS[year] || BRACKETS[2023])[filingStatus];
