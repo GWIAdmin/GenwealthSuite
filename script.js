@@ -1,4 +1,66 @@
-import { computeStateTax } from './stateTax.js';
+import { calculateStateTax } from './stateTax.js';
+
+let stateTaxData;
+window.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const res = await fetch('./state_tax_data.json');
+    if (!res.ok) throw new Error(res.status);
+    stateTaxData = await res.json();
+    initCollapsibles();
+    initUI();
+  } catch (e) {
+    console.error('Failed to load stateTaxData:', e);
+  }
+});
+
+function initCollapsibles() {
+  document
+    .querySelectorAll('h2[data-target]')
+    .forEach(header => {
+      const content = document.getElementById(header.dataset.target);
+      if (!content) return;
+
+      // start collapsed
+      content.style.display = 'none';
+      header.style.cursor = 'pointer';
+
+      header.addEventListener('click', () => {
+        const isOpen = content.style.display === 'block';
+        content.style.display = isOpen ? 'none' : 'block';
+      });
+    });
+}
+
+function initUI() {
+  // Example: hook up your “State” dropdown to calculate state tax
+  const stateSelect = document.getElementById('state');
+  const stateTotalField = document.getElementById('stateTotalTax');
+
+  stateSelect.addEventListener('change', () => {
+    const st = stateSelect.value;
+    const agi = parseFloat(document.getElementById('totalAdjustedGrossIncome').value) || 0;
+    // use your imported function
+    const owed = calculateStateTax(stateTaxData, st, agi);
+    stateTotalField.value = owed.toFixed(2);
+  });
+
+  // Back‑to‑top button
+  const backBtn = document.getElementById('backToTopBtn');
+  backBtn.addEventListener('click', () =>
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  );
+  window.addEventListener('scroll', () => {
+    backBtn.style.display = window.pageYOffset > 200 ? 'block' : 'none';
+  });
+
+  // Dark‑mode toggle
+  const dmToggle = document.getElementById('darkModeToggle');
+  dmToggle.addEventListener('change', () => {
+    document.body.classList.toggle('dark-mode', dmToggle.checked);
+  });
+
+  // (…any other wiring: spouse‑section show/hide, dynamic dependents/businesses, notes UI, form submit, etc…)
+}
 
 //-------------------------------//
 // 1. SUBMIT HANDLER AND RESULTS //
@@ -341,7 +403,7 @@ function recalcStateTax() {
     const stateAbbrev    = document.getElementById('state').value;      // e.g. "CA", "NY", etc.
     const year           = parseInt(document.getElementById('year').value, 10) || 2023;
     const filingStatus  = document.getElementById('filingStatus').value; // e.g. "Single", "Married Filing Jointly", etc.
-    const tax           = computeStateTax(taxableIncome, stateAbbrev, year, filingStatus);
+    const tax           = calculateStateTax(taxableIncome, stateAbbrev, year, filingStatus);
     document.getElementById('stateTotalTax').value = formatCurrency(String(tax));
 }
 
@@ -3287,7 +3349,7 @@ function recalculateDeductions() {
     const miscellaneousDeductions = getFieldValue('miscellaneousDeductions');
     const standardOrItemizedDeduction = getFieldValue('standardOrItemizedDeduction');
 
-    const totalDeductionsVal =
+    let totalDeductionsVal =
         medical +
         stateAndLocalTaxes +
         otherTaxesFromSchK1 +
@@ -5286,10 +5348,10 @@ function computeOrdinaryTax(income, filingStatus, year) {
       if (remaining <= 0) break;
     }
     return tax;
-  }
+}
   
   
-  /**
+/**
    * Implements IRS Schedule D worksheet (steps 1–47):
    *   • Step 1: Form‑computed taxableIncome
    *   • Step 2: netCapitalGain = qualifiedDividends + netLongTermGains
@@ -5298,7 +5360,8 @@ function computeOrdinaryTax(income, filingStatus, year) {
    *   • Step 8–18: compute 0%/15%/20% thresholds
    *   • Step 19–22: apply the 0/15/20% rates to the capital‑gain portion
    *   • Sum them all
-   */
+*/
+
 function computeCapitalGainTax(taxableIncome, qualifiedDividends, longTermGains, filingStatus, year) {
     // 0 – net capital gain
     const netGain = Math.max(0, qualifiedDividends + longTermGains);
