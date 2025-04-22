@@ -479,29 +479,6 @@ h3:hover {
   border: 4px solid #552583;
 }
 
-/* Collapsible Section */
-.collapsible {
-  overflow: hidden;
-  max-height: 0;
-  transition: none;
-}
-
-.collapsible.active {
-  max-height: 61200px;
-  transition: max-height 8s ease;
-}
-
-.collapsible-content {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.5s ease;
-}
-
-.collapsible-content.active {
-  max-height: 3000px; /* Adjust as needed */
-  transition: max-height 1s ease;
-}
-
 /* Section Styling */
 section {
   margin-bottom: 30px;
