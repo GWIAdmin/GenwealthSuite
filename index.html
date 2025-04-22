@@ -71,7 +71,9 @@
 
       <!-- Personal Information Section -->
       <section id="personalInformation">
-        <h2 onclick="toggleCollapsible('personalInformationContent')">Personal Information</h2>
+        <h2 data-target="personalInformationContent">
+          Personal Information
+        </h2>
         <div id="personalInformationContent" class="collapsible">
         
           <div class="form-group">
@@ -264,12 +266,12 @@
 
       <!-- Income Section -->
       <section id="income">
-        <h2 onclick="toggleCollapsible('incomeContent')">Income</h2>
+        <h2 data-target="incomeContent">Income</h2>
         <div id="incomeContent" class="collapsible">
 
       <!-- W-2 Section -->
       <section id="w2s">
-        <h2 onclick="toggleCollapsible('w2sContainer')">W-2</h2>
+        <h2 data-target="w2sContainer">W-2</h2>
         <div id="w2sContainer" class="collapsible">
           <!-- Dynamically added W-2 blocks will appear here -->
         </div>
@@ -368,7 +370,7 @@
       <!-- Businesses Section -->
       <section id="businesses">
 
-      <h2 onclick="toggleCollapsible('businessContent')">Business</h2>
+      <h2 data-target="businessContent">Business</h2>
 
       <div id="businessContent" class="collapsible">
 
@@ -388,7 +390,7 @@
 
       <!-- Adjusted Gross Income -->
       <section id="adjustedGrossIncome">
-        <h2 onclick="toggleCollapsible('adjustedGrossIncomeContent')">Adjusted Gross Income</h2>
+        <h2 data-target="adjustedGrossIncomeContent">Adjusted Gross Income</h2>
         <div id="adjustedGrossIncomeContent" class="collapsible">
 
         <div class="form-group">
@@ -436,7 +438,7 @@
 
       <!-- Deductions Section -->
       <section id="Deductions">
-        <h2 onclick="toggleCollapsible('deductionsContent')">Deductions</h2>
+        <h2 data-target="deductionsContent">Deductions</h2>
         <div id="deductionsContent" class="collapsible">
 
         <div class="form-group">
@@ -499,7 +501,7 @@
 
       <!-- Tax and Credits Section -->
       <section id="taxAndCredits">
-        <h2 onclick="toggleCollapsible('taxAndCreditsContent')">Tax and Credits</h2>
+        <h2 data-target="taxAndCreditsContent">Tax and Credits</h2>
         <div id="taxAndCreditsContent" class="collapsible">        
         
         <div class="form-group">
@@ -572,7 +574,7 @@
 
       <!-- Payments Section -->
       <section id="payments">
-        <h2 onclick="toggleCollapsible('paymentsContent')">Payments</h2>
+        <h2 data-target="paymentsContent">Payments</h2>
         <div id="paymentsContent" class="collapsible">        
 
         <div class="form-group">
@@ -615,7 +617,7 @@
 
       <!-- Employer and Employee Taxes Section -->
       <section id="employerEmployeeTaxes">
-        <h2 onclick="toggleCollapsible('employerEmployeeTaxesContent')">
+        <h2 data-target="employerEmployeeTaxesContent">
           Employer and Employee Taxes
         </h2>
         <div id="employerEmployeeTaxesContent" class="collapsible">
@@ -643,7 +645,7 @@
 
       <!-- State Taxable Income Section -->
       <section id="stateTaxableIncome">
-        <h2 onclick="toggleCollapsible('stateTaxableIncomeContent')">State Taxable Income</h2>
+        <h2 data-target="stateTaxableIncomeContent">State Taxable Income</h2>
         <div id="stateTaxableIncomeContent" class="collapsible">         
 
         <div class="form-group">
@@ -701,7 +703,7 @@
 
       <!-- Total Tax -->
        <section id="totalTaxSection">
-        <h2 onclick="toggleCollapsible('totalTaxContent')">Total Tax</h2>
+        <h2 data-target="totalTaxContent">Total Tax</h2>
         <div id="totalTaxContent" class="collapsible">
 
         <div class="form-group">
@@ -729,7 +731,7 @@
     <button id="backToTopBtn" title="Go to top"><i class="fas fa-arrow-up"></i></button>
   </div>
 
-  <script type="module" src="script.js"></script>
+  <script type="module" src="./script.js"></script>
   
   <h3>&#169; 2025 Genwealth 360 Inc.</h3>
 </body>
