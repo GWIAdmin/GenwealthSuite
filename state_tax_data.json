@@ -1,0 +1,1938 @@
+{
+  "AL": {
+    "2022": {
+      "Single": [
+        { "threshold": 500,  "rate": 0.02 },
+        { "threshold": 3000, "rate": 0.04 },
+        { "threshold": null, "rate": 0.05 }
+      ],
+      "HOH": [
+        { "threshold": 500,  "rate": 0.02 },
+        { "threshold": 3000, "rate": 0.04 },
+        { "threshold": null, "rate": 0.05 }
+      ],
+      "MFS": [
+        { "threshold": 500,  "rate": 0.02 },
+        { "threshold": 3000, "rate": 0.04 },
+        { "threshold": null, "rate": 0.05 }
+      ],
+      "MFJ": [
+        { "threshold": 1000, "rate": 0.02 },
+        { "threshold": 6000, "rate": 0.04 },
+        { "threshold": null, "rate": 0.05 }
+      ]
+    },
+    "2023": { "$ref": "#/AL/2022" },
+    "2024": { "$ref": "#/AL/2022" },
+    "2025": { "$ref": "#/AL/2022" }
+  },
+
+  "AZ": {
+    "2022": {
+      "Single": [
+        { "threshold": 28653, "rate": 0.0255 },
+        { "threshold": null,   "rate": 0.0298 }
+      ],
+      "MFS": [
+        { "threshold": 28653, "rate": 0.0255 },
+        { "threshold": null,   "rate": 0.0298 }
+      ],
+      "MFJ": [
+        { "threshold": 57305, "rate": 0.0255 },
+        { "threshold": null,   "rate": 0.0298 }
+      ],
+      "HOH": [
+        { "threshold": 57305, "rate": 0.0255 },
+        { "threshold": null,   "rate": 0.0298 }
+      ]
+    },
+    "2023": {
+      "Single": [ { "threshold": null, "rate": 0.025 } ],
+      "MFS":    [ { "threshold": null, "rate": 0.025 } ],
+      "MFJ":    [ { "threshold": null, "rate": 0.025 } ],
+      "HOH":    [ { "threshold": null, "rate": 0.025 } ]
+    },
+    "2024": {
+      "Single": [ { "threshold": null, "rate": 0.025 } ],
+      "MFS":    [ { "threshold": null, "rate": 0.025 } ],
+      "MFJ":    [ { "threshold": null, "rate": 0.025 } ],
+      "HOH":    [ { "threshold": null, "rate": 0.025 } ]
+    },
+    "2025": {
+      "Single": [ { "threshold": null, "rate": 0.025 } ],
+      "MFS":    [ { "threshold": null, "rate": 0.025 } ],
+      "MFJ":    [ { "threshold": null, "rate": 0.025 } ],
+      "HOH":    [ { "threshold": null, "rate": 0.025 } ]
+    }
+  },
+  "AR": {
+    "2022": {
+      "Single": [
+        { "threshold": 4999,  "rate": 0.0   },
+        { "threshold": 9999,  "rate": 0.02  },
+        { "threshold": 14299, "rate": 0.03  },
+        { "threshold": 23599, "rate": 0.034 },
+        { "threshold": 84500, "rate": 0.049 },
+        { "threshold": null,  "rate": 0.049 }
+      ],
+      "MFS": [
+        { "threshold": 4999,  "rate": 0.0   },
+        { "threshold": 9999,  "rate": 0.02  },
+        { "threshold": 14299, "rate": 0.03  },
+        { "threshold": 23599, "rate": 0.034 },
+        { "threshold": 84500, "rate": 0.049 },
+        { "threshold": null,  "rate": 0.049 }
+      ],
+      "HOH": [
+        { "threshold": 4999,  "rate": 0.0   },
+        { "threshold": 9999,  "rate": 0.02  },
+        { "threshold": 14299, "rate": 0.03  },
+        { "threshold": 23599, "rate": 0.034 },
+        { "threshold": 84500, "rate": 0.049 },
+        { "threshold": null,  "rate": 0.049 }
+      ],
+      "MFJ": [
+        { "threshold": 4300,  "rate": 0.02 },
+        { "threshold": 8500,  "rate": 0.04 },
+        { "threshold": null,  "rate": 0.049 }
+      ]
+    },
+    "2023": {
+      "Single": [
+        { "threshold": 5099,  "rate": 0.0   },
+        { "threshold": 10299, "rate": 0.02  },
+        { "threshold": 14699, "rate": 0.03  },
+        { "threshold": 24299, "rate": 0.034 },
+        { "threshold": 87000, "rate": 0.047 },
+        { "threshold": null,  "rate": 0.047 }
+      ],
+      "MFS": [
+        { "threshold": 5099,  "rate": 0.0   },
+        { "threshold": 10299, "rate": 0.02  },
+        { "threshold": 14699, "rate": 0.03  },
+        { "threshold": 24299, "rate": 0.034 },
+        { "threshold": 87000, "rate": 0.047 },
+        { "threshold": null,  "rate": 0.047 }
+      ],
+      "HOH": [
+        { "threshold": 5099,  "rate": 0.0   },
+        { "threshold": 10299, "rate": 0.02  },
+        { "threshold": 14699, "rate": 0.03  },
+        { "threshold": 24299, "rate": 0.034 },
+        { "threshold": 87000, "rate": 0.047 },
+        { "threshold": null,  "rate": 0.047 }
+      ],
+      "MFJ": [
+        { "threshold": 4400, "rate": 0.02 },
+        { "threshold": 8800, "rate": 0.04 },
+        { "threshold": null, "rate": 0.047 }
+      ]
+    },
+    "2024": {
+      "Single": [
+        { "threshold": 5299,  "rate": 0.0   },
+        { "threshold": 10599, "rate": 0.02  },
+        { "threshold": 15099, "rate": 0.03  },
+        { "threshold": 24999, "rate": 0.034 },
+        { "threshold": 89600, "rate": 0.039 },
+        { "threshold": null,  "rate": 0.039 }
+      ],
+      "MFS": [
+        { "threshold": 5299,  "rate": 0.0   },
+        { "threshold": 10599, "rate": 0.02  },
+        { "threshold": 15099, "rate": 0.03  },
+        { "threshold": 24999, "rate": 0.034 },
+        { "threshold": 89600, "rate": 0.039 },
+        { "threshold": null,  "rate": 0.039 }
+      ],
+      "HOH": [
+        { "threshold": 5299,  "rate": 0.0   },
+        { "threshold": 10599, "rate": 0.02  },
+        { "threshold": 15099, "rate": 0.03  },
+        { "threshold": 24999, "rate": 0.034 },
+        { "threshold": 89600, "rate": 0.039 },
+        { "threshold": null,  "rate": 0.039 }
+      ],
+      "MFJ": [
+        { "threshold": 4500, "rate": 0.02 },
+        { "threshold": 8800, "rate": 0.04 },
+        { "threshold": null, "rate": 0.039 }
+      ]
+    },
+    "2025": {
+      "Single": [
+        { "threshold": 5299,  "rate": 0.0   },
+        { "threshold": 10599, "rate": 0.02  },
+        { "threshold": 15099, "rate": 0.03  },
+        { "threshold": 24999, "rate": 0.034 },
+        { "threshold": 89600, "rate": 0.039 },
+        { "threshold": null,  "rate": 0.039 }
+      ],
+      "MFS": [
+        { "threshold": 5299,  "rate": 0.0   },
+        { "threshold": 10599, "rate": 0.02  },
+        { "threshold": 15099, "rate": 0.03  },
+        { "threshold": 24999, "rate": 0.034 },
+        { "threshold": 89600, "rate": 0.039 },
+        { "threshold": null,  "rate": 0.039 }
+      ],
+      "HOH": [
+        { "threshold": 5299,  "rate": 0.0   },
+        { "threshold": 10599, "rate": 0.02  },
+        { "threshold": 15099, "rate": 0.03  },
+        { "threshold": 24999, "rate": 0.034 },
+        { "threshold": 89600, "rate": 0.039 },
+        { "threshold": null,  "rate": 0.039 }
+      ],
+      "MFJ": [
+        { "threshold": 4500, "rate": 0.02 },
+        { "threshold": 8800, "rate": 0.04 },
+        { "threshold": null, "rate": 0.039 }
+      ]
+    }
+  },
+  "CA": {
+    "2022": { "$ref": "#/CA/2023" },
+    "2023": {
+      "Single": [
+        { "threshold": 10412,   "rate": 0.01  },
+        { "threshold": 24684,   "rate": 0.02  },
+        { "threshold": 38959,   "rate": 0.04  },
+        { "threshold": 54081,   "rate": 0.06  },
+        { "threshold": 68350,   "rate": 0.08  },
+        { "threshold": 349137,  "rate": 0.093 },
+        { "threshold": 418961,  "rate": 0.103 },
+        { "threshold": 698271,  "rate": 0.113 },
+        { "threshold": null,     "rate": 0.123 }
+      ],
+      "MFS":    [
+        { "threshold": 10412,  "rate": 0.01  },
+        { "threshold": 24684,  "rate": 0.02  },
+        { "threshold": 38959,  "rate": 0.04  },
+        { "threshold": 54081,  "rate": 0.06  },
+        { "threshold": 68350,  "rate": 0.08  },
+        { "threshold": 349137, "rate": 0.093 },
+        { "threshold": 418961, "rate": 0.103 },
+        { "threshold": 698271, "rate": 0.113 },
+        { "threshold": null,    "rate": 0.123 }
+      ],
+      "MFJ":    [
+        { "threshold": 20824,    "rate": 0.01  },
+        { "threshold": 49368,    "rate": 0.02  },
+        { "threshold": 77918,    "rate": 0.04  },
+        { "threshold": 108162,   "rate": 0.06  },
+        { "threshold": 136700,   "rate": 0.08  },
+        { "threshold": 698274,   "rate": 0.093 },
+        { "threshold": 837922,   "rate": 0.103 },
+        { "threshold": 1396542,  "rate": 0.113 },
+        { "threshold": null,      "rate": 0.123 }
+      ],
+      "QW":     [
+        { "threshold": 20824,    "rate": 0.01  },
+        { "threshold": 49368,    "rate": 0.02  },
+        { "threshold": 77918,    "rate": 0.04  },
+        { "threshold": 108162,   "rate": 0.06  },
+        { "threshold": 136700,   "rate": 0.08  },
+        { "threshold": 698274,   "rate": 0.093 },
+        { "threshold": 837922,   "rate": 0.103 },
+        { "threshold": 1396542,  "rate": 0.113 },
+        { "threshold": null,      "rate": 0.123 }
+      ],
+      "HOH":    [
+        { "threshold": 20839,   "rate": 0.01  },
+        { "threshold": 49371,   "rate": 0.02  },
+        { "threshold": 63644,   "rate": 0.04  },
+        { "threshold": 78765,   "rate": 0.06  },
+        { "threshold": 93037,   "rate": 0.08  },
+        { "threshold": 474824,  "rate": 0.093 },
+        { "threshold": 569790,  "rate": 0.103 },
+        { "threshold": 949649,  "rate": 0.113 },
+        { "threshold": null,     "rate": 0.123 }
+      ]
+    },
+    "2024": {
+      "Single": [
+        { "threshold": 10756,   "rate": 0.01  },
+        { "threshold": 25499,   "rate": 0.02  },
+        { "threshold": 40245,   "rate": 0.04  },
+        { "threshold": 55866,   "rate": 0.06  },
+        { "threshold": 70606,   "rate": 0.08  },
+        { "threshold": 360659,  "rate": 0.093 },
+        { "threshold": 432787,  "rate": 0.103 },
+        { "threshold": 721314,  "rate": 0.113 },
+        { "threshold": null,     "rate": 0.123 }
+      ],
+      "MFS":    [
+        { "threshold": 10756,  "rate": 0.01  },
+        { "threshold": 25499,  "rate": 0.02  },
+        { "threshold": 40245,  "rate": 0.04  },
+        { "threshold": 55866,  "rate": 0.06  },
+        { "threshold": 70606,  "rate": 0.08  },
+        { "threshold": 360659, "rate": 0.093 },
+        { "threshold": 432787, "rate": 0.103 },
+        { "threshold": 721314, "rate": 0.113 },
+        { "threshold": null,    "rate": 0.123 }
+      ],
+      "MFJ":    [
+        { "threshold": 21512,    "rate": 0.01  },
+        { "threshold": 50998,    "rate": 0.02  },
+        { "threshold": 80490,    "rate": 0.04  },
+        { "threshold": 111732,   "rate": 0.06  },
+        { "threshold": 141212,   "rate": 0.08  },
+        { "threshold": 721318,   "rate": 0.093 },
+        { "threshold": 865574,   "rate": 0.103 },
+        { "threshold": 1442628,  "rate": 0.113 },
+        { "threshold": null,      "rate": 0.123 }
+      ],
+      "QW":     [
+        { "threshold": 21512,    "rate": 0.01  },
+        { "threshold": 50998,    "rate": 0.02  },
+        { "threshold": 80490,    "rate": 0.04  },
+        { "threshold": 111732,   "rate": 0.06  },
+        { "threshold": 141212,   "rate": 0.08  },
+        { "threshold": 721318,   "rate": 0.093 },
+        { "threshold": 865574,   "rate": 0.103 },
+        { "threshold": 1442628,  "rate": 0.113 },
+        { "threshold": null,      "rate": 0.123 }
+      ],
+      "HOH":    [
+        { "threshold": 21527,   "rate": 0.01  },
+        { "threshold": 51000,   "rate": 0.02  },
+        { "threshold": 65744,   "rate": 0.04  },
+        { "threshold": 81364,   "rate": 0.06  },
+        { "threshold": 96107,   "rate": 0.08  },
+        { "threshold": 490493,  "rate": 0.093 },
+        { "threshold": 588593,  "rate": 0.103 },
+        { "threshold": 980987,  "rate": 0.113 },
+        { "threshold": null,     "rate": 0.123 }
+      ]
+    },
+    "2025": {
+      "Single": [
+        { "threshold": 10756,   "rate": 0.01  },
+        { "threshold": 25499,   "rate": 0.02  },
+        { "threshold": 40245,   "rate": 0.04  },
+        { "threshold": 55866,   "rate": 0.06  },
+        { "threshold": 70606,   "rate": 0.08  },
+        { "threshold": 360659,  "rate": 0.093 },
+        { "threshold": 432787,  "rate": 0.103 },
+        { "threshold": 721314,  "rate": 0.113 },
+        { "threshold": null,     "rate": 0.123 }
+      ],
+      "MFS":    [
+        { "threshold": 10756,  "rate": 0.01  },
+        { "threshold": 25499,  "rate": 0.02  },
+        { "threshold": 40245,  "rate": 0.04  },
+        { "threshold": 55866,  "rate": 0.06  },
+        { "threshold": 70606,  "rate": 0.08  },
+        { "threshold": 360659, "rate": 0.093 },
+        { "threshold": 432787, "rate": 0.103 },
+        { "threshold": 721314, "rate": 0.113 },
+        { "threshold": null,    "rate": 0.123 }
+      ],
+      "MFJ":    [
+        { "threshold": 21512,    "rate": 0.01  },
+        { "threshold": 50998,    "rate": 0.02  },
+        { "threshold": 80490,    "rate": 0.04  },
+        { "threshold": 111732,   "rate": 0.06  },
+        { "threshold": 141212,   "rate": 0.08  },
+        { "threshold": 721318,   "rate": 0.093 },
+        { "threshold": 865574,   "rate": 0.103 },
+        { "threshold": 1442628,  "rate": 0.113 },
+        { "threshold": null,      "rate": 0.123 }
+      ],
+      "QW":     [
+        { "threshold": 21512,    "rate": 0.01  },
+        { "threshold": 50998,    "rate": 0.02  },
+        { "threshold": 80490,    "rate": 0.04  },
+        { "threshold": 111732,   "rate": 0.06  },
+        { "threshold": 141212,   "rate": 0.08  },
+        { "threshold": 721318,   "rate": 0.093 },
+        { "threshold": 865574,   "rate": 0.103 },
+        { "threshold": 1442628,  "rate": 0.113 },
+        { "threshold": null,      "rate": 0.123 }
+      ],
+      "HOH":    [
+        { "threshold": 21527,   "rate": 0.01  },
+        { "threshold": 51000,   "rate": 0.02  },
+        { "threshold": 65744,   "rate": 0.04  },
+        { "threshold": 81364,   "rate": 0.06  },
+        { "threshold": 96107,   "rate": 0.08  },
+        { "threshold": 490493,  "rate": 0.093 },
+        { "threshold": 588593,  "rate": 0.103 },
+        { "threshold": 980987,  "rate": 0.113 },
+        { "threshold": null,     "rate": 0.123 }
+      ]
+    }
+  },
+
+  "CO": {
+    "2022": {
+      "Single": [ { "threshold": null, "rate": 0.044 } ],
+      "MFS":    [ { "threshold": null, "rate": 0.044 } ],
+      "MFJ":    [ { "threshold": null, "rate": 0.044 } ],
+      "HOH":    [ { "threshold": null, "rate": 0.044 } ]
+    },
+    "2023": {
+      "Single": [ { "threshold": null, "rate": 0.044 } ],
+      "MFS":    [ { "threshold": null, "rate": 0.044 } ],
+      "MFJ":    [ { "threshold": null, "rate": 0.044 } ],
+      "HOH":    [ { "threshold": null, "rate": 0.044 } ]
+    },
+    "2024": {
+      "Single": [ { "threshold": null, "rate": 0.0425 } ],
+      "MFS":    [ { "threshold": null, "rate": 0.0425 } ],
+      "MFJ":    [ { "threshold": null, "rate": 0.0425 } ],
+      "HOH":    [ { "threshold": null, "rate": 0.0425 } ]
+    },
+    "2025": {
+      "Single": [ { "threshold": null, "rate": 0.044 } ],
+      "MFS":    [ { "threshold": null, "rate": 0.044 } ],
+      "MFJ":    [ { "threshold": null, "rate": 0.044 } ],
+      "HOH":    [ { "threshold": null, "rate": 0.044 } ]
+    }
+  },
+
+  "CT": {
+    "2022": {
+      "Single": [
+        { "threshold":     0, "rate": 0.03   },
+        { "threshold":  10000, "rate": 0.05   },
+        { "threshold":  50000, "rate": 0.055  },
+        { "threshold": 100000, "rate": 0.06   },
+        { "threshold": 200000, "rate": 0.065  },
+        { "threshold": 250000, "rate": 0.069  },
+        { "threshold": 500000, "rate": 0.0699 }
+      ],
+      "MFS": [
+        { "threshold":     0, "rate": 0.03   },
+        { "threshold":  10000, "rate": 0.05   },
+        { "threshold":  50000, "rate": 0.055  },
+        { "threshold": 100000, "rate": 0.06   },
+        { "threshold": 200000, "rate": 0.065  },
+        { "threshold": 250000, "rate": 0.069  },
+        { "threshold": 500000, "rate": 0.0699 }
+      ],
+      "MFJ": [
+        { "threshold":     0, "rate": 0.03   },
+        { "threshold":  20000, "rate": 0.05   },
+        { "threshold": 100000, "rate": 0.055  },
+        { "threshold": 200000, "rate": 0.06   },
+        { "threshold": 400000, "rate": 0.065  },
+        { "threshold": 500000, "rate": 0.069  },
+        { "threshold":1000000, "rate": 0.0699 }
+      ],
+      "QW": [
+        { "threshold":     0, "rate": 0.03   },
+        { "threshold":  20000, "rate": 0.05   },
+        { "threshold": 100000, "rate": 0.055  },
+        { "threshold": 200000, "rate": 0.06   },
+        { "threshold": 400000, "rate": 0.065  },
+        { "threshold": 500000, "rate": 0.069  },
+        { "threshold":1000000, "rate": 0.0699 }
+      ],
+      "HOH": [
+        { "threshold":     0, "rate": 0.03   },
+        { "threshold":  16000, "rate": 0.05   },
+        { "threshold":  80000, "rate": 0.055  },
+        { "threshold": 160000, "rate": 0.06   },
+        { "threshold": 320000, "rate": 0.065  },
+        { "threshold": 400000, "rate": 0.069  },
+        { "threshold": 800000, "rate": 0.0699 }
+      ]
+    },
+    "2023": {
+      "Single": [ { "threshold":     0, "rate": 0.03   }, { "threshold":  10000, "rate": 0.05 }, { "threshold":  50000, "rate": 0.055 }, { "threshold": 100000, "rate": 0.06 }, { "threshold": 200000, "rate": 0.065 }, { "threshold": 250000, "rate": 0.069 }, { "threshold": 500000, "rate": 0.0699 } ],
+      "MFS":    [ { "threshold":     0, "rate": 0.03   }, { "threshold":  10000, "rate": 0.05 }, { "threshold":  50000, "rate": 0.055 }, { "threshold": 100000, "rate": 0.06 }, { "threshold": 200000, "rate": 0.065 }, { "threshold": 250000, "rate": 0.069 }, { "threshold": 500000, "rate": 0.0699 } ],
+      "MFJ":    [ { "threshold":     0, "rate": 0.03   }, { "threshold":  20000, "rate": 0.05 }, { "threshold": 100000, "rate": 0.055 }, { "threshold": 200000, "rate": 0.06 }, { "threshold": 400000, "rate": 0.065 }, { "threshold": 500000, "rate": 0.069 }, { "threshold":1000000, "rate": 0.0699 } ],
+      "QW":     [ { "threshold":     0, "rate": 0.03   }, { "threshold":  20000, "rate": 0.05 }, { "threshold": 100000, "rate": 0.055 }, { "threshold": 200000, "rate": 0.06 }, { "threshold": 400000, "rate": 0.065 }, { "threshold": 500000, "rate": 0.069 }, { "threshold":1000000, "rate": 0.0699 } ],
+      "HOH":    [ { "threshold":     0, "rate": 0.03   }, { "threshold":  16000, "rate": 0.05 }, { "threshold":  80000, "rate": 0.055 }, { "threshold": 160000, "rate": 0.06 }, { "threshold": 320000, "rate": 0.065 }, { "threshold": 400000, "rate": 0.069 }, { "threshold": 800000, "rate": 0.0699 } ]
+    },
+    "2024": {
+      "Single": [
+        { "threshold":     0, "rate": 0.02   },
+        { "threshold":  10000, "rate": 0.045  },
+        { "threshold":  50000, "rate": 0.055  },
+        { "threshold": 100000, "rate": 0.06   },
+        { "threshold": 200000, "rate": 0.065  },
+        { "threshold": 250000, "rate": 0.069  },
+        { "threshold": 500000, "rate": 0.0699 }
+      ],
+      "MFS": [
+        { "threshold":     0, "rate": 0.02   },
+        { "threshold":  10000, "rate": 0.045  },
+        { "threshold":  50000, "rate": 0.055  },
+        { "threshold": 100000, "rate": 0.06   },
+        { "threshold": 200000, "rate": 0.065  },
+        { "threshold": 250000, "rate": 0.069  },
+        { "threshold": 500000, "rate": 0.0699 }
+      ],
+      "MFJ": [
+        { "threshold":     0, "rate": 0.02   },
+        { "threshold":  20000, "rate": 0.045  },
+        { "threshold": 100000, "rate": 0.055  },
+        { "threshold": 200000, "rate": 0.06   },
+        { "threshold": 400000, "rate": 0.065  },
+        { "threshold": 500000, "rate": 0.069  },
+        { "threshold":1000000, "rate": 0.0699 }
+      ],
+      "QW": [
+        { "threshold":     0, "rate": 0.02   },
+        { "threshold":  20000, "rate": 0.045  },
+        { "threshold": 100000, "rate": 0.055  },
+        { "threshold": 200000, "rate": 0.06   },
+        { "threshold": 400000, "rate": 0.065  },
+        { "threshold": 500000, "rate": 0.069  },
+        { "threshold":1000000, "rate": 0.0699 }
+      ],
+      "HOH": [
+        { "threshold":     0, "rate": 0.02   },
+        { "threshold":  16000, "rate": 0.045  },
+        { "threshold":  80000, "rate": 0.055  },
+        { "threshold": 160000, "rate": 0.06   },
+        { "threshold": 320000, "rate": 0.065  },
+        { "threshold": 400000, "rate": 0.069  },
+        { "threshold": 800000, "rate": 0.0699 }
+      ]
+    },
+    "2025": {
+      "Single": [
+        { "threshold":     0, "rate": 0.02   },
+        { "threshold":  10000, "rate": 0.045  },
+        { "threshold":  50000, "rate": 0.055  },
+        { "threshold": 100000, "rate": 0.06   },
+        { "threshold": 200000, "rate": 0.065  },
+        { "threshold": 250000, "rate": 0.069  },
+        { "threshold": 500000, "rate": 0.0699 }
+      ],
+      "MFS": [
+        { "threshold":     0, "rate": 0.02   },
+        { "threshold":  10000, "rate": 0.045  },
+        { "threshold":  50000, "rate": 0.055  },
+        { "threshold": 100000, "rate": 0.06   },
+        { "threshold": 200000, "rate": 0.065  },
+        { "threshold": 250000, "rate": 0.069  },
+        { "threshold": 500000, "rate": 0.0699 }
+      ],
+      "MFJ": [
+        { "threshold":     0, "rate": 0.02   },
+        { "threshold":  20000, "rate": 0.045  },
+        { "threshold": 100000, "rate": 0.055  },
+        { "threshold": 200000, "rate": 0.06   },
+        { "threshold": 400000, "rate": 0.065  },
+        { "threshold": 500000, "rate": 0.069  },
+        { "threshold":1000000, "rate": 0.0699 }
+      ],
+      "QW": [
+        { "threshold":     0, "rate": 0.02   },
+        { "threshold":  20000, "rate": 0.045  },
+        { "threshold": 100000, "rate": 0.055  },
+        { "threshold": 200000, "rate": 0.06   },
+        { "threshold": 400000, "rate": 0.065  },
+        { "threshold": 500000, "rate": 0.069  },
+        { "threshold":1000000, "rate": 0.0699 }
+      ],
+      "HOH": [
+        { "threshold":     0, "rate": 0.02   },
+        { "threshold":  16000, "rate": 0.045  },
+        { "threshold":  80000, "rate": 0.055  },
+        { "threshold": 160000, "rate": 0.06   },
+        { "threshold": 320000, "rate": 0.065  },
+        { "threshold": 400000, "rate": 0.069  },
+        { "threshold": 800000, "rate": 0.0699 }
+      ]
+    }
+  },
+
+  "DE": {
+    "2022": {
+      "Single": [
+        { "threshold": 2000,  "rate": 0.0   },
+        { "threshold": 5000,  "rate": 0.022 },
+        { "threshold": 10000, "rate": 0.039 },
+        { "threshold": 20000, "rate": 0.048 },
+        { "threshold": 25000, "rate": 0.052 },
+        { "threshold": 60000, "rate": 0.055 },
+        { "threshold": null,  "rate": 0.066 }
+      ],
+      "MFS": [
+        { "threshold": 2000,  "rate": 0.0   },
+        { "threshold": 5000,  "rate": 0.022 },
+        { "threshold": 10000, "rate": 0.039 },
+        { "threshold": 20000, "rate": 0.048 },
+        { "threshold": 25000, "rate": 0.052 },
+        { "threshold": 60000, "rate": 0.055 },
+        { "threshold": null,  "rate": 0.066 }
+      ],
+      "MFJ": [
+        { "threshold": 2000,  "rate": 0.0   },
+        { "threshold": 5000,  "rate": 0.022 },
+        { "threshold": 10000, "rate": 0.039 },
+        { "threshold": 20000, "rate": 0.048 },
+        { "threshold": 25000, "rate": 0.052 },
+        { "threshold": 60000, "rate": 0.055 },
+        { "threshold": null,  "rate": 0.066 }
+      ],
+      "HOH": [
+        { "threshold": 2000,  "rate": 0.0   },
+        { "threshold": 5000,  "rate": 0.022 },
+        { "threshold": 10000, "rate": 0.039 },
+        { "threshold": 20000, "rate": 0.048 },
+        { "threshold": 25000, "rate": 0.052 },
+        { "threshold": 60000, "rate": 0.055 },
+        { "threshold": null,  "rate": 0.066 }
+      ]
+    },
+    "2023": {
+      "Single": [
+        { "threshold": 2000,  "rate": 0.0   },
+        { "threshold": 5000,  "rate": 0.022 },
+        { "threshold": 10000, "rate": 0.039 },
+        { "threshold": 20000, "rate": 0.048 },
+        { "threshold": 25000, "rate": 0.052 },
+        { "threshold": 60000, "rate": 0.055 },
+        { "threshold": null,  "rate": 0.066 }
+      ],
+      "MFS": [
+        { "threshold": 2000,  "rate": 0.0   },
+        { "threshold": 5000,  "rate": 0.022 },
+        { "threshold": 10000, "rate": 0.039 },
+        { "threshold": 20000, "rate": 0.048 },
+        { "threshold": 25000, "rate": 0.052 },
+        { "threshold": 60000, "rate": 0.055 },
+        { "threshold": null,  "rate": 0.066 }
+      ],
+      "MFJ": [
+        { "threshold": 2000,  "rate": 0.0   },
+        { "threshold": 5000,  "rate": 0.022 },
+        { "threshold": 10000, "rate": 0.039 },
+        { "threshold": 20000, "rate": 0.048 },
+        { "threshold": 25000, "rate": 0.052 },
+        { "threshold": 60000, "rate": 0.055 },
+        { "threshold": null,  "rate": 0.066 }
+      ],
+      "HOH": [
+        { "threshold": 2000,  "rate": 0.0   },
+        { "threshold": 5000,  "rate": 0.022 },
+        { "threshold": 10000, "rate": 0.039 },
+        { "threshold": 20000, "rate": 0.048 },
+        { "threshold": 25000, "rate": 0.052 },
+        { "threshold": 60000, "rate": 0.055 },
+        { "threshold": null,  "rate": 0.066 }
+      ]
+    },
+    "2024": {
+      "Single": [
+        { "threshold": 2000,  "rate": 0.0   },
+        { "threshold": 5000,  "rate": 0.022 },
+        { "threshold": 10000, "rate": 0.039 },
+        { "threshold": 20000, "rate": 0.048 },
+        { "threshold": 25000, "rate": 0.052 },
+        { "threshold": 60000, "rate": 0.055 },
+        { "threshold": null,  "rate": 0.066 }
+      ],
+      "MFS": [
+        { "threshold": 2000,  "rate": 0.0   },
+        { "threshold": 5000,  "rate": 0.022 },
+        { "threshold": 10000, "rate": 0.039 },
+        { "threshold": 20000, "rate": 0.048 },
+        { "threshold": 25000, "rate": 0.052 },
+        { "threshold": 60000, "rate": 0.055 },
+        { "threshold": null,  "rate": 0.066 }
+      ],
+      "MFJ": [
+        { "threshold": 2000,  "rate": 0.0   },
+        { "threshold": 5000,  "rate": 0.022 },
+        { "threshold": 10000, "rate": 0.039 },
+        { "threshold": 20000, "rate": 0.048 },
+        { "threshold": 25000, "rate": 0.052 },
+        { "threshold": 60000, "rate": 0.055 },
+        { "threshold": null,  "rate": 0.066 }
+      ],
+      "HOH": [
+        { "threshold": 2000,  "rate": 0.0   },
+        { "threshold": 5000,  "rate": 0.022 },
+        { "threshold": 10000, "rate": 0.039 },
+        { "threshold": 20000, "rate": 0.048 },
+        { "threshold": 25000, "rate": 0.052 },
+        { "threshold": 60000, "rate": 0.055 },
+        { "threshold": null,  "rate": 0.066 }
+      ]
+    },
+    "2025": {
+      "Single": [
+        { "threshold": 2000,  "rate": 0.0   },
+        { "threshold": 5000,  "rate": 0.022 },
+        { "threshold": 10000, "rate": 0.039 },
+        { "threshold": 20000, "rate": 0.048 },
+        { "threshold": 25000, "rate": 0.052 },
+        { "threshold": 60000, "rate": 0.055 },
+        { "threshold": null,  "rate": 0.066 }
+      ],
+      "MFS": [
+        { "threshold": 2000,  "rate": 0.0   },
+        { "threshold": 5000,  "rate": 0.022 },
+        { "threshold": 10000, "rate": 0.039 },
+        { "threshold": 20000, "rate": 0.048 },
+        { "threshold": 25000, "rate": 0.052 },
+        { "threshold": 60000, "rate": 0.055 },
+        { "threshold": null,  "rate": 0.066 }
+      ],
+      "MFJ": [
+        { "threshold": 2000,  "rate": 0.0   },
+        { "threshold": 5000,  "rate": 0.022 },
+        { "threshold": 10000, "rate": 0.039 },
+        { "threshold": 20000, "rate": 0.048 },
+        { "threshold": 25000, "rate": 0.052 },
+        { "threshold": 60000, "rate": 0.055 },
+        { "threshold": null,  "rate": 0.066 }
+      ],
+      "HOH": [
+        { "threshold": 2000,  "rate": 0.0   },
+        { "threshold": 5000,  "rate": 0.022 },
+        { "threshold": 10000, "rate": 0.039 },
+        { "threshold": 20000, "rate": 0.048 },
+        { "threshold": 25000, "rate": 0.052 },
+        { "threshold": 60000, "rate": 0.055 },
+        { "threshold": null,  "rate": 0.066 }
+      ]
+    }
+  },
+
+  "FL": {
+    "2022": {
+      "Single": [ { "threshold": null, "rate": 0.055 } ],
+      "MFS":    [ { "threshold": null, "rate": 0.055 } ],
+      "MFJ":    [ { "threshold": null, "rate": 0.055 } ],
+      "HOH":    [ { "threshold": null, "rate": 0.055 } ]
+    },
+    "2023": {
+      "Single": [ { "threshold": null, "rate": 0.055 } ],
+      "MFS":    [ { "threshold": null, "rate": 0.055 } ],
+      "MFJ":    [ { "threshold": null, "rate": 0.055 } ],
+      "HOH":    [ { "threshold": null, "rate": 0.055 } ]
+    },
+    "2024": {
+      "Single": [ { "threshold": null, "rate": 0.055 } ],
+      "MFS":    [ { "threshold": null, "rate": 0.055 } ],
+      "MFJ":    [ { "threshold": null, "rate": 0.055 } ],
+      "HOH":    [ { "threshold": null, "rate": 0.055 } ]
+    },
+    "2025": {
+      "Single": [ { "threshold": null, "rate": 0.055 } ],
+      "MFS":    [ { "threshold": null, "rate": 0.055 } ],
+      "MFJ":    [ { "threshold": null, "rate": 0.055 } ],
+      "HOH":    [ { "threshold": null, "rate": 0.055 } ]
+    }
+  },
+
+  "GA": {
+    "2022": {
+      "Single": [
+        { "threshold": 750,   "rate": 0.01   },
+        { "threshold": 2250,  "rate": 0.02   },
+        { "threshold": 3750,  "rate": 0.03   },
+        { "threshold": 5250,  "rate": 0.04   },
+        { "threshold": 7000,  "rate": 0.05   },
+        { "threshold": null,  "rate": 0.0575 }
+      ],
+      "MFS": [
+        { "threshold": 500,   "rate": 0.01   },
+        { "threshold": 1500,  "rate": 0.02   },
+        { "threshold": 2500,  "rate": 0.03   },
+        { "threshold": 3500,  "rate": 0.04   },
+        { "threshold": 5000,  "rate": 0.05   },
+        { "threshold": null,  "rate": 0.0575 }
+      ],
+      "MFJ": [
+        { "threshold": 1000,  "rate": 0.01   },
+        { "threshold": 3000,  "rate": 0.02   },
+        { "threshold": 5000,  "rate": 0.03   },
+        { "threshold": 7000,  "rate": 0.04   },
+        { "threshold": 10000, "rate": 0.05   },
+        { "threshold": null,  "rate": 0.0575 }
+      ],
+      "HOH": [
+        { "threshold": 1000,  "rate": 0.01   },
+        { "threshold": 3000,  "rate": 0.02   },
+        { "threshold": 5000,  "rate": 0.03   },
+        { "threshold": 7000,  "rate": 0.04   },
+        { "threshold": 10000, "rate": 0.05   },
+        { "threshold": null,  "rate": 0.0575 }
+      ]
+    },
+    "2023": {
+      "Single": [
+        { "threshold": 750,   "rate": 0.01   },
+        { "threshold": 2250,  "rate": 0.02   },
+        { "threshold": 3750,  "rate": 0.03   },
+        { "threshold": 5250,  "rate": 0.04   },
+        { "threshold": 7000,  "rate": 0.05   },
+        { "threshold": null,  "rate": 0.0575 }
+      ],
+      "MFS": [
+        { "threshold": 500,   "rate": 0.01   },
+        { "threshold": 1500,  "rate": 0.02   },
+        { "threshold": 2500,  "rate": 0.03   },
+        { "threshold": 3500,  "rate": 0.04   },
+        { "threshold": 5000,  "rate": 0.05   },
+        { "threshold": null,  "rate": 0.0575 }
+      ],
+      "MFJ": [
+        { "threshold": 1000,  "rate": 0.01   },
+        { "threshold": 3000,  "rate": 0.02   },
+        { "threshold": 5000,  "rate": 0.03   },
+        { "threshold": 7000,  "rate": 0.04   },
+        { "threshold": 10000, "rate": 0.05   },
+        { "threshold": null,  "rate": 0.0575 }
+      ],
+      "HOH": [
+        { "threshold": 1000,  "rate": 0.01   },
+        { "threshold": 3000,  "rate": 0.02   },
+        { "threshold": 5000,  "rate": 0.03   },
+        { "threshold": 7000,  "rate": 0.04   },
+        { "threshold": 10000, "rate": 0.05   },
+        { "threshold": null,  "rate": 0.0575 }
+      ]
+    },
+    "2024": {
+      "Single": [ { "threshold": null, "rate": 0.0539 } ],
+      "MFS":    [ { "threshold": null, "rate": 0.0539 } ],
+      "MFJ":    [ { "threshold": null, "rate": 0.0539 } ],
+      "HOH":    [ { "threshold": null, "rate": 0.0539 } ]
+    },
+    "2025": {
+      "Single": [ { "threshold": null, "rate": 0.0529 } ],
+      "MFS":    [ { "threshold": null, "rate": 0.0529 } ],
+      "MFJ":    [ { "threshold": null, "rate": 0.0529 } ],
+      "HOH":    [ { "threshold": null, "rate": 0.0529 } ]
+    }
+  },
+
+  "HI": {
+    "2022": {
+      "Single": [
+        { "threshold": 2400,   "rate": 0.014  },
+        { "threshold": 4800,   "rate": 0.032  },
+        { "threshold": 9600,   "rate": 0.055  },
+        { "threshold": 14400,  "rate": 0.064  },
+        { "threshold": 19200,  "rate": 0.068  },
+        { "threshold": 24000,  "rate": 0.072  },
+        { "threshold": 36000,  "rate": 0.076  },
+        { "threshold": 48000,  "rate": 0.079  },
+        { "threshold": 150000, "rate": 0.0825 },
+        { "threshold": 175000, "rate": 0.09   },
+        { "threshold": 200000, "rate": 0.10   },
+        { "threshold": null,   "rate": 0.11   }
+      ],
+      "MFS": [
+        { "threshold": 2400,   "rate": 0.014  },
+        { "threshold": 4800,   "rate": 0.032  },
+        { "threshold": 9600,   "rate": 0.055  },
+        { "threshold": 14400,  "rate": 0.064  },
+        { "threshold": 19200,  "rate": 0.068  },
+        { "threshold": 24000,  "rate": 0.072  },
+        { "threshold": 36000,  "rate": 0.076  },
+        { "threshold": 48000,  "rate": 0.079  },
+        { "threshold": 150000, "rate": 0.0825 },
+        { "threshold": 175000, "rate": 0.09   },
+        { "threshold": 200000, "rate": 0.10   },
+        { "threshold": null,   "rate": 0.11   }
+      ],
+      "MFJ": [
+        { "threshold": 4800,   "rate": 0.014  },
+        { "threshold": 9600,   "rate": 0.032  },
+        { "threshold": 19200,  "rate": 0.055  },
+        { "threshold": 28800,  "rate": 0.064  },
+        { "threshold": 38400,  "rate": 0.068  },
+        { "threshold": 48000,  "rate": 0.072  },
+        { "threshold": 72000,  "rate": 0.076  },
+        { "threshold": 96000,  "rate": 0.079  },
+        { "threshold": 300000, "rate": 0.0825 },
+        { "threshold": 350000, "rate": 0.09   },
+        { "threshold": 400000, "rate": 0.10   },
+        { "threshold": null,   "rate": 0.11   }
+      ],
+      "QW": [
+        { "threshold": 4800,   "rate": 0.014  },
+        { "threshold": 9600,   "rate": 0.032  },
+        { "threshold": 19200,  "rate": 0.055  },
+        { "threshold": 28800,  "rate": 0.064  },
+        { "threshold": 38400,  "rate": 0.068  },
+        { "threshold": 48000,  "rate": 0.072  },
+        { "threshold": 72000,  "rate": 0.076  },
+        { "threshold": 96000,  "rate": 0.079  },
+        { "threshold": 300000, "rate": 0.0825 },
+        { "threshold": 350000, "rate": 0.09   },
+        { "threshold": 400000, "rate": 0.10   },
+        { "threshold": null,   "rate": 0.11   }
+      ],
+      "HOH": [
+        { "threshold": 3600,   "rate": 0.014  },
+        { "threshold": 7200,   "rate": 0.032  },
+        { "threshold": 14400,  "rate": 0.055  },
+        { "threshold": 21600,  "rate": 0.064  },
+        { "threshold": 28800,  "rate": 0.068  },
+        { "threshold": 36000,  "rate": 0.072  },
+        { "threshold": 54000,  "rate": 0.076  },
+        { "threshold": 72000,  "rate": 0.079  },
+        { "threshold": 225000, "rate": 0.0825 },
+        { "threshold": 262500, "rate": 0.09   },
+        { "threshold": 300000, "rate": 0.10   },
+        { "threshold": null,   "rate": 0.11   }
+      ]
+    },
+    "2023": { "$ref": "#/HI/2022" },
+    "2024": { "$ref": "#/HI/2022" },
+    "2025": { "$ref": "#/HI/2022" }
+  },
+
+  "ID": {
+    "2022": {
+      "MFJ": [
+        { "threshold": 3324,  "rate": 0.01  },
+        { "threshold": 9974,  "rate": 0.03  },
+        { "threshold": 16622, "rate": 0.045 },
+        { "threshold": null,  "rate": 0.06  }
+      ],
+      "HOH": [
+        { "threshold": 3324,  "rate": 0.01  },
+        { "threshold": 9974,  "rate": 0.03  },
+        { "threshold": 16622, "rate": 0.045 },
+        { "threshold": null,  "rate": 0.06  }
+      ],
+      "QW": [
+        { "threshold": 3324,  "rate": 0.01  },
+        { "threshold": 9974,  "rate": 0.03  },
+        { "threshold": 16622, "rate": 0.045 },
+        { "threshold": null,  "rate": 0.06  }
+      ],
+      "Single": [
+        { "threshold": 1662,  "rate": 0.01  },
+        { "threshold": 4987,  "rate": 0.03  },
+        { "threshold": 8311,  "rate": 0.045 },
+        { "threshold": null,  "rate": 0.06  }
+      ],
+      "MFS": [
+        { "threshold": 1662,  "rate": 0.01  },
+        { "threshold": 4987,  "rate": 0.03  },
+        { "threshold": 8311,  "rate": 0.045 },
+        { "threshold": null,  "rate": 0.06  }
+      ]
+    },
+    "2023": {
+      "MFJ": [
+        { "threshold": 8978,  "rate": 0.00   },
+        { "threshold": null,  "rate": 0.058  }
+      ],
+      "HOH": [
+        { "threshold": 8978,  "rate": 0.00   },
+        { "threshold": null,  "rate": 0.058  }
+      ],
+      "QW": [
+        { "threshold": 8978,  "rate": 0.00   },
+        { "threshold": null,  "rate": 0.058  }
+      ],
+      "Single": [
+        { "threshold": 4489,  "rate": 0.00   },
+        { "threshold": null,  "rate": 0.058  }
+      ],
+      "MFS": [
+        { "threshold": 4489,  "rate": 0.00   },
+        { "threshold": null,  "rate": 0.058  }
+      ]
+    },
+    "2024": {
+      "MFJ": [
+        { "threshold": 9346,  "rate": 0.00    },
+        { "threshold": null,  "rate": 0.05695 }
+      ],
+      "HOH": [
+        { "threshold": 9346,  "rate": 0.00    },
+        { "threshold": null,  "rate": 0.05695 }
+      ],
+      "QW": [
+        { "threshold": 9346,  "rate": 0.00    },
+        { "threshold": null,  "rate": 0.05695 }
+      ],
+      "Single": [
+        { "threshold": 4673,  "rate": 0.00    },
+        { "threshold": null,  "rate": 0.05695 }
+      ],
+      "MFS": [
+        { "threshold": 4673,  "rate": 0.00    },
+        { "threshold": null,  "rate": 0.05695 }
+      ]
+    },
+    "2025": {
+      "MFJ": [
+        { "threshold": 9346,  "rate": 0.00    },
+        { "threshold": null,  "rate": 0.05695 }
+      ],
+      "HOH": [
+        { "threshold": 9346,  "rate": 0.00    },
+        { "threshold": null,  "rate": 0.05695 }
+      ],
+      "QW": [
+        { "threshold": 9346,  "rate": 0.00    },
+        { "threshold": null,  "rate": 0.05695 }
+      ],
+      "Single": [
+        { "threshold": 4673,  "rate": 0.00    },
+        { "threshold": null,  "rate": 0.05695 }
+      ],
+      "MFS": [
+        { "threshold": 4673,  "rate": 0.00    },
+        { "threshold": null,  "rate": 0.05695 }
+      ]
+    }
+  },
+
+  "IL": {
+    "2022": {
+      "Single": [ { "threshold": null, "rate": 0.0495 } ],
+      "MFS":    [ { "threshold": null, "rate": 0.0495 } ],
+      "MFJ":    [ { "threshold": null, "rate": 0.0495 } ],
+      "HOH":    [ { "threshold": null, "rate": 0.0495 } ]
+    },
+    "2023": { "$ref": "#/IL/2022" },
+    "2024": { "$ref": "#/IL/2022" },
+    "2025": { "$ref": "#/IL/2022" }
+  },
+
+  "IN": {
+    "2022": {
+      "Single": [ { "threshold": null, "rate": 0.0323 } ],
+      "MFS":    [ { "threshold": null, "rate": 0.0323 } ],
+      "MFJ":    [ { "threshold": null, "rate": 0.0323 } ],
+      "HOH":    [ { "threshold": null, "rate": 0.0323 } ],
+      "QW":     [ { "threshold": null, "rate": 0.0323 } ]
+    },
+    "2023": {
+      "Single": [ { "threshold": null, "rate": 0.0315 } ],
+      "MFS":    [ { "threshold": null, "rate": 0.0315 } ],
+      "MFJ":    [ { "threshold": null, "rate": 0.0315 } ],
+      "HOH":    [ { "threshold": null, "rate": 0.0315 } ],
+      "QW":     [ { "threshold": null, "rate": 0.0315 } ]
+    },
+    "2024": {
+      "Single": [ { "threshold": null, "rate": 0.0305 } ],
+      "MFS":    [ { "threshold": null, "rate": 0.0305 } ],
+      "MFJ":    [ { "threshold": null, "rate": 0.0305 } ],
+      "HOH":    [ { "threshold": null, "rate": 0.0305 } ],
+      "QW":     [ { "threshold": null, "rate": 0.0305 } ]
+    },
+    "2025": {
+      "Single": [ { "threshold": null, "rate": 0.0305 } ],
+      "MFS":    [ { "threshold": null, "rate": 0.0305 } ],
+      "MFJ":    [ { "threshold": null, "rate": 0.0305 } ],
+      "HOH":    [ { "threshold": null, "rate": 0.0305 } ],
+      "QW":     [ { "threshold": null, "rate": 0.0305 } ]
+    }
+  },
+
+  "IA": {
+    "2022": {
+      "Single": [
+        { "threshold": 1743,  "rate": 0.0033  },
+        { "threshold": 3486,  "rate": 0.0067  },
+        { "threshold": 6972,  "rate": 0.0225  },
+        { "threshold": 15687, "rate": 0.0414  },
+        { "threshold": 26145, "rate": 0.0563  },
+        { "threshold": 34860, "rate": 0.0596  },
+        { "threshold": 52290, "rate": 0.0625  },
+        { "threshold": 78435, "rate": 0.0744  },
+        { "threshold": null,  "rate": 0.0853  }
+      ],
+      "MFS": [
+        { "threshold": 1743,  "rate": 0.0033  },
+        { "threshold": 3486,  "rate": 0.0067  },
+        { "threshold": 6972,  "rate": 0.0225  },
+        { "threshold": 15687, "rate": 0.0414  },
+        { "threshold": 26145, "rate": 0.0563  },
+        { "threshold": 34860, "rate": 0.0596  },
+        { "threshold": 52290, "rate": 0.0625  },
+        { "threshold": 78435, "rate": 0.0744  },
+        { "threshold": null,  "rate": 0.0853  }
+      ],
+      "MFJ": [
+        { "threshold": 1743,  "rate": 0.0033  },
+        { "threshold": 3486,  "rate": 0.0067  },
+        { "threshold": 6972,  "rate": 0.0225  },
+        { "threshold": 15687, "rate": 0.0414  },
+        { "threshold": 26145, "rate": 0.0563  },
+        { "threshold": 34860, "rate": 0.0596  },
+        { "threshold": 52290, "rate": 0.0625  },
+        { "threshold": 78435, "rate": 0.0744  },
+        { "threshold": null,  "rate": 0.0853  }
+      ],
+      "HOH": [
+        { "threshold": 1743,  "rate": 0.0033  },
+        { "threshold": 3486,  "rate": 0.0067  },
+        { "threshold": 6972,  "rate": 0.0225  },
+        { "threshold": 15687, "rate": 0.0414  },
+        { "threshold": 26145, "rate": 0.0563  },
+        { "threshold": 34860, "rate": 0.0596  },
+        { "threshold": 52290, "rate": 0.0625  },
+        { "threshold": 78435, "rate": 0.0744  },
+        { "threshold": null,  "rate": 0.0853  }
+      ],
+      "QW": [
+        { "threshold": 1743,  "rate": 0.0033  },
+        { "threshold": 3486,  "rate": 0.0067  },
+        { "threshold": 6972,  "rate": 0.0225  },
+        { "threshold": 15687, "rate": 0.0414  },
+        { "threshold": 26145, "rate": 0.0563  },
+        { "threshold": 34860, "rate": 0.0596  },
+        { "threshold": 52290, "rate": 0.0625  },
+        { "threshold": 78435, "rate": 0.0744  },
+        { "threshold": null,  "rate": 0.0853  }
+      ]
+    },
+    "2023": {
+      "MFJ": [ { "threshold": 12000, "rate": 0.044 }, { "threshold": 60000, "rate": 0.0482 }, { "threshold": 150000, "rate": 0.057 }, { "threshold": null, "rate": 0.06 } ],
+      "Single": [ { "threshold": 6000, "rate": 0.044 }, { "threshold": 30000, "rate": 0.0482 }, { "threshold": 75000, "rate": 0.057 }, { "threshold": null, "rate": 0.06 } ],
+      "MFS":    [ { "threshold": 6000, "rate": 0.044 }, { "threshold": 30000, "rate": 0.0482 }, { "threshold": 75000, "rate": 0.057 }, { "threshold": null, "rate": 0.06 } ],
+      "HOH":    [ { "threshold": 6000, "rate": 0.044 }, { "threshold": 30000, "rate": 0.0482 }, { "threshold": 75000, "rate": 0.057 }, { "threshold": null, "rate": 0.06 } ],
+      "QW":     [ { "threshold": 6000, "rate": 0.044 }, { "threshold": 30000, "rate": 0.0482 }, { "threshold": 75000, "rate": 0.057 }, { "threshold": null, "rate": 0.06 } ]
+    },
+    "2024": { "$ref": "#/IA/2023" },
+    "2025": { "$ref": "#/IA/2023" }
+  },
+
+  "KS": {
+    "2022": {
+      "Single": [ { "threshold": 15000, "rate": 0.031 }, { "threshold": 30000, "rate": 0.0525 }, { "threshold": null, "rate": 0.057 } ],
+      "MFS":    [ { "threshold": 15000, "rate": 0.031 }, { "threshold": 30000, "rate": 0.0525 }, { "threshold": null, "rate": 0.057 } ],
+      "HOH":    [ { "threshold": 15000, "rate": 0.031 }, { "threshold": 30000, "rate": 0.0525 }, { "threshold": null, "rate": 0.057 } ],
+      "MFJ":    [ { "threshold": 30000, "rate": 0.031 }, { "threshold": 60000, "rate": 0.0525 }, { "threshold": null, "rate": 0.057 } ]
+    },
+    "2023": { "$ref": "#/KS/2022" },
+    "2024": { "$ref": "#/KS/2022" },
+    "2025": { "$ref": "#/KS/2022" }
+  },
+
+  "KY": {
+    "2022": {
+      "Single": [ { "threshold": null, "rate": 0.05 } ],
+      "MFS":    [ { "threshold": null, "rate": 0.05 } ],
+      "MFJ":    [ { "threshold": null, "rate": 0.05 } ],
+      "HOH":    [ { "threshold": null, "rate": 0.05 } ],
+      "QW":     [ { "threshold": null, "rate": 0.05 } ]
+    },
+    "2023": {
+      "Single": [ { "threshold": null, "rate": 0.045 } ],
+      "MFS":    [ { "threshold": null, "rate": 0.045 } ],
+      "MFJ":    [ { "threshold": null, "rate": 0.045 } ],
+      "HOH":    [ { "threshold": null, "rate": 0.045 } ],
+      "QW":     [ { "threshold": null, "rate": 0.045 } ]
+    },
+    "2024": { "$ref": "#/KY/2023" },
+    "2025": { "$ref": "#/KY/2023" }
+  },
+
+  "LA": {
+    "2022": {
+      "Single": [ { "threshold": 12500, "rate": 0.0185 }, { "threshold": 50000, "rate": 0.035 }, { "threshold": null, "rate": 0.0425 } ],
+      "MFS":    [ { "threshold": 12500, "rate": 0.0185 }, { "threshold": 50000, "rate": 0.035 }, { "threshold": null, "rate": 0.0425 } ],
+      "HOH":    [ { "threshold": 12500, "rate": 0.0185 }, { "threshold": 50000, "rate": 0.035 }, { "threshold": null, "rate": 0.0425 } ],
+      "MFJ":    [ { "threshold": 25000, "rate": 0.0185 }, { "threshold": 100000, "rate": 0.035 }, { "threshold": null, "rate": 0.0425 } ],
+      "QW":     [ { "threshold": 25000, "rate": 0.0185 }, { "threshold": 100000, "rate": 0.035 }, { "threshold": null, "rate": 0.0425 } ]
+    },
+    "2023": { "$ref": "#/LA/2022" },
+    "2024": { "$ref": "#/LA/2022" },
+    "2025": { "$ref": "#/LA/2022" }
+  },
+
+  "ME": {
+    "2022": {
+      "Single": [
+        { "threshold": 0,     "rate": 0.058 },
+        { "threshold": 23000, "rate": 0.0675 },
+        { "threshold": null,  "rate": 0.0715 }
+      ],
+      "MFS": [
+        { "threshold": 0,     "rate": 0.058 },
+        { "threshold": 23000, "rate": 0.0675 },
+        { "threshold": null,  "rate": 0.0715 }
+      ],
+      "HOH": [
+        { "threshold": 0,     "rate": 0.058 },
+        { "threshold": 34500, "rate": 0.0675 },
+        { "threshold": null,  "rate": 0.0715 }
+      ],
+      "MFJ": [
+        { "threshold": 0,     "rate": 0.058 },
+        { "threshold": 46000, "rate": 0.0675 },
+        { "threshold": null,  "rate": 0.0715 }
+      ]
+    },
+    "2023": {
+      "Single": [
+        { "threshold": 0,     "rate": 0.058 },
+        { "threshold": 24500, "rate": 0.0675 },
+        { "threshold": null,  "rate": 0.0715 }
+      ],
+      "MFS": [
+        { "threshold": 0,     "rate": 0.058 },
+        { "threshold": 24500, "rate": 0.0675 },
+        { "threshold": null,  "rate": 0.0715 }
+      ],
+      "HOH": [
+        { "threshold": 0,     "rate": 0.058 },
+        { "threshold": 36750, "rate": 0.0675 },
+        { "threshold": null,  "rate": 0.0715 }
+      ],
+      "MFJ": [
+        { "threshold": 0,     "rate": 0.058 },
+        { "threshold": 49050, "rate": 0.0675 },
+        { "threshold": null,  "rate": 0.0715 }
+      ]
+    },
+    "2024": {
+      "Single": [
+        { "threshold": 0,     "rate": 0.058 },
+        { "threshold": 24500, "rate": 0.0675 },
+        { "threshold": null,  "rate": 0.0715 }
+      ],
+      "MFS": [
+        { "threshold": 0,     "rate": 0.058 },
+        { "threshold": 24500, "rate": 0.0675 },
+        { "threshold": null,  "rate": 0.0715 }
+      ],
+      "HOH": [
+        { "threshold": 0,     "rate": 0.058 },
+        { "threshold": 36750, "rate": 0.0675 },
+        { "threshold": null,  "rate": 0.0715 }
+      ],
+      "MFJ": [
+        { "threshold": 0,     "rate": 0.058 },
+        { "threshold": 49050, "rate": 0.0675 },
+        { "threshold": null,  "rate": 0.0715 }
+      ]
+    },
+    "2025": { "$ref": "#/ME/2024" }
+  },
+
+  "MD": {
+    "2022": {
+      "Single": [
+        { "threshold": 0,      "rate": 0.02   },
+        { "threshold": 1000,   "rate": 0.03   },
+        { "threshold": 2000,   "rate": 0.04   },
+        { "threshold": 3000,   "rate": 0.0475 },
+        { "threshold": 100000, "rate": 0.05   },
+        { "threshold": 125000, "rate": 0.0525 },
+        { "threshold": 150000, "rate": 0.055  },
+        { "threshold": 250000, "rate": 0.0575 }
+      ],
+      "MFS":    [ { "threshold": 0, "rate": 0.02 }, { "threshold": 1000, "rate": 0.03 }, { "threshold": 2000, "rate": 0.04 }, { "threshold": 3000, "rate": 0.0475 }, { "threshold": 100000, "rate": 0.05 }, { "threshold": 125000, "rate": 0.0525 }, { "threshold": 150000, "rate": 0.055 }, { "threshold": 250000, "rate": 0.0575 } ],
+      "MFJ":    [ { "threshold": 0, "rate": 0.02 }, { "threshold": 1000, "rate": 0.03 }, { "threshold": 2000, "rate": 0.04 }, { "threshold": 3000, "rate": 0.0475 }, { "threshold": 150000, "rate": 0.05 }, { "threshold": 175000, "rate": 0.0525 }, { "threshold": 225000, "rate": 0.055 }, { "threshold": 300000, "rate": 0.0575 } ],
+      "HOH":    [ { "threshold": 0, "rate": 0.02 }, { "threshold": 1000, "rate": 0.03 }, { "threshold": 2000, "rate": 0.04 }, { "threshold": 3000, "rate": 0.0475 }, { "threshold": 150000, "rate": 0.05 }, { "threshold": 175000, "rate": 0.0525 }, { "threshold": 225000, "rate": 0.055 }, { "threshold": 300000, "rate": 0.0575 } ],
+      "QW":     [ { "threshold": 0, "rate": 0.02 }, { "threshold": 1000, "rate": 0.03 }, { "threshold": 2000, "rate": 0.04 }, { "threshold": 3000, "rate": 0.0475 }, { "threshold": 150000, "rate": 0.05 }, { "threshold": 175000, "rate": 0.0525 }, { "threshold": 225000, "rate": 0.055 }, { "threshold": 300000, "rate": 0.0575 } ]
+    },
+    "2023": { "$ref": "#/MD/2022" },
+    "2024": { "$ref": "#/MD/2022" },
+    "2025": { "$ref": "#/MD/2022" }
+  },
+
+  "MA": {
+    "2022": {
+      "Single": [ { "threshold": 0, "rate": 0.05 }, { "threshold": 1000000, "rate": 0.09 } ],
+      "MFS":    [ { "threshold": 0, "rate": 0.05 }, { "threshold": 1000000, "rate": 0.09 } ],
+      "MFJ":    [ { "threshold": 0, "rate": 0.05 }, { "threshold": 1000000, "rate": 0.09 } ],
+      "HOH":    [ { "threshold": 0, "rate": 0.05 }, { "threshold": 1000000, "rate": 0.09 } ],
+      "QW":     [ { "threshold": 0, "rate": 0.05 }, { "threshold": 1000000, "rate": 0.09 } ]
+    },
+    "2023": { "$ref": "#/MA/2022" },
+    "2024": { "$ref": "#/MA/2022" },
+    "2025": { "$ref": "#/MA/2022" }
+  },
+
+  "MI": {
+    "2022": { "Single":[{ "threshold": null, "rate": 0.0425 }], "MFS":[{ "threshold": null, "rate": 0.0425 }], "MFJ":[{ "threshold": null, "rate": 0.0425 }], "HOH":[{ "threshold": null, "rate": 0.0425 }], "QW":[{ "threshold": null, "rate": 0.0425 }] },
+    "2023": { "Single":[{ "threshold": null, "rate": 0.0405 }], "MFS":[{ "threshold": null, "rate": 0.0405 }], "MFJ":[{ "threshold": null, "rate": 0.0405 }], "HOH":[{ "threshold": null, "rate": 0.0405 }], "QW":[{ "threshold": null, "rate": 0.0405 }] },
+    "2024": { "Single":[{ "threshold": null, "rate": 0.0425 }], "MFS":[{ "threshold": null, "rate": 0.0425 }], "MFJ":[{ "threshold": null, "rate": 0.0425 }], "HOH":[{ "threshold": null, "rate": 0.0425 }], "QW":[{ "threshold": null, "rate": 0.0425 }] },
+    "2025": { "Single":[{ "threshold": null, "rate": 0.0425 }], "MFS":[{ "threshold": null, "rate": 0.0425 }], "MFJ":[{ "threshold": null, "rate": 0.0425 }], "HOH":[{ "threshold": null, "rate": 0.0425 }], "QW":[{ "threshold": null, "rate": 0.0425 }] }
+  },
+
+  "MN": {
+    "2022": {
+      "MFJ": [ { "threshold": 41050, "rate": 0.0535 }, { "threshold": 163060, "rate": 0.068 }, { "threshold": 284810, "rate": 0.0785 }, { "threshold": null, "rate": 0.0985 } ],
+      "MFS": [ { "threshold": 20525, "rate": 0.0535 }, { "threshold": 81530, "rate": 0.068 }, { "threshold": 142405, "rate": 0.0785 }, { "threshold": null, "rate": 0.0985 } ],
+      "HOH": [ { "threshold": 34570, "rate": 0.0535 }, { "threshold": 138890, "rate": 0.068 }, { "threshold": 227600, "rate": 0.0785 }, { "threshold": null, "rate": 0.0985 } ],
+      "Single":[{ "threshold": 28080, "rate": 0.0535 }, { "threshold": 92230, "rate": 0.068 }, { "threshold": 171220, "rate": 0.0785 }, { "threshold": null, "rate": 0.0985 } ]
+    },
+    "2023": {
+      "MFJ": [ { "threshold": 43950, "rate": 0.0535 }, { "threshold": 174610, "rate": 0.068 }, { "threshold": 304970, "rate": 0.0785 }, { "threshold": null, "rate": 0.0985 } ],
+      "MFS": [ { "threshold": 21975, "rate": 0.0535 }, { "threshold": 87305,  "rate": 0.068 }, { "threshold": 152485, "rate": 0.0785 }, { "threshold": null, "rate": 0.0985 } ],
+      "HOH": [ { "threshold": 37010, "rate": 0.0535 }, { "threshold": 148730, "rate": 0.068 }, { "threshold": 243720, "rate": 0.0785 }, { "threshold": null, "rate": 0.0985 } ],
+      "Single":[{ "threshold": 30070, "rate": 0.0535 }, { "threshold": 98760,  "rate": 0.068 }, { "threshold": 183340, "rate": 0.0785 }, { "threshold": null, "rate": 0.0985 } ]
+    },
+    "2024": {
+      "MFJ": [ { "threshold": 46330, "rate": 0.0535 }, { "threshold": 184040, "rate": 0.068  }, { "threshold": 321450, "rate": 0.0785 }, { "threshold": null, "rate": 0.0985 } ],
+      "MFS": [ { "threshold": 23165, "rate": 0.0535 }, { "threshold": 92020,  "rate": 0.068  }, { "threshold": 160725, "rate": 0.0785 }, { "threshold": null, "rate": 0.0985 } ],
+      "HOH": [ { "threshold": 39010, "rate": 0.0535 }, { "threshold": 156760, "rate": 0.068  }, { "threshold": 256880, "rate": 0.0785 }, { "threshold": null, "rate": 0.0985 } ],
+      "Single":[{ "threshold": 31690, "rate": 0.0535 }, { "threshold": 104090, "rate": 0.068  }, { "threshold": 193240, "rate": 0.0785 }, { "threshold": null, "rate": 0.0985 } ]
+    },
+    "2025": {
+      "MFJ": [ { "threshold": 46330, "rate": 0.0535 }, { "threshold": 184040, "rate": 0.068  }, { "threshold": 321450, "rate": 0.0785 }, { "threshold": null, "rate": 0.0985 } ],
+      "MFS": [ { "threshold": 23165, "rate": 0.0535 }, { "threshold": 92020,  "rate": 0.068  }, { "threshold": 160725, "rate": 0.0785 }, { "threshold": null, "rate": 0.0985 } ],
+      "HOH": [ { "threshold": 39010, "rate": 0.0535 }, { "threshold": 156760, "rate": 0.068  }, { "threshold": 256880, "rate": 0.0785 }, { "threshold": null, "rate": 0.0985 } ],
+      "Single":[{ "threshold": 31690, "rate": 0.0535 }, { "threshold": 104090, "rate": 0.068  }, { "threshold": 193240, "rate": 0.0785 }, { "threshold": null, "rate": 0.0985 } ]
+    }
+  },
+
+  "MS": {
+    "2022": {
+      "Single":[{ "threshold": 5000,  "rate": 0 }, { "threshold": 10000, "rate": 0.04 }, { "threshold": null, "rate": 0.05 }],
+      "MFS":   [{ "threshold": 5000,  "rate": 0 }, { "threshold": 10000, "rate": 0.04 }, { "threshold": null, "rate": 0.05 }],
+      "MFJ":   [{ "threshold": 5000,  "rate": 0 }, { "threshold": 10000, "rate": 0.04 }, { "threshold": null, "rate": 0.05 }],
+      "HOH":   [{ "threshold": 5000,  "rate": 0 }, { "threshold": 10000, "rate": 0.04 }, { "threshold": null, "rate": 0.05 }],
+      "QW":    [{ "threshold": 5000,  "rate": 0 }, { "threshold": 10000, "rate": 0.04 }, { "threshold": null, "rate": 0.05 }]
+    },
+    "2023": {
+      "Single":[{ "threshold": 10000, "rate": 0 }, { "threshold": null, "rate": 0.05 }],
+      "MFS":   [{ "threshold": 10000, "rate": 0 }, { "threshold": null, "rate": 0.05 }],
+      "MFJ":   [{ "threshold": 10000, "rate": 0 }, { "threshold": null, "rate": 0.05 }],
+      "HOH":   [{ "threshold": 10000, "rate": 0 }, { "threshold": null, "rate": 0.05 }],
+      "QW":    [{ "threshold": 10000, "rate": 0 }, { "threshold": null, "rate": 0.05 }]
+    },
+    "2024": {
+      "Single":[{ "threshold": 10000, "rate": 0 }, { "threshold": null, "rate": 0.05 }],
+      "MFS":   [{ "threshold": 10000, "rate": 0 }, { "threshold": null, "rate": 0.05 }],
+      "MFJ":   [{ "threshold": 10000, "rate": 0 }, { "threshold": null, "rate": 0.05 }],
+      "HOH":   [{ "threshold": 10000, "rate": 0 }, { "threshold": null, "rate": 0.05 }],
+      "QW":    [{ "threshold": 10000, "rate": 0 }, { "threshold": null, "rate": 0.05 }]
+    },
+    "2025": { "$ref": "#/MS/2024" }
+  },
+
+  "MT": {
+    "2022": {
+      "Single": [
+        { "threshold": 3300,  "rate": 0.01   },
+        { "threshold": 5800,  "rate": 0.02   },
+        { "threshold": 8900,  "rate": 0.03   },
+        { "threshold": 12000, "rate": 0.04   },
+        { "threshold": 15400, "rate": 0.05   },
+        { "threshold": 19800, "rate": 0.06   },
+        { "threshold": null,  "rate": 0.0675 }
+      ],
+      "MFS":    [ { "threshold": 3300,  "rate": 0.01 }, { "threshold": 5800,  "rate": 0.02 }, { "threshold": 8900,  "rate": 0.03 }, { "threshold": 12000, "rate": 0.04 }, { "threshold": 15400, "rate": 0.05 }, { "threshold": 19800, "rate": 0.06 }, { "threshold": null,  "rate": 0.0675 } ],
+      "MFJ":    [ { "threshold": 3300,  "rate": 0.01 }, { "threshold": 5800,  "rate": 0.02 }, { "threshold": 8900,  "rate": 0.03 }, { "threshold": 12000, "rate": 0.04 }, { "threshold": 15400, "rate": 0.05 }, { "threshold": 19800, "rate": 0.06 }, { "threshold": null,  "rate": 0.0675 } ],
+      "HOH":    [ { "threshold": 3300,  "rate": 0.01 }, { "threshold": 5800,  "rate": 0.02 }, { "threshold": 8900,  "rate": 0.03 }, { "threshold": 12000, "rate": 0.04 }, { "threshold": 15400, "rate": 0.05 }, { "threshold": 19800, "rate": 0.06 }, { "threshold": null,  "rate": 0.0675 } ],
+      "QW":     [ { "threshold": 3300,  "rate": 0.01 }, { "threshold": 5800,  "rate": 0.02 }, { "threshold": 8900,  "rate": 0.03 }, { "threshold": 12000, "rate": 0.04 }, { "threshold": 15400, "rate": 0.05 }, { "threshold": 19800, "rate": 0.06 }, { "threshold": null,  "rate": 0.0675 } ]
+    },
+    "2023": {
+      "Single": [
+        { "threshold": 3600,  "rate": 0.01   },
+        { "threshold": 6300,  "rate": 0.02   },
+        { "threshold": 9700,  "rate": 0.03   },
+        { "threshold": 13000, "rate": 0.04   },
+        { "threshold": 16800, "rate": 0.05   },
+        { "threshold": 21600, "rate": 0.06   },
+        { "threshold": null,  "rate": 0.0675 }
+      ],
+          "MFS": { "$ref": "#/MT/2022/MFS" },
+          "MFJ": { "$ref": "#/MT/2022/MFJ" },
+          "HOH": { "$ref": "#/MT/2022/HOH" },
+           "QW":  { "$ref": "#/MT/2022/QW" }
+        },
+        "2024": {
+          "Single": [
+            { "threshold": 3600,  "rate": 0.01   },
+            { "threshold": 6300,  "rate": 0.02   },
+            { "threshold": 9700,  "rate": 0.03   },
+            { "threshold":13000,  "rate": 0.04   },
+            { "threshold":16800,  "rate": 0.05   },
+            { "threshold":21600,  "rate": 0.06   },
+            { "threshold":null,   "rate": 0.0675 }
+          ],
+          "MFS": { "$ref": "#/MT/2022/MFS" },
+          "MFJ": { "$ref": "#/MT/2022/MFJ" },
+         "HOH": { "$ref": "#/MT/2022/HOH" },
+          "QW":  { "$ref": "#/MT/2022/QW" }
+        },
+        "2025": { "$ref": "#/MT/2024" }
+       },
+
+  "NE": {
+    "2022": {
+      "Single": [
+        { "threshold": 3440,  "rate": 0.0246 },
+        { "threshold": 20590, "rate": 0.0351 },
+        { "threshold": 33180, "rate": 0.0501 },
+        { "threshold": null,  "rate": 0.0684 }
+      ],
+      "MFS": [
+        { "threshold": 3440,  "rate": 0.0246 },
+        { "threshold": 20590, "rate": 0.0351 },
+        { "threshold": 33180, "rate": 0.0501 },
+        { "threshold": null,  "rate": 0.0684 }
+      ],
+      "HOH": [
+        { "threshold": 6410,  "rate": 0.0246 },
+        { "threshold": 32950, "rate": 0.0351 },
+        { "threshold": 49200, "rate": 0.0501 },
+        { "threshold": null,  "rate": 0.0684 }
+      ],
+      "MFJ": [
+        { "threshold": 6860,  "rate": 0.0246 },
+        { "threshold": 41190, "rate": 0.0351 },
+        { "threshold": 66360, "rate": 0.0501 },
+        { "threshold": null,  "rate": 0.0684 }
+      ],
+      "QW": [
+        { "threshold": 6860,  "rate": 0.0246 },
+        { "threshold": 41190, "rate": 0.0351 },
+        { "threshold": 66360, "rate": 0.0501 },
+        { "threshold": null,  "rate": 0.0684 }
+      ]
+    },
+    "2023": {
+      "Single": [
+        { "threshold": 3700,  "rate": 0.0246 },
+        { "threshold": 22170, "rate": 0.0351 },
+        { "threshold": 35730, "rate": 0.0501 },
+        { "threshold": null,  "rate": 0.0664 }
+      ],
+      "MFS": [
+        { "threshold": 3700,  "rate": 0.0246 },
+        { "threshold": 22170, "rate": 0.0351 },
+        { "threshold": 35730, "rate": 0.0501 },
+        { "threshold": null,  "rate": 0.0664 }
+      ],
+      "HOH": [
+        { "threshold": 6900,  "rate": 0.0246 },
+        { "threshold": 35480, "rate": 0.0351 },
+        { "threshold": 52980, "rate": 0.0501 },
+        { "threshold": null,  "rate": 0.0664 }
+      ],
+      "MFJ": [
+        { "threshold": 7390,  "rate": 0.0246 },
+        { "threshold": 44350, "rate": 0.0351 },
+        { "threshold": 71460, "rate": 0.0501 },
+        { "threshold": null,  "rate": 0.0664 }
+      ],
+      "QW": [
+        { "threshold": 7390,  "rate": 0.0246 },
+        { "threshold": 44350, "rate": 0.0351 },
+        { "threshold": 71460, "rate": 0.0501 },
+        { "threshold": null,  "rate": 0.0664 }
+      ]
+    },
+    "2024": {
+      "Single": [
+        { "threshold": 3700,  "rate": 0.0246 },
+        { "threshold": 22170, "rate": 0.0351 },
+        { "threshold": 35730, "rate": 0.0501 },
+        { "threshold": null,  "rate": 0.0664 }
+      ],
+      "MFS": [
+        { "threshold": 3700,  "rate": 0.0246 },
+        { "threshold": 22170, "rate": 0.0351 },
+        { "threshold": 35730, "rate": 0.0501 },
+        { "threshold": null,  "rate": 0.0664 }
+      ],
+      "HOH": [
+        { "threshold": 6900,  "rate": 0.0246 },
+        { "threshold": 35480, "rate": 0.0351 },
+        { "threshold": 52980, "rate": 0.0501 },
+        { "threshold": null,  "rate": 0.0664 }
+      ],
+      "MFJ": [
+        { "threshold": 7390,  "rate": 0.0246 },
+        { "threshold": 44350, "rate": 0.0351 },
+        { "threshold": 71460, "rate": 0.0501 },
+        { "threshold": null,  "rate": 0.0664 }
+      ],
+      "QW": [
+        { "threshold": 7390,  "rate": 0.0246 },
+        { "threshold": 44350, "rate": 0.0351 },
+        { "threshold": 71460, "rate": 0.0501 },
+        { "threshold": null,  "rate": 0.0664 }
+      ]
+    },
+    "2025": { "$ref": "#/NE/2024" }
+  },
+
+  "NJ": {
+    "2022": {
+      "Single": [
+        { "threshold": 20000,  "rate": 0.014   },
+        { "threshold": 35000,  "rate": 0.0175  },
+        { "threshold": 40000,  "rate": 0.035   },
+        { "threshold": 75000,  "rate": 0.05525 },
+        { "threshold": 500000, "rate": 0.0637  },
+        { "threshold": 1000000,"rate": 0.0897  },
+        { "threshold": null,   "rate": 0.1075 }
+      ],
+      "MFS": [
+        { "threshold": 20000,  "rate": 0.014   },
+        { "threshold": 35000,  "rate": 0.0175  },
+        { "threshold": 40000,  "rate": 0.035   },
+        { "threshold": 75000,  "rate": 0.05525 },
+        { "threshold": 500000, "rate": 0.0637  },
+        { "threshold": 1000000,"rate": 0.0897  },
+        { "threshold": null,   "rate": 0.1075 }
+      ],
+      "MFJ": [
+        { "threshold": 20000,  "rate": 0.014   },
+        { "threshold": 50000,  "rate": 0.0175  },
+        { "threshold": 70000,  "rate": 0.0245  },
+        { "threshold": 80000,  "rate": 0.035   },
+        { "threshold": 150000, "rate": 0.05525 },
+        { "threshold": 500000, "rate": 0.0637  },
+        { "threshold": 1000000,"rate": 0.0897  },
+        { "threshold": null,   "rate": 0.1075 }
+      ],
+      "HOH": [ { "$ref": "#/NJ/2022/MFJ" } ],
+      "QW":  [ { "$ref": "#/NJ/2022/MFJ" } ]
+    },
+    "2023": { "$ref": "#/NJ/2022" },
+    "2024": { "$ref": "#/NJ/2022" },
+    "2025": { "$ref": "#/NJ/2022" }
+  },
+
+  "NM": {
+    "2022": {
+      "Single": [
+        { "threshold": 5500,   "rate": 0.017  },
+        { "threshold": 11000,  "rate": 0.032  },
+        { "threshold": 16000,  "rate": 0.047  },
+        { "threshold": 210000, "rate": 0.049  },
+        { "threshold": null,   "rate": 0.059  }
+      ],
+      "MFS":    [ { "$ref": "#/NM/2022/Single" } ],
+      "MFJ":    [
+        { "threshold": 8000,   "rate": 0.017  },
+        { "threshold": 16000,  "rate": 0.032  },
+        { "threshold": 24000,  "rate": 0.047  },
+        { "threshold": 315000, "rate": 0.049  },
+        { "threshold": null,   "rate": 0.059  }
+      ],
+      "QW":     [ { "$ref": "#/NM/2022/MFJ" } ],
+      "HOH":    [ { "$ref": "#/NM/2022/MFJ" } ]
+    },
+    "2023": { "$ref": "#/NM/2022" },
+    "2024": { "$ref": "#/NM/2022" },
+    "2025": { "$ref": "#/NM/2022" }
+  },
+
+  "NY": {
+    "additionalTaxPhaseOut": {
+      "Single": {
+        "threshold": 8500,
+        "rates": [
+          { "threshold": 8500,   "rate": 0.04 },
+          { "threshold": 11700,  "rate": 0.045 },
+          { "threshold": 13900,  "rate": 0.0525 },
+          { "threshold": 80650,  "rate": 0.055 },
+          { "threshold": 215400, "rate": 0.06 },
+          { "threshold": 1077550,"rate": 0.0685 },
+          { "threshold": 5000000,"rate": 0.0965 },
+          { "threshold": 25000000,"rate":0.103 },
+          { "threshold": null,    "rate":0.109 }
+        ]
+      },
+      "MFS": {
+        "threshold": 8500,
+        "rates": [
+          { "threshold": 8500,   "rate": 0.04 },
+          { "threshold": 11700,  "rate": 0.045 },
+          { "threshold": 13900,  "rate": 0.0525 },
+          { "threshold": 80650,  "rate": 0.055 },
+          { "threshold": 215400, "rate": 0.06 },
+          { "threshold": 1077550,"rate": 0.0685 },
+          { "threshold": 5000000,"rate": 0.0965 },
+          { "threshold": 25000000,"rate":0.103 },
+          { "threshold": null,    "rate":0.109 }
+        ]
+      },
+      "MFJ": {
+        "threshold": 17150,
+        "rates": [
+          { "threshold": 17150,   "rate": 0.04 },
+          { "threshold": 23600,   "rate": 0.045 },
+          { "threshold": 27900,   "rate": 0.0525 },
+          { "threshold": 161550,  "rate": 0.055 },
+          { "threshold": 323200,  "rate": 0.06 },
+          { "threshold": 2155350, "rate": 0.0685 },
+          { "threshold": 5000000, "rate": 0.0965 },
+          { "threshold": 25000000,"rate":0.103 },
+          { "threshold": null,     "rate":0.109 }
+        ]
+      },
+      "HOH": {
+        "threshold": 12800,
+        "rates": [
+          { "threshold": 12800,   "rate": 0.04 },
+          { "threshold": 17650,   "rate": 0.045 },
+          { "threshold": 20900,   "rate": 0.0525 },
+          { "threshold": 107650,  "rate": 0.055 },
+          { "threshold": 269300,  "rate": 0.06 },
+          { "threshold": 1616450, "rate": 0.0685 },
+          { "threshold": 5000000, "rate": 0.0965 },
+          { "threshold": 25000000,"rate":0.103 },
+          { "threshold": null,     "rate":0.109 }
+        ]
+      }
+    },
+    "benefitRecapture": {
+      "Single": {
+        "phaseIn":   { "start": 200000,  "step": 5000,  "perStep": 90,  "max": 2700 },
+        "phaseOut":  { "start": 500000,  "step": 5000,  "perStep": 50,  "max": 3150 }
+      },
+      "MFS": {
+        "phaseIn":   { "start": 200000,  "step": 5000,  "perStep": 90,  "max": 2700 },
+        "phaseOut":  { "start": 500000,  "step": 5000,  "perStep": 50,  "max": 3150 }
+      },
+      "MFJ": {
+        "phaseIn":   { "start": 400000,  "step": 10000, "perStep":180, "max": 5400 },
+        "phaseOut":  { "start":1000000,  "step": 10000, "perStep":100, "max": 6300 }
+      },
+      "HOH": {
+        "phaseIn":   { "start": 320000,  "step": 8000,  "perStep":140, "max": 4920 },
+        "phaseOut":  { "start": 800000,  "step": 8000,  "perStep": 80, "max": 5640 }
+      }
+    },
+    "Yonkers": {
+      "2022": [
+        { "threshold":   0,     "rate": 0.0378 },
+        { "threshold": 12000,   "rate": 0.03762 },
+        { "threshold": 25000,   "rate": 0.08319 },
+        { "threshold": 50000,   "rate": 0.03876 }
+      ],
+      "2023": [
+        { "threshold":   0,     "rate": 0.03078 },
+        { "threshold": 12000,   "rate": 0.03762 },
+        { "threshold": 25000,   "rate": 0.03819 },
+        { "threshold": 50000,   "rate": 0.03876 }
+      ],
+      "2024": { "$ref": "#/NY/Yonkers/2023" },
+      "2025": { "$ref": "#/NY/Yonkers/2023" }
+    }
+  },
+
+  "NC": {
+    "2022": [ { "threshold": null, "rate": 0.0499 } ],
+    "2023": [ { "threshold": null, "rate": 0.0475 } ],
+    "2024": [ { "threshold": null, "rate": 0.0450 } ],
+    "2025": { "$ref": "#/NC/2024" }
+  },
+  
+  "ND": {
+    "2022": [
+      { "threshold": 0,      "rate": 0.011  },
+      { "threshold": 41775,  "rate": 0.0204 },
+      { "threshold": 101050, "rate": 0.0227 },
+      { "threshold": 210825, "rate": 0.0264 },
+      { "threshold": null,   "rate": 0.029  }
+    ],
+    "2023": [
+      { "threshold": 0,      "rate": 0.0    },
+      { "threshold": 44725,  "rate": 0.0195 },
+      { "threshold": 225975, "rate": 0.025  }
+    ],
+    "2024": [
+      { "threshold": 0,      "rate": 0.0    },
+      { "threshold": 44725,  "rate": 0.0195 },
+      { "threshold": 225975, "rate": 0.025  }
+    ],
+    "2025": [
+      { "threshold": 0,      "rate": 0.0    },
+      { "threshold": 44725,  "rate": 0.0195 },
+      { "threshold": 225975, "rate": 0.025  }
+    ]
+  },
+
+  "OH": {
+    "2022": [ { "threshold": 0, "rate": 0.0000 }, { "threshold": 26050, "rate": 0.02765 }, { "threshold": 46100, "rate": 0.03226 }, { "threshold": 92150, "rate": 0.03688 }, { "threshold":115300, "rate": 0.03990 } ],
+    "2023": [ { "threshold": 0, "rate": 0.0000 }, { "threshold": 26050, "rate": 0.02750 }, { "threshold":100000, "rate": 0.03688 }, { "threshold":115300, "rate": 0.03750 } ],
+    "2024": [ { "threshold": 0, "rate": 0.0000 }, { "threshold": 26050, "rate": 0.02750 }, { "threshold":100000, "rate": 0.03688 }, { "threshold":115300, "rate": 0.03750 } ],
+    "2025": { "$ref": "#/OH/2024" }
+  },
+
+  "OK": {
+    "2022": {
+      "Single": [
+        { "threshold":    0, "rate": 0.0025 },
+        { "threshold": 1000, "rate": 0.0075 },
+        { "threshold": 2500, "rate": 0.0175 },
+        { "threshold": 3750, "rate": 0.0275 },
+        { "threshold": 4900, "rate": 0.0375 },
+        { "threshold": 7200, "rate": 0.0475 }
+      ],
+      "MFS":    [ { "$ref": "#/OK/2022/Single" } ],
+      "MFJ":    [
+        { "threshold":    0, "rate": 0.0025 },
+        { "threshold": 2000, "rate": 0.0075 },
+        { "threshold": 5000, "rate": 0.0175 },
+        { "threshold": 7500, "rate": 0.0275 },
+        { "threshold": 9800, "rate": 0.0375 },
+        { "threshold":12200,"rate": 0.0475 }
+      ],
+      "HOH":    [ { "$ref": "#/OK/2022/MFJ" } ]
+    },
+    "2023": { "$ref": "#/OK/2022" },
+    "2024": { "$ref": "#/OK/2022" },
+    "2025": { "$ref": "#/OK/2022" }
+  },
+
+  "OR": {
+    "2022": {
+      "Single": [
+        { "threshold":     0, "rate": 0.0475 },
+        { "threshold":  3750.0, "rate": 0.0675 },
+        { "threshold":  9450.0, "rate": 0.0875 },
+        { "threshold":125000.0, "rate": 0.0990 }
+      ],
+      "MFS": [
+        { "threshold":     0, "rate": 0.0475 },
+        { "threshold":  3750.0, "rate": 0.0675 },
+        { "threshold":  9450.0, "rate": 0.0875 },
+        { "threshold":125000.0, "rate": 0.0990 }
+      ],
+      "HOH": [
+        { "threshold":     0, "rate": 0.0475 },
+        { "threshold":  3750.0, "rate": 0.0675 },
+        { "threshold":  9450.0, "rate": 0.0875 },
+        { "threshold":125000.0, "rate": 0.0990 }
+      ],
+      "QW": [
+        { "threshold":     0, "rate": 0.0475 },
+        { "threshold":  3750.0, "rate": 0.0675 },
+        { "threshold":  9450.0, "rate": 0.0875 },
+        { "threshold":125000.0, "rate": 0.0990 }
+      ],
+      "MFJ": [
+        { "threshold":     0, "rate": 0.0475 },
+        { "threshold":  7500.0, "rate": 0.0675 },
+        { "threshold": 18900.0, "rate": 0.0875 },
+        { "threshold":250000.0, "rate": 0.0990 }
+      ]
+    },
+    "2023": {
+      "Single": [
+        { "threshold":     0, "rate": 0.0475 },
+        { "threshold":  4050.0, "rate": 0.0675 },
+        { "threshold": 10200.0, "rate": 0.0875 },
+        { "threshold":125000.0, "rate": 0.0990 }
+      ],
+      "MFS": [
+        { "threshold":     0, "rate": 0.0475 },
+        { "threshold":  4050.0, "rate": 0.0675 },
+        { "threshold": 10200.0, "rate": 0.0875 },
+        { "threshold":125000.0, "rate": 0.0990 }
+      ],
+      "HOH": [
+        { "threshold":     0, "rate": 0.0475 },
+        { "threshold":  4050.0, "rate": 0.0675 },
+        { "threshold": 10200.0, "rate": 0.0875 },
+        { "threshold":125000.0, "rate": 0.0990 }
+      ],
+      "QW": [
+        { "threshold":     0, "rate": 0.0475 },
+        { "threshold":  4050.0, "rate": 0.0675 },
+        { "threshold": 10200.0, "rate": 0.0875 },
+        { "threshold":125000.0, "rate": 0.0990 }
+      ],
+      "MFJ": [
+        { "threshold":     0, "rate": 0.0475 },
+        { "threshold":  8100.0, "rate": 0.0675 },
+        { "threshold": 20400.0, "rate": 0.0875 },
+        { "threshold":250000.0, "rate": 0.0990 }
+      ]
+    },
+    "2024": {
+      "Single": [
+        { "threshold":     0, "rate": 0.0475 },
+        { "threshold":  4050.0, "rate": 0.0675 },
+        { "threshold": 10200.0, "rate": 0.0875 },
+        { "threshold":125000.0, "rate": 0.0990 }
+      ],
+      "MFS": [
+        { "threshold":     0, "rate": 0.0475 },
+        { "threshold":  4050.0, "rate": 0.0675 },
+        { "threshold": 10200.0, "rate": 0.0875 },
+        { "threshold":125000.0, "rate": 0.0990 }
+      ],
+      "HOH": [
+        { "threshold":     0, "rate": 0.0475 },
+        { "threshold":  4050.0, "rate": 0.0675 },
+        { "threshold": 10200.0, "rate": 0.0875 },
+        { "threshold":125000.0, "rate": 0.0990 }
+      ],
+      "QW": [
+        { "threshold":     0, "rate": 0.0475 },
+        { "threshold":  4050.0, "rate": 0.0675 },
+        { "threshold": 10200.0, "rate": 0.0875 },
+        { "threshold":125000.0, "rate": 0.0990 }
+      ],
+      "MFJ": [
+        { "threshold":     0, "rate": 0.0475 },
+        { "threshold":  8100.0, "rate": 0.0675 },
+        { "threshold": 20400.0, "rate": 0.0875 },
+        { "threshold":250000.0, "rate": 0.0990 }
+      ]
+    },
+    "2025": { "$ref": "#/OR/2024" }
+  },
+
+    "PA": {
+        "2022": [ { "threshold": 0, "rate": 0.0307 } ],
+        "2023": [ { "threshold": 0, "rate": 0.0307 } ],
+        "2024": [ { "threshold": 0, "rate": 0.0307 } ],
+        "2025": [ { "threshold": 0, "rate": 0.0307 } ]
+  },
+
+  "RI": {
+    "2022": [
+      { "threshold":    0, "rate": 0.0375 },
+      { "threshold":68200, "rate": 0.0475 },
+      { "threshold":155050,"rate": 0.0599 }
+    ],
+    "2023": [
+      { "threshold":    0, "rate": 0.0375 },
+      { "threshold":73450, "rate": 0.0475 },
+      { "threshold":166950,"rate": 0.0599 }
+    ],
+    "2024": { "$ref": "#/RI/2023" },
+    "2025": { "$ref": "#/RI/2023" }
+  },
+
+  "SC": {
+    "2022": [
+      { "threshold":    0, "rate": 0.0000 },
+      { "threshold": 3200, "rate": 0.0300 },
+      { "threshold": 6410, "rate": 0.0400 },
+      { "threshold": 9620, "rate": 0.0500 },
+      { "threshold":12820, "rate": 0.0600 },
+      { "threshold":16040, "rate": 0.0700 }
+    ],
+    "2023": [
+      { "threshold":    0, "rate": 0.0000 },
+      { "threshold": 3329, "rate": 0.0300 },
+      { "threshold":16679,"rate": 0.0640 }
+    ],
+    "2024": { "$ref": "#/SC/2023" },
+    "2025": { "$ref": "#/SC/2023" }
+  },
+
+  "UT": {
+    "2022": [ { "threshold": 0, "rate": 0.0485 } ],
+    "2023": [ { "threshold": 0, "rate": 0.0465 } ],
+    "2024": [ { "threshold": 0, "rate": 0.0465 } ],
+    "2025": { "$ref": "#/UT/2024" }
+  },
+
+  "VT": {
+    "2022": {
+      "Single": [ { "threshold": 0, "rate": 0.0350 }, { "threshold":42150,"rate":0.0660 }, { "threshold":102200,"rate":0.0760 }, { "threshold":213150,"rate":0.0875 } ],
+      "MFS":    [ { "threshold": 0, "rate": 0.0350 }, { "threshold":35225,"rate":0.0660 }, { "threshold":85150, "rate":0.0760 }, { "threshold":129750,"rate":0.0875 } ],
+      "MFJ":    [ { "threshold": 0, "rate": 0.0350 }, { "threshold":70450,"rate":0.0660 }, { "threshold":170300,"rate":0.0760 }, { "threshold":259500,"rate":0.0875 } ],
+      "HOH":    [ { "threshold": 0, "rate": 0.0350 }, { "threshold":56500,"rate":0.0660 }, { "threshold":145950,"rate":0.0760 }, { "threshold":236350,"rate":0.0875 } ]
+    },
+    "2023": {
+      "Single": [ { "threshold": 0, "rate": 0.0350 }, { "threshold":45400,"rate":0.0660 }, { "threshold":110050,"rate":0.0760 }, { "threshold":229550,"rate":0.0875 } ],
+      "MFS":    [ { "threshold": 0, "rate": 0.0350 }, { "threshold":37925,"rate":0.0660 }, { "threshold":91700, "rate":0.0760 }, { "threshold":139725,"rate":0.0875 } ],
+      "MFJ":    [ { "threshold": 0, "rate": 0.0350 }, { "threshold":75000,"rate":0.0350 }, { "threshold":183400,"rate":0.0660 }, { "threshold":279450,"rate":0.0760 }, { "threshold":279450,"rate":0.0875 } ],
+      "HOH":    [ { "threshold": 0, "rate": 0.0350 }, { "threshold":60850,"rate":0.0660 }, { "threshold":157150,"rate":0.0760 }, { "threshold":254500,"rate":0.0875 } ]
+    },
+    "2024": { "$ref": "#/VT/2023" },
+    "2025": { "$ref": "#/VT/2023" }
+  },
+
+  "VA": {
+    "2022": [
+      { "threshold":    0, "rate": 0.0200 },
+      { "threshold": 3000, "rate": 0.0300 },
+      { "threshold": 5000, "rate": 0.0500 },
+      { "threshold":17000, "rate": 0.0575 }
+    ],
+    "2023": [
+      { "threshold":    0, "rate": 0.0200 },
+      { "threshold": 3000, "rate": 0.0300 },
+      { "threshold": 5000, "rate": 0.0500 },
+      { "threshold":17000, "rate": 0.0575 }
+    ],
+    "2024": [
+      { "threshold":    0, "rate": 0.0200 },
+      { "threshold": 3000, "rate": 0.0300 },
+      { "threshold": 5000, "rate": 0.0500 },
+      { "threshold":17000, "rate": 0.0575 }
+    ],
+    "2025": [
+      { "threshold":    0, "rate": 0.0200 },
+      { "threshold": 3000, "rate": 0.0300 },
+      { "threshold": 5000, "rate": 0.0500 },
+      { "threshold":17000, "rate": 0.0575 }
+    ]
+  },
+
+  "WV": {
+    "2022": {
+      "MFS": [
+        { "threshold":   0, "rate": 0.0300 },
+        { "threshold":5000,"rate": 0.0400 },
+        { "threshold":12500,"rate":0.0450 },
+        { "threshold":20000,"rate":0.0600 },
+        { "threshold":30000,"rate":0.0650 }
+      ],
+      "Single": [
+        { "threshold":   0, "rate": 0.0300 },
+        { "threshold":10000,"rate":0.0400 },
+        { "threshold":25000,"rate":0.0450 },
+        { "threshold":40000,"rate":0.0600 },
+        { "threshold":60000,"rate":0.0650 }
+      ],
+      "MFJ":    [ { "threshold": 0, "rate":0.0300 }, { "threshold":10000,"rate":0.0400 }, { "threshold":25000,"rate":0.0450 }, { "threshold":40000,"rate":0.0600 }, { "threshold":60000,"rate":0.0650 } ],
+      "HOH":    [ { "threshold": 0, "rate":0.0300 }, { "threshold":10000,"rate":0.0400 }, { "threshold":25000,"rate":0.0450 }, { "threshold":40000,"rate":0.0600 }, { "threshold":60000,"rate":0.0650 } ],
+      "QW":     [ { "threshold": 0, "rate":0.0300 }, { "threshold":10000,"rate":0.0400 }, { "threshold":25000,"rate":0.0450 }, { "threshold":40000,"rate":0.0600 }, { "threshold":60000,"rate":0.0650 } ]
+    },
+    "2023": {
+      "MFS": [
+        { "threshold":   0, "rate": 0.0236 },
+        { "threshold":5000,"rate": 0.0315 },
+        { "threshold":12500,"rate":0.0354 },
+        { "threshold":20000,"rate":0.0472 },
+        { "threshold":30000,"rate":0.0512 }
+      ],
+      "Single": [
+        { "threshold":   0, "rate": 0.0236 },
+        { "threshold":10000,"rate":0.0315 },
+        { "threshold":25000,"rate":0.0354 },
+        { "threshold":40000,"rate":0.0472 },
+        { "threshold":60000,"rate":0.0512 }
+      ],
+      "MFJ":    [ { "threshold": 0, "rate":0.0236 }, { "threshold":10000,"rate":0.0315 }, { "threshold":25000,"rate":0.0354 }, { "threshold":40000,"rate":0.0472 }, { "threshold":60000,"rate":0.0512 } ],
+      "HOH":    [ { "threshold": 0, "rate":0.0236 }, { "threshold":10000,"rate":0.0315 }, { "threshold":25000,"rate":0.0354 }, { "threshold":40000,"rate":0.0472 }, { "threshold":60000,"rate":0.0512 } ],
+      "QW":     [ { "threshold": 0, "rate":0.0236 }, { "threshold":10000,"rate":0.0315 }, { "threshold":25000,"rate":0.0354 }, { "threshold":40000,"rate":0.0472 }, { "threshold":60000,"rate":0.0512 } ]
+    },
+    "2024": { "$ref": "#/WV/2023" },
+    "2025": { "$ref": "#/WV/2023" }
+  },
+
+  "WI": {
+    "2022": {
+      "Single": [
+        { "threshold":    0, "rate": 0.0354 },
+        { "threshold":12760,"rate":0.0465 },
+        { "threshold":25520,"rate":0.0530 },
+        { "threshold":280950,"rate":0.0765 }
+      ],
+      "HOH":    [ { "threshold":0,"rate":0.0354 },{ "threshold":12760,"rate":0.0465 },{ "threshold":25520,"rate":0.0530 },{ "threshold":280950,"rate":0.0765 } ],
+      "MFS":    [ { "threshold":0,"rate":0.0354 },{ "threshold":8510,"rate":0.0465 },{ "threshold":17010,"rate":0.0530 },{ "threshold":187300,"rate":0.0765 } ],
+      "MFJ":    [ { "threshold":0,"rate":0.0354 },{ "threshold":17010,"rate":0.0465 },{ "threshold":34030,"rate":0.0530 },{ "threshold":374600,"rate":0.0765 } ]
+    },
+    "2023": {
+      "Single": [ { "threshold":0,"rate":0.0350 },{ "threshold":13810,"rate":0.0440 },{ "threshold":27630,"rate":0.0530 },{ "threshold":304170,"rate":0.0765 } ],
+      "HOH":    [ { "threshold":0,"rate":0.0350 },{ "threshold":13810,"rate":0.0440 },{ "threshold":27630,"rate":0.0530 },{ "threshold":304170,"rate":0.0765 } ],
+      "MFS":    [ { "threshold":0,"rate":0.0350 },{ "threshold": 9210,"rate":0.0440 },{ "threshold":18420,"rate":0.0530 },{ "threshold":202780,"rate":0.0765 } ],
+      "MFJ":    [ { "threshold":0,"rate":0.0350 },{ "threshold":18420,"rate":0.0440 },{ "threshold":36840,"rate":0.0530 },{ "threshold":405550,"rate":0.0765 } ]
+    },
+    "2024": { "$ref": "#/WI/2023" },
+    "2025": { "$ref": "#/WI/2023" }
+  }
+}

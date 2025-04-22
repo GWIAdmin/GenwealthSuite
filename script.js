@@ -340,7 +340,8 @@ function recalcStateTax() {
     const taxableIncome = getFieldValue('taxableIncome');
     const stateAbbrev    = document.getElementById('state').value;      // e.g. "CA", "NY", etc.
     const year           = parseInt(document.getElementById('year').value, 10) || 2023;
-    const tax            = computeStateTax(taxableIncome, stateAbbrev, year);
+    const filingStatus  = document.getElementById('filingStatus').value; // e.g. "Single", "Married Filing Jointly", etc.
+    const tax           = computeStateTax(taxableIncome, stateAbbrev, year, filingStatus);
     document.getElementById('stateTotalTax').value = formatCurrency(String(tax));
 }
 
@@ -3454,6 +3455,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+document.getElementById('filingStatus').addEventListener('change', recalcStateTax);
 
 //--------------------------------------//
 // 16. AUTO-COPY STATE TO "SELECTSTATE" //
