@@ -887,3 +887,13 @@ body.dark-mode .res-comp-btn {
 .state-breakdown-left, .state-breakdown-right {
   flex: 1;
 }
+
+.collapsible-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease-in-out;
+}
+
+.collapsible-content.active {
+  max-height: 2000px;
+}
