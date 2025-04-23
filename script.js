@@ -1,3 +1,4 @@
+import { STATE_STD_DED } from './stateStdDeduction.js';
 import { calculateStateTax, getBrackets } from './stateTax.js';
 
 const FS_MAP = {
@@ -21,6 +22,13 @@ window.addEventListener('DOMContentLoaded', async () => {
         // ─────────────────────────────
     initCollapsibles();
     initUI();
+
+    // kick‐off one initial recalculation now that data is in place
+    recalcStateTax();            // populate stateTotalTax
+    updateAllBusinessOwnerResCom(); // fill in each business’s OwnerComp from W‑2s
+    updateAggregateResComp();       // sum into the global RC field
+    recalculateTotals();            // re‑run your full totals (incl. state & employer FICA)
+
   } catch (e) {
     console.error('Failed to load stateTaxData:', e);
   }
@@ -105,14 +113,32 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
 
 function displayResults(resultData) {
     const resultsDiv = document.getElementById('results');
-    const truncatedTaxableIncome = parseInt(resultData.taxableIncome);
-    const truncatedTotalTax = parseInt(resultData.totalTax);
-    const truncatedRefundOrDue = parseInt(resultData.refundOrDue);
+
+    // first update the form’s Taxable Income and re‑calc state tax
+    document.getElementById('taxableIncome').value = parseInt(resultData.taxableIncome, 10);
+    recalcStateTax();  // ← now #stateTotalTax.value is in sync
+
+    const fedTax = parseInt(resultData.totalTax, 10);
+
+      // pull the computed state tax from your UI
+      // allow digits, minus and decimal point, then parseFloat
+      const stateTax = parseFloat(
+        document
+          .getElementById('stateTotalTax')
+          .value
+          .replace(/[^0-9.\-]/g, '')   // now keeps the dot
+      ) || 0;
+
+    const totalTax = fedTax + stateTax;
+    const refundOrDue = parseInt(resultData.refundOrDue, 10); // adjust if you need to re‑compute this, too
+
     resultsDiv.innerHTML = `
-        <h2>Your Tax Results</h2>
-        <p><strong>Taxable Income:</strong> $${truncatedTaxableIncome}</p>
-        <p><strong>Total Tax Owed:</strong> $${truncatedTotalTax}</p>
-        <p><strong>Refund or Amount Due:</strong> $${truncatedRefundOrDue}</p>
+      <h2>Your Tax Results</h2>
+      <p><strong>Taxable Income:</strong> $${parseInt(resultData.taxableIncome, 10)}</p>
+      <p><strong>Federal Tax Owed:</strong> $${fedTax}</p>
+      <p><strong>State Tax Owed:</strong> $${stateTax}</p>
+      <p><strong>Total Tax Owed:</strong> $${totalTax}</p>
+      <p><strong>Refund or Amount Due:</strong> $${refundOrDue}</p>
     `;
 }
 
@@ -410,36 +436,54 @@ function createResCompSection(businessIndex, ownerIndex, isOtherOwner = false) {
  * computeStateTax, and render into #stateTotalTax.
  */
 function recalcStateTax() {
-    const state = document.getElementById('state').value;
-    if (!state) {
-      document.getElementById('stateTotalTax').value = '';
-      return;
-    }
+    if (!window.stateTaxData) return;
   
-    const agi = getFieldValue('totalAdjustedGrossIncome');
+    const stateAbbrev = document.getElementById('state').value;
+    const year        = document.getElementById('year').value;
+    const uiStatus    = document.getElementById('filingStatus').value;
+    const statusKey   = FS_MAP[uiStatus] || 'Single';
   
-    // grab the year & filing‑status from the form
-    const yearInput = document.getElementById('year').value;          // e.g. "2024"
-    const uiStatus = document.getElementById('filingStatus').value;   // e.g. "Married Filing Jointly"
-    const statusKey = FS_MAP[uiStatus] || 'Single';
-  
-    console.log(
-      `calculating state tax for ${state} / ${yearInput} / ${statusKey} @ ${agi}`
-    );
-  
-    const owed = calculateStateTax(
+    // 1) pull out exactly the one bracket‐array you need:
+    const brackets = getBrackets(
       stateTaxData,
-      state,
-      agi,
-      yearInput,
+      stateAbbrev,
+      year,
       statusKey
     );
   
+    if (!Array.isArray(brackets)) {
+      console.error('getBrackets did not return an array:', brackets);
+      document.getElementById('stateTotalTax').value = '0.00';
+      return;
+    }
+  
+    // 2) compute state‐taxable income
+    const agi    = getFieldValue('totalAdjustedGrossIncome');
+    const stdDed = (
+      STATE_STD_DED[stateAbbrev]?.[year]?.[statusKey]
+    ) || 0;
+    const stateTaxableIncome = Math.max(0, agi - stdDed);
+  
+    console.log(`State AGI: ${agi}, STD: ${stdDed}, Taxable: ${stateTaxableIncome}`);
+  
+    // 3) pass the bracket array + taxable income into the calculator
+    const owed = calculateStateTax(brackets, stateTaxableIncome);
+  
+    console.log('Brackets used:', brackets);
+    console.table(
+      brackets.map(({ threshold, rate }) => ({
+        threshold,
+        rate: (typeof rate === 'string' ? rate : (rate * 100).toFixed(1) + '%')
+      }))
+    );
+  
+    // 4) render result
     document.getElementById('stateTotalTax').value = owed.toFixed(2);
-}
+  }
+  
   
 document.getElementById('state').addEventListener('change', recalcStateTax);
-document.getElementById('year').addEventListener ('change', recalcStateTax);
+document.getElementById('year' ).addEventListener('change', recalcStateTax);
 document.getElementById('filingStatus').addEventListener('change', recalcStateTax);
 
 function updateRCSectionForOwner(businessIndex, ownerIndex, isOther) {
@@ -475,7 +519,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function updateAggregateResComp() {
-    console.log("updateAggregateResComp() called");
     let totalRC = 0;
     const numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
     for (let i = 1; i <= numBusinesses; i++) {
@@ -494,7 +537,6 @@ function updateAggregateResComp() {
     const rcField = document.getElementById('reasonableCompensation');
     if (rcField) {
         rcField.value = formatCurrency(String(totalRC));
-        console.log("Global RC Updated to:", rcField.value);
     }
 }
 
@@ -3249,7 +3291,8 @@ function sumW2Wages() {
 }
 
 function recalculateTotals() {
-
+    
+    recalculateDeductions();
     recalcStateTax();
 
     // 1. Get updated wage values.
@@ -5649,8 +5692,44 @@ function updateTotalTax() {
     const employeeFICA         = getFieldValue('employeeTaxes');
     const employerFICA         = getFieldValue('employerTaxes');
 
+    console.log({
+        computedTax,
+        additionalMedicare,
+        netInvestment,
+        selfEmployment,
+        otherTaxes,
+        foreignCredit,
+        minTaxCredit,
+        personalCredits,
+        businessCredit,
+        childCredit,
+        otherCredits,
+        stateTotalTax,
+        employeeFICA,
+        employerFICA
+      });
+    
+      let totalFed =
+        computedTax +
+        additionalMedicare +
+        netInvestment +
+        selfEmployment +
+        otherTaxes -
+        foreignCredit -
+        minTaxCredit -
+        personalCredits -
+        businessCredit -
+        childCredit -
+        otherCredits;
+    
+      console.log('Total Federal Tax:', totalFed);
+    
+      const grandTotal = totalFed + stateTotalTax + employeeFICA + employerFICA;
+      console.log('Grand Total:', grandTotal);
+
+
     // 7) Build your Total Federal Tax (income‑tax only)
-    let totalFed =
+    totalFed =
         computedTax
       + additionalMedicare
       + netInvestment

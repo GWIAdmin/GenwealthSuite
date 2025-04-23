@@ -1,5 +1,3 @@
-// stateTax.js
-
 // 1) Simple JSON‑Pointer resolver (for "$ref": "#/XX/2022")
 function resolveJsonPointer(obj, pointer) {
   const parts = pointer.replace(/^#\//, '').split('/');
@@ -13,71 +11,76 @@ function resolveJsonPointer(obj, pointer) {
 
 // 2) Pull out & normalize one state's one filing‑status bracket array
 export function getBrackets(rawData, stateAbbrev, year, filingStatus) {
-
-  const STATUSES = ['Single','MFS','MFJ','HOH','QW'];
-
-  //  ↙— bail out if someone passed the placeholder
-  if (!STATUSES.includes(filingStatus)) {
-    console.warn(`getBrackets: invalid status “${filingStatus}”, returning empty brackets`);
+  if (!rawData[stateAbbrev]) {
+    console.warn(`getBrackets: no data for state “${stateAbbrev}”`);
     return [];
   }
 
-  if (!STATUSES.includes(stateAbbrev)) {
-    console.warn(`stateAbbrev: invalid status “${stateAbbrev}”`);
-    return [];
-  }
-
-  let yearData = rawData[stateAbbrev]?.[year];
+  let yearData = rawData[stateAbbrev][year];
   if (!yearData) return [];
 
-  // top‑level $ref?
+  // follow a top‑level $ref
   if (yearData.$ref) {
     yearData = resolveJsonPointer(rawData, yearData.$ref);
   }
 
-  // flat‑array case (same brackets for all statuses)
+  // flat‑array (no statuses)
   if (Array.isArray(yearData)) {
-    return yearData.map(({threshold,rate}) => ({
-      threshold: threshold == null ? Infinity : threshold,
-      rate
-    }));
+    return yearData;
   }
 
-  // otherwise per‑status object
+  // status‑specific
   let brackets = yearData[filingStatus];
   if (!brackets) return [];
+
+  // bracket‑level $ref
   if (brackets.$ref) {
     brackets = resolveJsonPointer(rawData, brackets.$ref);
   }
-  if (!Array.isArray(brackets)) return [];
 
-  return brackets.map(({threshold,rate}) => ({
-    threshold: threshold == null ? Infinity : threshold,
-    rate
-  }));
+  // single‑element pointer‐array (e.g. HOH → MFJ)
+  if (
+    Array.isArray(brackets) &&
+    brackets.length === 1 &&
+    brackets[0] != null &&
+    typeof brackets[0] === 'object' &&
+    brackets[0].$ref
+  ) {
+    brackets = resolveJsonPointer(rawData, brackets[0].$ref);
+  }
+
+  return Array.isArray(brackets) ? brackets : [];
 }
 
 // 3) Compute the tax
-export function calculateStateTax(
-  rawData,
-  stateAbbrev,
-  income,
-  year = '2023',
-  filingStatus = 'Single'
-) {
-  const brackets = getBrackets(rawData, stateAbbrev, year, filingStatus);
+export function calculateStateTax(brackets, taxableIncome) {
   let tax = 0;
+  let lastThreshold = 0;
 
-  for (let i = 0; i < brackets.length; i++) {
-    const lower = brackets[i].threshold || 0;
-    const upper = brackets[i+1]?.threshold ?? Infinity;
-    if (income <= lower) break;
-    const slice = Math.min(income, upper) - lower;
-    tax += slice * brackets[i].rate;
+  for (let { threshold, rate } of brackets) {
+    // interpret `null` (or undefined) as “∞”
+    const upper = (threshold == null) ? Infinity : threshold;
+
+    if (taxableIncome > lastThreshold) {
+      const slice = Math.min(taxableIncome, upper) - lastThreshold;
+
+      // ---- NEW: parse the rate if it’s a string ending in “%”
+      let r;
+      if (typeof rate === 'string' && rate.trim().endsWith('%')) {
+        r = parseFloat(rate) / 100;      // "8.0%" → 0.08
+      } else {
+        r = Number(rate);                // already a number (e.g. 0.08)
+      }
+
+      tax += slice * r;
+    }
+
+    lastThreshold = upper;
+    if (taxableIncome <= upper) break;
   }
 
-  return Math.round(tax);
+  return tax;
 }
 
-window.getBrackets    = getBrackets;
+window.getBrackets = getBrackets;
 window.calculateStateTax = calculateStateTax;
