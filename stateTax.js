@@ -12,7 +12,6 @@ function resolveJsonPointer(obj, pointer) {
 // 2) Pull out & normalize one state's one filing‑status bracket array
 export function getBrackets(rawData, stateAbbrev, year, filingStatus) {
   if (!rawData[stateAbbrev]) {
-    console.warn(`getBrackets: no data for state “${stateAbbrev}”`);
     return [];
   }
 

@@ -479,7 +479,7 @@ function recalcStateTax() {
   
     // 4) render result
     document.getElementById('stateTotalTax').value = owed.toFixed(2);
-  }
+}
   
   
 document.getElementById('state').addEventListener('change', recalcStateTax);
@@ -4692,8 +4692,11 @@ function addW2Block() {
 
     collapsibleContent.appendChild(removeBtn);
 
-    // Append the new W-2 block to the container
-    document.getElementById('w2sContainer').appendChild(w2Block);   
+    document.getElementById('w2sContainer').appendChild(w2Block);
+    const bigSection = document.getElementById('w2sContainer');
+    if (bigSection) bigSection.style.display = 'block';
+    collapsibleContent.style.display = 'block';
+
     w2Block.querySelectorAll('.currency-field').forEach((field) => {
           field.addEventListener('blur', function() {
               this.value = formatCurrency(this.value);
