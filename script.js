@@ -3213,24 +3213,32 @@ function updateNetInvestmentTax() {
     const stcg  = getFieldValue('shortTermCapitalGains');
     const ltcg  = getFieldValue('longTermCapitalGains');
     const intI  = getFieldValue('taxableInterest');
-    const other = getFieldValue('otherIncome');  // tweak if you have more categories
+    const other = getFieldValue('otherIncome');  // add other categories here if needed
     const netInvIncome = qd + stcg + ltcg + intI + other;
   
-    // 2) Get your Modified AGI and filing‑status threshold
-    const magi = getFieldValue('totalAdjustedGrossIncome');
-    const status = document.getElementById('filingStatus').value;
+    // 2) Get MAGI and filing-status threshold
+    const magi    = getFieldValue('totalAdjustedGrossIncome');
+    const status  = document.getElementById('filingStatus').value;
     const THRESHOLDS = {
-      "Single": 200000,
-      "Head of Household": 200000,
-      "Married Filing Jointly": 250000,
-      "Married Filing Separately": 125000
+      "Single":                   200000,
+      "Head of Household":        200000,
+      "Married Filing Jointly":   250000,
+      "Married Filing Separately":125000
     };
     const thresh = THRESHOLDS[status] || THRESHOLDS["Single"];
+  
+    // 3) Compute the excess of MAGI over threshold (line 15), clamp at zero
     const excess = Math.max(0, magi - thresh);
   
-    // 3) NIIT = 3.8% × min(income, excess)
-    const niit = Math.min(netInvIncome, excess) * 0.038;
-    document.getElementById('netInvestmentTax').value = formatCurrency(String(Math.round(niit)));
+    // 4) The NIIT base is the lesser of net investment income (line 12) or excess (line 15), clamp at zero
+    const taxableBase = Math.max(0, Math.min(netInvIncome, excess));
+  
+    // 5) NIIT is 3.8% of that amount (line 17)
+    const niit = taxableBase * 0.038;
+  
+    // 6) Render, rounded to the nearest dollar
+    document.getElementById('netInvestmentTax').value =
+      formatCurrency(String(Math.round(niit)));
 }
 
 //---------------------------------------------------//
