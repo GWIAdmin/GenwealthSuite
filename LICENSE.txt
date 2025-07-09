@@ -1,0 +1,37 @@
+INTERNAL USE LICENSE AGREEMENT
+
+Copyright (c) [2025] [Genwealth 360 Inc.]
+
+This Software and associated documentation files (the “Software”) are licensed to Genwealth 360 Inc. (the “Licensee”) under the terms described below.
+
+1. GRANT OF LICENSE
+Subject to the terms and conditions of this Agreement, the Licensor hereby grants Genwealth 360 Inc. a limited, non-exclusive, non-transferable, revocable license to use, modify, and execute the Software solely for internal business operations and purposes. No ownership rights are transferred under this Agreement.
+
+2. RESTRICTIONS
+Except as expressly permitted under this Agreement, Genwealth 360 Inc. shall not, and shall not permit any employee or third party to:
+   a. Distribute, sublicense, disclose, sell, lease, or otherwise make the Software available to any third party;
+   b. Use the Software for any external, public-facing, or commercial offering;
+   c. Reverse engineer, decompile, disassemble, or otherwise attempt to derive the source code from any compiled portion of the Software (if applicable), except to the extent that such activity is expressly permitted by applicable law;
+   d. Remove or alter any copyright, trademark, or other proprietary notices from the Software.
+
+3. INTELLECTUAL PROPERTY
+All rights, title, and interest in and to the Software, including all associated intellectual property rights, remain with the Licensor. This license does not convey any rights of ownership in the Software.
+
+4. NO WARRANTY
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. THE LICENSOR DOES NOT WARRANT THAT THE SOFTWARE WILL BE ERROR-FREE OR OPERATE WITHOUT INTERRUPTION.
+
+5. LIMITATION OF LIABILITY
+IN NO EVENT SHALL THE LICENSOR BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES ARISING OUT OF OR IN CONNECTION WITH THE USE OF OR INABILITY TO USE THE SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+6. TERMINATION
+This license is effective until terminated. It will terminate automatically without notice if Genwealth 360 Inc. fails to comply with any provision of this Agreement. Upon termination, all use of the Software must cease, and all copies, modified or unmodified, must be destroyed.
+
+7. GOVERNING LAW
+This Agreement shall be governed by and construed in accordance with the laws of the jurisdiction of the Licensor’s principal place of business, without regard to conflict of law principles.
+
+8. ENTIRE AGREEMENT
+This Agreement constitutes the entire agreement between the parties with respect to the Software and supersedes all prior or contemporaneous understandings regarding such subject matter.
+
+[Genwealth 360 Inc.]  
+
+Effective Date: [01/01/2023]
