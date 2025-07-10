@@ -1359,10 +1359,10 @@ function populateBusinessNameFields(index) {
 //-----------------------------------------------------//
 
 function getFieldValue(id) {
-    const el = document.getElementById(id);
-    if (!el) return 0;
-    let val = parseFloat(el.value.replace(/[^0-9.-]/g, ''));
-    return isNaN(val) ? 0 : val;
+  const el = document.getElementById(id);
+  if (!el) return 0;
+  // unformatCurrency will detect parentheses or a leading minus
+  return unformatCurrency(el.value || '0');
 }
 
 function formatCurrency(value) {
@@ -3330,24 +3330,29 @@ function recalculateTotals() {
     const passiveActivityLossAdjustments = getFieldValue('passiveActivityLossAdjustments');
 
     let businessesNetTotal = 0;
-    const numBusinessesVal = parseInt(document.getElementById('numOfBusinesses').value || '0', 10);
+    const numBusinessesVal = parseInt(
+      document.getElementById('numOfBusinesses').value || '0',
+      10
+    );
+
     for (let i = 1; i <= numBusinessesVal; i++) {
-        const netValStr = document.getElementById(`business${i}Net`)?.value || '0';
-        const netVal = unformatCurrency(netValStr);
-        const businessTypeEl = document.getElementById(`business${i}Type`);
-        if (businessTypeEl && businessTypeEl.value.trim() === 'C-Corp') {
-            // For C‑Corp, do not include this business in the total.
-            continue;
-        }  else {
-            // For Schedule‑C, add the full net value.
-            if (businessTypeEl && businessTypeEl.value.trim() === 'Schedule-C') {
-                businessesNetTotal += netVal;
-            } else if (document.getElementById(`numOwnersSelect${i}`)) {
-                businessesNetTotal += getClientOwnershipPortion(i, netVal);
-            } else {
-                // Otherwise, assume the full net belongs to the client.
-                businessesNetTotal += netVal;
-            }
+      // grab this business’s net
+      const netVal = unformatCurrency(
+        document.getElementById(`business${i}Net`)?.value || '0'
+      );
+
+        const type = document
+          .getElementById(`business${i}Type`)?.value
+          .trim() || '';
+
+        if (type === 'C-Corp') {
+          continue;
+        } 
+        else if (type === 'Schedule-C') {
+          businessesNetTotal += netVal;
+        } 
+        else if (type === 'S-Corp' || type === 'Partnership') {
+          businessesNetTotal += getClientOwnershipPortion(i, netVal);
         }
     }
 
@@ -3367,7 +3372,6 @@ function recalculateTotals() {
 
     const totalIncomeVal = 
         finalWages +
-        reasonableCompensation +
         taxableInterest +
         taxableIRA +
         taxableDividends +
@@ -4376,6 +4380,15 @@ function addW2Block() {
      // This function checks that both a positive wage and a valid business selection exist
      // before storing the mapping.
      function updateW2Mapping() {
+
+        const isClientBus = document.getElementById('w2IsClientBusiness_' + w2Counter).value;
+        if (isClientBus !== 'Yes') {
+          // clear any stale mapping & recalc
+          delete w2WageMap[w2Block.id];
+          recalculateTotals();
+          return;
+        }
+        
         let wageVal = unformatCurrency(wagesInput.value || '0');
         let medicareWagesVal = unformatCurrency(medicareWagesInput.value || '0');
         let finalWage = (medicareWagesVal > 0) ? medicareWagesVal : wageVal;
