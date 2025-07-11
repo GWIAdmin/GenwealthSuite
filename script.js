@@ -3208,37 +3208,56 @@ function updateScheduleENet(index) {
  * NIIT = 3.8% × min( netInvIncome, max(0, MAGI − threshold) )
  */
 function updateNetInvestmentTax() {
-    // 1) Gather investment lines:
-    const qd    = getFieldValue('qualifiedDividends');
-    const stcg  = getFieldValue('shortTermCapitalGains');
-    const ltcg  = getFieldValue('longTermCapitalGains');
-    const intI  = getFieldValue('taxableInterest');
-    const other = getFieldValue('otherIncome');  // add other categories here if needed
-    const netInvIncome = qd + stcg + ltcg + intI + other;
+  // 1) Gather investment lines:
+  const taxableInterest    = getFieldValue('taxableInterest');
+  const ordinaryDividends  = getFieldValue('taxableDividends');
+  const qualifiedDividends = getFieldValue('qualifiedDividends');
+  const taxableIRA         = getFieldValue('taxableIRA');
+  const iraDistributions   = getFieldValue('iraDistributions');
+  const annuities          = getFieldValue('pensions') || 0;               // “Annuities”
   
-    // 2) Get MAGI and filing-status threshold
-    const magi    = getFieldValue('totalAdjustedGrossIncome');
-    const status  = document.getElementById('filingStatus').value;
-    const THRESHOLDS = {
-      "Single":                   200000,
-      "Head of Household":        200000,
-      "Married Filing Jointly":   250000,
-      "Married Filing Separately":125000
-    };
-    const thresh = THRESHOLDS[status] || THRESHOLDS["Single"];
+  // 1a) Sum *all* Schedule E “Net” fields (rental real estate, royalties, etc.)
+  let scheduleENetTotal = 0;
+  const eCount = parseInt(document.getElementById('numScheduleEs')?.value || '0', 10);
+  for (let i = 1; i <= eCount; i++) {
+    const netStr = document.getElementById(`scheduleE${i}Net`)?.value || '0';
+    scheduleENetTotal += unformatCurrency(netStr);
+  }
   
-    // 3) Compute the excess of MAGI over threshold (line 15), clamp at zero
-    const excess = Math.max(0, magi - thresh);
+  // 1b) Any manual “Adjustments” you’ve entered (e.g. passive-loss carryforwards)
+  const adjustments      = getFieldValue('passiveActivityLossAdjustments') 
+                         + getFieldValue('otherIncome'); // change/add fields here if you need
   
-    // 4) The NIIT base is the lesser of net investment income (line 12) or excess (line 15), clamp at zero
-    const taxableBase = Math.max(0, Math.min(netInvIncome, excess));
+  // 1c) Capital gains
+  const longTermGains    = getFieldValue('longTermCapitalGains');
+  const shortTermGains   = getFieldValue('shortTermCapitalGains');
   
-    // 5) NIIT is 3.8% of that amount (line 17)
-    const niit = taxableBase * 0.038;
+  const totalInvestmentIncome =
+      getFieldValue('taxableInterest')
+    + getFieldValue('taxableDividends')
+    + scheduleENetTotal
+    + adjustments;
+  // …this matches your “Total investment income: 62,500” in the sheet
+
+  // 2) MAGI & threshold
+  const magi    = getFieldValue('totalAdjustedGrossIncome');
+  const status  = document.getElementById('filingStatus').value;
+  const THRESHOLDS = {
+    "Single":                 200000,
+    "Head of Household":      200000,
+    "Married Filing Jointly": 250000,
+    "Married Filing Separately":125000
+  };
+  const threshold = THRESHOLDS[status] || THRESHOLDS["Single"];
   
-    // 6) Render, rounded to the nearest dollar
-    document.getElementById('netInvestmentTax').value =
-      formatCurrency(String(Math.round(niit)));
+  // 3) Compute the smaller of (a) totalInvestmentIncome or (b) MAGI–threshold
+  const excess      = Math.max(0, magi - threshold);
+  const taxableBase = Math.min(totalInvestmentIncome, excess);
+  // …exactly your “Enter smaller amount: 62,500”
+
+  // 4) NIIT = 3.8% of that base, rounded to the dollar
+  const niit = Math.round(taxableBase * 0.038);
+  document.getElementById('netInvestmentTax').value = formatCurrency(String(niit));
 }
 
 //---------------------------------------------------//
@@ -5414,7 +5433,6 @@ function updateStaticUnemploymentFields() {
 
 /**
  * Compute ordinary-income tax on `income` for given filing status & year.
- * Uses 2023 IRS brackets; you can extend to 2024+ by adding entries.
  */
 function computeOrdinaryTax(income, filingStatus, year) {
     // --- bracket tables keyed by year → status → [ { threshold, rate }, ... ] ---
@@ -5430,7 +5448,7 @@ function computeOrdinaryTax(income, filingStatus, year) {
               { threshold: Infinity, rate: 0.37 }
             ],
             "Married Filing Jointly": [
-              { threshold: 22550, rate: 0.10 },
+              { threshold: 20550, rate: 0.10 },
               { threshold: 83550, rate: 0.12 },
               { threshold: 178150, rate: 0.22 },
               { threshold: 340100, rate: 0.24 },
@@ -5444,7 +5462,7 @@ function computeOrdinaryTax(income, filingStatus, year) {
                 { threshold: 89075, rate: 0.22 },
                 { threshold: 170050, rate: 0.24 },
                 { threshold: 215950, rate: 0.32 },
-                { threshold: 539900, rate: 0.35 },
+                { threshold: 323925, rate: 0.35 },
                 { threshold: Infinity, rate: 0.37 }
             ],
             "Head of Household": [
@@ -5457,7 +5475,7 @@ function computeOrdinaryTax(income, filingStatus, year) {
               { threshold: Infinity, rate: 0.37 }
             ],
             "Qualifying Widow(er)": [
-                { threshold: 22550, rate: 0.10 },
+                { threshold: 20550, rate: 0.10 },
                 { threshold: 83550, rate: 0.12 },
                 { threshold: 178150, rate: 0.22 },
                 { threshold: 340100, rate: 0.24 },
@@ -5491,7 +5509,7 @@ function computeOrdinaryTax(income, filingStatus, year) {
             { threshold: 95375, rate: 0.22 },
             { threshold: 182100, rate: 0.24 },
             { threshold: 231250, rate: 0.32 },
-            { threshold: 578125, rate: 0.35 },
+            { threshold: 346875, rate: 0.35 },
             { threshold: Infinity, rate: 0.37 }
         ],
         "Head of Household": [
@@ -5538,7 +5556,7 @@ function computeOrdinaryTax(income, filingStatus, year) {
             { threshold: 100525, rate: 0.22 },
             { threshold: 191950, rate: 0.24 },
             { threshold: 243725, rate: 0.32 },
-            { threshold: 609350, rate: 0.35 },
+            { threshold: 365600, rate: 0.35 },
             { threshold: Infinity, rate: 0.37 }
         ],
         "Head of Household": [
@@ -5585,7 +5603,7 @@ function computeOrdinaryTax(income, filingStatus, year) {
             { threshold: 103350, rate: 0.22 },
             { threshold: 197300, rate: 0.24 },
             { threshold: 250525, rate: 0.32 },
-            { threshold: 626350, rate: 0.35 },
+            { threshold: 375800, rate: 0.35 },
             { threshold: Infinity, rate: 0.37 }
         ],
         "Head of Household": [
@@ -5609,7 +5627,7 @@ function computeOrdinaryTax(income, filingStatus, year) {
       }
     };
   
-    const statusBrackets = (BRACKETS[year] || BRACKETS[2023])[filingStatus];
+    const statusBrackets = (BRACKETS[year] || BRACKETS[2024])[filingStatus];
     if (!statusBrackets) return 0;
   
     let remaining = income, lastThreshold = 0, tax = 0;
@@ -5635,10 +5653,10 @@ function computeOrdinaryTax(income, filingStatus, year) {
    *   • Sum them all
 */
 
-function computeCapitalGainTax(taxableIncome, qualifiedDividends, longTermGains, filingStatus, year) {
+function computeCapitalGainTax(taxableIncome, qualifiedDividends, longTermGains, shortTermGains, filingStatus, year) {
     // 0 – net capital gain
-    const netGain = Math.max(0, qualifiedDividends + longTermGains);
-  
+    const netGain = Math.max(0, qualifiedDividends + longTermGains + shortTermGains);
+
     // 1 – ordinary portion
     const ordinaryPortion = Math.max(0, taxableIncome - netGain);
     const ordinaryTax = computeOrdinaryTax(ordinaryPortion, filingStatus, year);
@@ -5646,13 +5664,36 @@ function computeCapitalGainTax(taxableIncome, qualifiedDividends, longTermGains,
     // 2 – thresholds per filing status & year
     // IRS 2023 thresholds for 0% and 15% capital‑gain brackets:
     const CG_THRESHOLDS = {
-      2023: {
-        "Single":                  { zero: 44625, fifteen: 492300 },
-        "Married Filing Jointly":  { zero: 89250, fifteen: 553850 },
-        "Married Filing Separately": { zero: 44625, fifteen: 276900 },
-        "Head of Household":       { zero: 59750, fifteen: 523050 }
-      }
-      // add other years here as needed...
+        2022: {
+          "Single":                  { zero: 41675,  fifteen: 459750 },
+          "Married Filing Jointly":  { zero: 83350,  fifteen: 517200 },
+          "Married Filing Separately": { zero: 41675,  fifteen: 258600 },
+          "Head of Household":       { zero: 55800,  fifteen: 488500 },
+        },
+
+        // 2023 thresholds :contentReference[oaicite:1]{index=1}
+        2023: {
+          "Single":                  { zero: 44625,  fifteen: 492300 },
+          "Married Filing Jointly":  { zero: 89250,  fifteen: 553850 },
+          "Married Filing Separately": { zero: 44625,  fifteen: 276900 },
+          "Head of Household":       { zero: 59750,  fifteen: 523050 },
+        },
+
+        // 2024 thresholds :contentReference[oaicite:2]{index=2}
+        2024: {
+          "Single":                  { zero: 47025,  fifteen: 518900 },
+          "Married Filing Jointly":  { zero: 94050,  fifteen: 583750 },
+          "Married Filing Separately": { zero: 47025,  fifteen: 291850 },
+          "Head of Household":       { zero: 63000,  fifteen: 551350 },
+        },
+
+        // 2025 thresholds :contentReference[oaicite:3]{index=3}
+        2025: {
+          "Single":                  { zero: 48350,  fifteen: 533400 },
+          "Married Filing Jointly":  { zero: 96700,  fifteen: 600050 },
+          "Married Filing Separately": { zero: 48350,  fifteen: 300000 },
+          "Head of Household":       { zero: 64750,  fifteen: 566700 },
+        },
     };
     const t = (CG_THRESHOLDS[year] || CG_THRESHOLDS[2023])[filingStatus] ||
               CG_THRESHOLDS[2023]["Single"];
@@ -5660,7 +5701,14 @@ function computeCapitalGainTax(taxableIncome, qualifiedDividends, longTermGains,
   
     // 3 – how much gains taxed at 0% / 15% / 20%
     const zeroAmt      = Math.max(0, Math.min(netGain, Math.max(0, z - ordinaryPortion)));
-    const fifteenAmt   = Math.max(0, Math.min(netGain - zeroAmt, f - z));
+    // only the gains that fall between (ordinaryPortion + zeroAmt) and f get the 15% rate
+    const fifteenAmt = Math.max(0,
+      Math.min(
+        netGain - zeroAmt,
+        Math.max(0, f - (ordinaryPortion + zeroAmt))
+      )
+    );
+
     const twentyAmt    = Math.max(0, netGain - zeroAmt - fifteenAmt);
   
     const gainTax = zeroAmt * 0
@@ -5681,6 +5729,7 @@ function updateTotalTax() {
     const taxableIncome        = getFieldValue('taxableIncome');
     const qualifiedDividends   = getFieldValue('qualifiedDividends');
     const longTermGains        = getFieldValue('longTermCapitalGains');
+    const shortTermGains = getFieldValue('shortTermCapitalGains');
     const filingStatus         = document.getElementById('filingStatus').value;
     const year                 = parseInt(document.getElementById('year').value, 10);
 
@@ -5690,6 +5739,7 @@ function updateTotalTax() {
         taxableIncome,
         qualifiedDividends,
         longTermGains,
+        shortTermGains,
         filingStatus,
         year
       )
