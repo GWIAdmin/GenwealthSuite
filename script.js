@@ -8,6 +8,199 @@ const FS_MAP = {
     "Head of Household":        "HOH",
     "Qualifying Widow(er)":     "QW"
 };
+
+ export const BRACKETS = {
+      2022: {
+            "Single": [
+              { threshold: 10275, rate: 0.10 },
+              { threshold: 41775, rate: 0.12 },
+              { threshold: 89075, rate: 0.22 },
+              { threshold: 170050, rate: 0.24 },
+              { threshold: 215950, rate: 0.32 },
+              { threshold: 539900, rate: 0.35 },
+              { threshold: Infinity, rate: 0.37 }
+            ],
+            "Married Filing Jointly": [
+              { threshold: 20550, rate: 0.10 },
+              { threshold: 83550, rate: 0.12 },
+              { threshold: 178150, rate: 0.22 },
+              { threshold: 340100, rate: 0.24 },
+              { threshold: 431900, rate: 0.32 },
+              { threshold: 647850, rate: 0.35 },
+              { threshold: Infinity, rate: 0.37 }
+            ],
+            "Married Filing Separately": [
+                { threshold: 10275, rate: 0.10 },
+                { threshold: 41775, rate: 0.12 },
+                { threshold: 89075, rate: 0.22 },
+                { threshold: 170050, rate: 0.24 },
+                { threshold: 215950, rate: 0.32 },
+                { threshold: 323925, rate: 0.35 },
+                { threshold: Infinity, rate: 0.37 }
+            ],
+            "Head of Household": [
+              { threshold: 14650, rate: 0.10 },
+              { threshold: 55900, rate: 0.12 },
+              { threshold: 89050, rate: 0.22 },
+              { threshold: 170050, rate: 0.24 },
+              { threshold: 215950, rate: 0.32 },
+              { threshold: 539900, rate: 0.35 },
+              { threshold: Infinity, rate: 0.37 }
+            ],
+            "Qualifying Widow(er)": [
+                { threshold: 20550, rate: 0.10 },
+                { threshold: 83550, rate: 0.12 },
+                { threshold: 178150, rate: 0.22 },
+                { threshold: 340100, rate: 0.24 },
+                { threshold: 431900, rate: 0.32 },
+                { threshold: 647850, rate: 0.35 },
+                { threshold: Infinity, rate: 0.37 }
+            ]
+      },
+      2023: {
+        "Single": [
+          { threshold: 11000, rate: 0.10 },
+          { threshold: 44725, rate: 0.12 },
+          { threshold: 95375, rate: 0.22 },
+          { threshold: 182100, rate: 0.24 },
+          { threshold: 231250, rate: 0.32 },
+          { threshold: 578125, rate: 0.35 },
+          { threshold: Infinity, rate: 0.37 }
+        ],
+        "Married Filing Jointly": [
+          { threshold: 22000, rate: 0.10 },
+          { threshold: 89450, rate: 0.12 },
+          { threshold: 190750, rate: 0.22 },
+          { threshold: 364200, rate: 0.24 },
+          { threshold: 462500, rate: 0.32 },
+          { threshold: 693750, rate: 0.35 },
+          { threshold: Infinity, rate: 0.37 }
+        ],
+        "Married Filing Separately": [
+            { threshold: 11000, rate: 0.10 },
+            { threshold: 44725, rate: 0.12 },
+            { threshold: 95375, rate: 0.22 },
+            { threshold: 182100, rate: 0.24 },
+            { threshold: 231250, rate: 0.32 },
+            { threshold: 346875, rate: 0.35 },
+            { threshold: Infinity, rate: 0.37 }
+        ],
+        "Head of Household": [
+          { threshold: 15700, rate: 0.10 },
+          { threshold: 59850, rate: 0.12 },
+          { threshold: 95350, rate: 0.22 },
+          { threshold: 182100, rate: 0.24 },
+          { threshold: 231250, rate: 0.32 },
+          { threshold: 578100, rate: 0.35 },
+          { threshold: Infinity, rate: 0.37 }
+        ],
+        "Qualifying Widow(er)": [
+            { threshold: 22000, rate: 0.10 },
+            { threshold: 89450, rate: 0.12 },
+            { threshold: 190750, rate: 0.22 },
+            { threshold: 364200, rate: 0.24 },
+            { threshold: 462500, rate: 0.32 },
+            { threshold: 693750, rate: 0.35 },
+            { threshold: Infinity, rate: 0.37 }
+        ]
+      },
+      2024: {
+        "Single": [
+          { threshold: 11600, rate: 0.10 },
+          { threshold: 47150, rate: 0.12 },
+          { threshold: 100525, rate: 0.22 },
+          { threshold: 191950, rate: 0.24 },
+          { threshold: 243725, rate: 0.32 },
+          { threshold: 609350, rate: 0.35 },
+          { threshold: Infinity, rate: 0.37 }
+        ],
+        "Married Filing Jointly": [
+          { threshold: 23200, rate: 0.10 },
+          { threshold: 94300, rate: 0.12 },
+          { threshold: 201050, rate: 0.22 },
+          { threshold: 383900, rate: 0.24 },
+          { threshold: 487450, rate: 0.32 },
+          { threshold: 731200, rate: 0.35 },
+          { threshold: Infinity, rate: 0.37 }
+        ],
+        "Married Filing Separately": [
+            { threshold: 11600, rate: 0.10 },
+            { threshold: 47150, rate: 0.12 },
+            { threshold: 100525, rate: 0.22 },
+            { threshold: 191950, rate: 0.24 },
+            { threshold: 243725, rate: 0.32 },
+            { threshold: 365600, rate: 0.35 },
+            { threshold: Infinity, rate: 0.37 }
+        ],
+        "Head of Household": [
+          { threshold: 16550, rate: 0.10 },
+          { threshold: 63100, rate: 0.12 },
+          { threshold: 100500, rate: 0.22 },
+          { threshold: 191950, rate: 0.24 },
+          { threshold: 243700, rate: 0.32 },
+          { threshold: 609350, rate: 0.35 },
+          { threshold: Infinity, rate: 0.37 }
+        ],
+        "Qualifying Widow(er)": [
+            { threshold: 23200, rate: 0.10 },
+            { threshold: 94300, rate: 0.12 },
+            { threshold: 201050, rate: 0.22 },
+            { threshold: 383900, rate: 0.24 },
+            { threshold: 487450, rate: 0.32 },
+            { threshold: 731200, rate: 0.35 },
+            { threshold: Infinity, rate: 0.37 }
+        ]
+      },
+      2025: {
+        "Single": [
+          { threshold: 11925, rate: 0.10 },
+          { threshold: 48475, rate: 0.12 },
+          { threshold: 103350, rate: 0.22 },
+          { threshold: 197300, rate: 0.24 },
+          { threshold: 250525, rate: 0.32 },
+          { threshold: 626350, rate: 0.35 },
+          { threshold: Infinity, rate: 0.37 }
+        ],
+        "Married Filing Jointly": [
+          { threshold: 23850, rate: 0.10 },
+          { threshold: 96950, rate: 0.12 },
+          { threshold: 206700, rate: 0.22 },
+          { threshold: 394600, rate: 0.24 },
+          { threshold: 501050, rate: 0.32 },
+          { threshold: 751600, rate: 0.35 },
+          { threshold: Infinity, rate: 0.37 }
+        ],
+        "Married Filing Separately": [
+            { threshold: 11925, rate: 0.10 },
+            { threshold: 48475, rate: 0.12 },
+            { threshold: 103350, rate: 0.22 },
+            { threshold: 197300, rate: 0.24 },
+            { threshold: 250525, rate: 0.32 },
+            { threshold: 375800, rate: 0.35 },
+            { threshold: Infinity, rate: 0.37 }
+        ],
+        "Head of Household": [
+          { threshold: 17000, rate: 0.10 },
+          { threshold: 64850, rate: 0.12 },
+          { threshold: 103350, rate: 0.22 },
+          { threshold: 197300, rate: 0.24 },
+          { threshold: 250500, rate: 0.32 },
+          { threshold: 626350, rate: 0.35 },
+          { threshold: Infinity, rate: 0.37 }
+        ],
+        "Qualifying Widow(er)": [
+            { threshold: 23850, rate: 0.10 },
+            { threshold: 96950, rate: 0.12 },
+            { threshold: 206700, rate: 0.22 },
+            { threshold: 394600, rate: 0.24 },
+            { threshold: 501050, rate: 0.32 },
+            { threshold: 751600, rate: 0.35 },
+            { threshold: Infinity, rate: 0.37 }
+        ]
+      }
+    };
+
+const ORDINARY_TAX_BRACKETS = BRACKETS;
   
 let stateTaxData;
 window.addEventListener('DOMContentLoaded', async () => {
@@ -130,8 +323,15 @@ function displayResults(resultData) {
       ) || 0;
 
     const totalTax = fedTax + stateTax;
-    const refundOrDue = parseInt(resultData.refundOrDue, 10); // adjust if you need to re‑compute this, too
+    let refundOrDue = parseInt(resultData.refundOrDue, 10);
+    if (isNaN(refundOrDue)) {
+      // sum up every “Federal Income Tax Withheld” from the W-2 blocks
+      const withholdings = Array.from(
+        document.querySelectorAll("input[id^='w2FederalTaxWithheld_']")
+      ).reduce((sum, fld) => sum + unformatCurrency(fld.value), 0);
 
+      refundOrDue = totalTax - withholdings;
+    }
     resultsDiv.innerHTML = `
       <h2>Your Tax Results</h2>
       <p><strong>Taxable Income:</strong> $${parseInt(resultData.taxableIncome, 10)}</p>
@@ -3208,13 +3408,6 @@ function updateScheduleENet(index) {
  * NIIT = 3.8% × min( netInvIncome, max(0, MAGI − threshold) )
  */
 function updateNetInvestmentTax() {
-  // 1) Gather investment lines:
-  const taxableInterest    = getFieldValue('taxableInterest');
-  const ordinaryDividends  = getFieldValue('taxableDividends');
-  const qualifiedDividends = getFieldValue('qualifiedDividends');
-  const taxableIRA         = getFieldValue('taxableIRA');
-  const iraDistributions   = getFieldValue('iraDistributions');
-  const annuities          = getFieldValue('pensions') || 0;               // “Annuities”
   
   // 1a) Sum *all* Schedule E “Net” fields (rental real estate, royalties, etc.)
   let scheduleENetTotal = 0;
@@ -3227,17 +3420,19 @@ function updateNetInvestmentTax() {
   // 1b) Any manual “Adjustments” you’ve entered (e.g. passive-loss carryforwards)
   const adjustments      = getFieldValue('passiveActivityLossAdjustments') 
                          + getFieldValue('otherIncome'); // change/add fields here if you need
-  
-  // 1c) Capital gains
-  const longTermGains    = getFieldValue('longTermCapitalGains');
-  const shortTermGains   = getFieldValue('shortTermCapitalGains');
-  
+
+  // — only count **positive** net capital gains for NIIT —
+  const netCap = getFieldValue('longTermCapitalGains')
+               + getFieldValue('shortTermCapitalGains');
+  const positiveNetCapGain = Math.max(0, netCap);
+
+  // build your investment income bundle *without* letting losses drive it negative
   const totalInvestmentIncome =
-      getFieldValue('taxableInterest')
-    + getFieldValue('taxableDividends')
-    + scheduleENetTotal
-    + adjustments;
-  // …this matches your “Total investment income: 62,500” in the sheet
+        getFieldValue('taxableInterest')
+      + getFieldValue('taxableDividends')      // ordinary dividends
+      + getFieldValue('pensions')
+      + scheduleENetTotal
+      + adjustments;
 
   // 2) MAGI & threshold
   const magi    = getFieldValue('totalAdjustedGrossIncome');
@@ -3252,8 +3447,8 @@ function updateNetInvestmentTax() {
   
   // 3) Compute the smaller of (a) totalInvestmentIncome or (b) MAGI–threshold
   const excess      = Math.max(0, magi - threshold);
-  const taxableBase = Math.min(totalInvestmentIncome, excess);
-  // …exactly your “Enter smaller amount: 62,500”
+  // never let the NIIT base go below zero
+  const taxableBase = Math.max(0, Math.min(totalInvestmentIncome, excess));
 
   // 4) NIIT = 3.8% of that base, rounded to the dollar
   const niit = Math.round(taxableBase * 0.038);
@@ -3317,8 +3512,16 @@ function sumW2Wages() {
     return { totalW2Wages, totalMedicareWages };
 }
 
+let isRecalculating = false;
+
 function recalculateTotals() {
+
+    if (isRecalculating) return;
+    isRecalculating = true;
     
+    // ensure every W-2 block has been pushed into the map
+    document.querySelectorAll('.w2-block').forEach(block => updateW2Mapping(block.id));
+
     recalculateDeductions();
     recalcStateTax();
 
@@ -3440,6 +3643,8 @@ function recalculateTotals() {
         updateAggregateResComp();
         calculateEmployerEmployeeTaxes();
         updateTotalTax();
+
+        isRecalculating = false;
 }
 
 //-----------------------------------------------------//
@@ -4301,6 +4506,11 @@ function addW2Block() {
 
         // Update header when the dropdown changes
         whoseW2Select.addEventListener('change', updateHeader);
+        
+        whoseW2Select.addEventListener('change', () => {
+        updateW2Mapping();
+        recalculateTotals();
+        });
     }
 
     // --- Is This W-2 Compensation from Client's Business? ---
@@ -4401,12 +4611,7 @@ function addW2Block() {
      function updateW2Mapping() {
 
         const isClientBus = document.getElementById('w2IsClientBusiness_' + w2Counter).value;
-        if (isClientBus !== 'Yes') {
-          // clear any stale mapping & recalc
-          delete w2WageMap[w2Block.id];
-          recalculateTotals();
-          return;
-        }
+        const isBusinessRelated = (isClientBus === 'Yes');
         
         let wageVal = unformatCurrency(wagesInput.value || '0');
         let medicareWagesVal = unformatCurrency(medicareWagesInput.value || '0');
@@ -4416,10 +4621,6 @@ function addW2Block() {
             delete w2WageMap[w2Block.id];
             return;
         }
-
-        // Check if compensation is from client's business
-        const isClientBusinessSelect = document.getElementById('w2IsClientBusiness_' + w2Counter);
-        const isBusinessRelated = (isClientBusinessSelect.value === 'Yes');
         
         // Build or update the mapping object
         let mapping = {
@@ -4440,10 +4641,15 @@ function addW2Block() {
             const stateTaxKey = getStateTaxKey(stateAbbrev);
             mapping.unemploymentTax = calculateUnemploymentTax(taxYear, stateTaxKey, finalWage, "Yes");
         }
-        mapping.client = (document.getElementById('filingStatus').value === 'Married Filing Jointly' &&
-                            document.getElementById('w2WhoseW2_' + w2Counter))
-                            ? document.getElementById('w2WhoseW2_' + w2Counter).value
-                            : (document.getElementById('firstName').value.trim() || 'Client 1');
+        // ── Determine whose W-2 this is (only if MFJ and a valid selection) ──
+        const client1 = document.getElementById('firstName').value.trim() || 'Client 1';
+        const client2 = document.getElementById('spouseFirstName').value.trim() || 'Client 2';
+        let who = client1;
+        if (document.getElementById('filingStatus').value === 'Married Filing Jointly') {
+          const sel = document.getElementById('w2WhoseW2_' + w2Counter).value.trim();
+          if (sel === client1 || sel === client2) who = sel;
+        }
+        mapping.client = who;
 
         if (isBusinessRelated) {
             let businessName = businessNameSelect.value.trim();
@@ -4469,6 +4675,7 @@ function addW2Block() {
         recalculateTotals();
     }
 
+    window.updateW2Mapping = updateW2Mapping;
 
     // --- Federal Income Tax Withheld ---
     const federalTaxGroup = document.createElement('div');
@@ -4886,7 +5093,8 @@ function calculateDetailedSelfEmploymentTax() {
       const spouseSSTax = Math.min(spouseNetEarningsSE, spouseAvailableSS) * 0.124;
       const clientMedicareTax = clientNetEarningsSE * 0.029;
       const spouseMedicareTax = spouseNetEarningsSE * 0.029;
-      const seTaxExcludingAdditional = clientSSTax + clientMedicareTax + spouseSSTax + spouseMedicareTax;
+      // Only the MEDICARE portion counts for SE Tax here:
+      const medOnlyTax = clientMedicareTax + spouseMedicareTax;
   
       // 3f. Compute Additional Medicare Tax using Medicare wages if provided.
         const additionalMedicareTax = calculateAdditionalMedicareTax(
@@ -4894,7 +5102,8 @@ function calculateDetailedSelfEmploymentTax() {
         );
   
       // 3g. Compute half SE tax deduction.
-      const halfSelfEmploymentTaxDeduction = seTaxExcludingAdditional / 2;
+      // Half of that is the deductible piece:
+      const halfSelfEmploymentTaxDeduction = medOnlyTax / 2;
   
       // Debug logs (optional)
       console.log("---------------------------------------------------------------------");
@@ -4905,13 +5114,12 @@ function calculateDetailedSelfEmploymentTax() {
       console.log("Client Available SS:", clientAvailableSS, "Spouse Available SS:", spouseAvailableSS);
       console.log("Client SS Tax:", clientSSTax, "Spouse SS Tax:", spouseSSTax);
       console.log("Client Medicare Tax:", clientMedicareTax, "Spouse Medicare Tax:", spouseMedicareTax);
-      console.log("SE Tax (Excl. Additional):", seTaxExcludingAdditional);
       console.log("Additional Medicare Tax:", additionalMedicareTax);
       console.log("Half SE Tax Deduction:", halfSelfEmploymentTaxDeduction);
       console.log("---------------------------------------------------------------------");
   
       return {
-        seTaxExcludingAdditional,
+        medOnlyTax,
         additionalMedicareTax,
         halfSelfEmploymentTaxDeduction,
         client: {
@@ -4981,7 +5189,7 @@ function calculateDetailedSelfEmploymentTax() {
 function updateSelfEmploymentTax() {
     const taxResults = calculateDetailedSelfEmploymentTax();
     document.getElementById('selfEmploymentTax').value =
-      formatCurrency(String(Math.round(taxResults.seTaxExcludingAdditional)));
+      formatCurrency(String(Math.round(taxResults.medOnlyTax)));
     document.getElementById('additionalMedicareTax').value =
       formatCurrency(String(Math.round(taxResults.additionalMedicareTax)));
     document.getElementById('halfSETax').value =
@@ -5436,198 +5644,9 @@ function updateStaticUnemploymentFields() {
  */
 function computeOrdinaryTax(income, filingStatus, year) {
     // --- bracket tables keyed by year → status → [ { threshold, rate }, ... ] ---
-    const BRACKETS = {
-      2022: {
-            "Single": [
-              { threshold: 10275, rate: 0.10 },
-              { threshold: 41775, rate: 0.12 },
-              { threshold: 89075, rate: 0.22 },
-              { threshold: 170050, rate: 0.24 },
-              { threshold: 215950, rate: 0.32 },
-              { threshold: 539900, rate: 0.35 },
-              { threshold: Infinity, rate: 0.37 }
-            ],
-            "Married Filing Jointly": [
-              { threshold: 20550, rate: 0.10 },
-              { threshold: 83550, rate: 0.12 },
-              { threshold: 178150, rate: 0.22 },
-              { threshold: 340100, rate: 0.24 },
-              { threshold: 431900, rate: 0.32 },
-              { threshold: 647850, rate: 0.35 },
-              { threshold: Infinity, rate: 0.37 }
-            ],
-            "Married Filing Separately": [
-                { threshold: 10275, rate: 0.10 },
-                { threshold: 41775, rate: 0.12 },
-                { threshold: 89075, rate: 0.22 },
-                { threshold: 170050, rate: 0.24 },
-                { threshold: 215950, rate: 0.32 },
-                { threshold: 323925, rate: 0.35 },
-                { threshold: Infinity, rate: 0.37 }
-            ],
-            "Head of Household": [
-              { threshold: 14650, rate: 0.10 },
-              { threshold: 55900, rate: 0.12 },
-              { threshold: 89050, rate: 0.22 },
-              { threshold: 170050, rate: 0.24 },
-              { threshold: 215950, rate: 0.32 },
-              { threshold: 539900, rate: 0.35 },
-              { threshold: Infinity, rate: 0.37 }
-            ],
-            "Qualifying Widow(er)": [
-                { threshold: 20550, rate: 0.10 },
-                { threshold: 83550, rate: 0.12 },
-                { threshold: 178150, rate: 0.22 },
-                { threshold: 340100, rate: 0.24 },
-                { threshold: 431900, rate: 0.32 },
-                { threshold: 647850, rate: 0.35 },
-                { threshold: Infinity, rate: 0.37 }
-            ]
-      },
-      2023: {
-        "Single": [
-          { threshold: 11000, rate: 0.10 },
-          { threshold: 44725, rate: 0.12 },
-          { threshold: 95375, rate: 0.22 },
-          { threshold: 182100, rate: 0.24 },
-          { threshold: 231250, rate: 0.32 },
-          { threshold: 578125, rate: 0.35 },
-          { threshold: Infinity, rate: 0.37 }
-        ],
-        "Married Filing Jointly": [
-          { threshold: 22000, rate: 0.10 },
-          { threshold: 89450, rate: 0.12 },
-          { threshold: 190750, rate: 0.22 },
-          { threshold: 364200, rate: 0.24 },
-          { threshold: 462500, rate: 0.32 },
-          { threshold: 693750, rate: 0.35 },
-          { threshold: Infinity, rate: 0.37 }
-        ],
-        "Married Filing Separately": [
-            { threshold: 11000, rate: 0.10 },
-            { threshold: 44725, rate: 0.12 },
-            { threshold: 95375, rate: 0.22 },
-            { threshold: 182100, rate: 0.24 },
-            { threshold: 231250, rate: 0.32 },
-            { threshold: 346875, rate: 0.35 },
-            { threshold: Infinity, rate: 0.37 }
-        ],
-        "Head of Household": [
-          { threshold: 15700, rate: 0.10 },
-          { threshold: 59850, rate: 0.12 },
-          { threshold: 95350, rate: 0.22 },
-          { threshold: 182100, rate: 0.24 },
-          { threshold: 231250, rate: 0.32 },
-          { threshold: 578100, rate: 0.35 },
-          { threshold: Infinity, rate: 0.37 }
-        ],
-        "Qualifying Widow(er)": [
-            { threshold: 22000, rate: 0.10 },
-            { threshold: 89450, rate: 0.12 },
-            { threshold: 190750, rate: 0.22 },
-            { threshold: 364200, rate: 0.24 },
-            { threshold: 462500, rate: 0.32 },
-            { threshold: 693750, rate: 0.35 },
-            { threshold: Infinity, rate: 0.37 }
-        ]
-      },
-      2024: {
-        "Single": [
-          { threshold: 11600, rate: 0.10 },
-          { threshold: 47150, rate: 0.12 },
-          { threshold: 100525, rate: 0.22 },
-          { threshold: 191950, rate: 0.24 },
-          { threshold: 243725, rate: 0.32 },
-          { threshold: 609350, rate: 0.35 },
-          { threshold: Infinity, rate: 0.37 }
-        ],
-        "Married Filing Jointly": [
-          { threshold: 23200, rate: 0.10 },
-          { threshold: 94300, rate: 0.12 },
-          { threshold: 201050, rate: 0.22 },
-          { threshold: 383900, rate: 0.24 },
-          { threshold: 487450, rate: 0.32 },
-          { threshold: 731200, rate: 0.35 },
-          { threshold: Infinity, rate: 0.37 }
-        ],
-        "Married Filing Separately": [
-            { threshold: 11600, rate: 0.10 },
-            { threshold: 47150, rate: 0.12 },
-            { threshold: 100525, rate: 0.22 },
-            { threshold: 191950, rate: 0.24 },
-            { threshold: 243725, rate: 0.32 },
-            { threshold: 365600, rate: 0.35 },
-            { threshold: Infinity, rate: 0.37 }
-        ],
-        "Head of Household": [
-          { threshold: 16550, rate: 0.10 },
-          { threshold: 63100, rate: 0.12 },
-          { threshold: 100500, rate: 0.22 },
-          { threshold: 191950, rate: 0.24 },
-          { threshold: 243700, rate: 0.32 },
-          { threshold: 609350, rate: 0.35 },
-          { threshold: Infinity, rate: 0.37 }
-        ],
-        "Qualifying Widow(er)": [
-            { threshold: 23200, rate: 0.10 },
-            { threshold: 94300, rate: 0.12 },
-            { threshold: 201050, rate: 0.22 },
-            { threshold: 383900, rate: 0.24 },
-            { threshold: 487450, rate: 0.32 },
-            { threshold: 731200, rate: 0.35 },
-            { threshold: Infinity, rate: 0.37 }
-        ]
-      },
-      2025: {
-        "Single": [
-          { threshold: 11925, rate: 0.10 },
-          { threshold: 48475, rate: 0.12 },
-          { threshold: 103350, rate: 0.22 },
-          { threshold: 197300, rate: 0.24 },
-          { threshold: 250525, rate: 0.32 },
-          { threshold: 626350, rate: 0.35 },
-          { threshold: Infinity, rate: 0.37 }
-        ],
-        "Married Filing Jointly": [
-          { threshold: 23850, rate: 0.10 },
-          { threshold: 96950, rate: 0.12 },
-          { threshold: 206700, rate: 0.22 },
-          { threshold: 394600, rate: 0.24 },
-          { threshold: 501050, rate: 0.32 },
-          { threshold: 751600, rate: 0.35 },
-          { threshold: Infinity, rate: 0.37 }
-        ],
-        "Married Filing Separately": [
-            { threshold: 11925, rate: 0.10 },
-            { threshold: 48475, rate: 0.12 },
-            { threshold: 103350, rate: 0.22 },
-            { threshold: 197300, rate: 0.24 },
-            { threshold: 250525, rate: 0.32 },
-            { threshold: 375800, rate: 0.35 },
-            { threshold: Infinity, rate: 0.37 }
-        ],
-        "Head of Household": [
-          { threshold: 17000, rate: 0.10 },
-          { threshold: 64850, rate: 0.12 },
-          { threshold: 103350, rate: 0.22 },
-          { threshold: 197300, rate: 0.24 },
-          { threshold: 250500, rate: 0.32 },
-          { threshold: 626350, rate: 0.35 },
-          { threshold: Infinity, rate: 0.37 }
-        ],
-        "Qualifying Widow(er)": [
-            { threshold: 23850, rate: 0.10 },
-            { threshold: 96950, rate: 0.12 },
-            { threshold: 206700, rate: 0.22 },
-            { threshold: 394600, rate: 0.24 },
-            { threshold: 501050, rate: 0.32 },
-            { threshold: 751600, rate: 0.35 },
-            { threshold: Infinity, rate: 0.37 }
-        ]
-      }
-    };
-  
-    const statusBrackets = (BRACKETS[year] || BRACKETS[2024])[filingStatus];
+
+    const statusBrackets =
+      (ORDINARY_TAX_BRACKETS[year] || ORDINARY_TAX_BRACKETS[2024])[filingStatus];
     if (!statusBrackets) return 0;
   
     let remaining = income, lastThreshold = 0, tax = 0;
@@ -5654,70 +5673,90 @@ function computeOrdinaryTax(income, filingStatus, year) {
 */
 
 function computeCapitalGainTax(taxableIncome, qualifiedDividends, longTermGains, shortTermGains, filingStatus, year) {
-    // 0 – net capital gain
-    const netGain = Math.max(0, qualifiedDividends + longTermGains + shortTermGains);
+  // 0a) Separate out short-term (ordinary) vs long-term (preferential)
+  const netShortTerm        = shortTermGains;
+  const netLongTermPlusQD   = qualifiedDividends + longTermGains;
+  // combined for loss deduction later
+  const netCapitalGainLoss  = netShortTerm + netLongTermPlusQD;
 
-    // 1 – ordinary portion
-    const ordinaryPortion = Math.max(0, taxableIncome - netGain);
-    const ordinaryTax = computeOrdinaryTax(ordinaryPortion, filingStatus, year);
-  
-    // 2 – thresholds per filing status & year
-    // IRS 2023 thresholds for 0% and 15% capital‑gain brackets:
-    const CG_THRESHOLDS = {
-        2022: {
-          "Single":                  { zero: 41675,  fifteen: 459750 },
-          "Married Filing Jointly":  { zero: 83350,  fifteen: 517200 },
-          "Married Filing Separately": { zero: 41675,  fifteen: 258600 },
-          "Head of Household":       { zero: 55800,  fifteen: 488500 },
-        },
+  // 1) Ordinary‐income portion includes wages & *short-term* gains
+  //    so only subtract the *long-term+QD* piece
+  const positiveLongTermGain = Math.max(0, netLongTermPlusQD);
+  const ordinaryPortionRaw   = taxableIncome - positiveLongTermGain;
+  const ordinaryPortion    = Math.max(0, ordinaryPortionRaw);
+  let ordinaryTax        = computeOrdinaryTax(ordinaryPortion, filingStatus, year);
 
-        // 2023 thresholds :contentReference[oaicite:1]{index=1}
-        2023: {
-          "Single":                  { zero: 44625,  fifteen: 492300 },
-          "Married Filing Jointly":  { zero: 89250,  fifteen: 553850 },
-          "Married Filing Separately": { zero: 44625,  fifteen: 276900 },
-          "Head of Household":       { zero: 59750,  fifteen: 523050 },
-        },
+   // -- new: use only the LT+QD piece for preferential buckets --
+   const gainBase = positiveLongTermGain;
 
-        // 2024 thresholds :contentReference[oaicite:2]{index=2}
-        2024: {
-          "Single":                  { zero: 47025,  fifteen: 518900 },
-          "Married Filing Jointly":  { zero: 94050,  fifteen: 583750 },
-          "Married Filing Separately": { zero: 47025,  fifteen: 291850 },
-          "Head of Household":       { zero: 63000,  fifteen: 551350 },
-        },
+  // 3) Thresholds for 0% and 15% long-term rates by year & filing status
+  const CG_THRESHOLDS = {
+    2022: {
+      "Single":                   { zero: 41675,  fifteen: 459750 },
+      "Married Filing Jointly":   { zero: 83350,  fifteen: 517200 },
+      "Married Filing Separately":{ zero: 41675,  fifteen: 258600 },
+      "Head of Household":        { zero: 55800,  fifteen: 488500 }
+    },
+    2023: {
+      "Single":                   { zero: 44625,  fifteen: 492300 },
+      "Married Filing Jointly":   { zero: 89250,  fifteen: 553850 },
+      "Married Filing Separately":{ zero: 44625,  fifteen: 276900 },
+      "Head of Household":        { zero: 59750,  fifteen: 523050 }
+    },
+    2024: {
+      "Single":                   { zero: 47025,  fifteen: 518900 },
+      "Married Filing Jointly":   { zero: 94050,  fifteen: 583750 },
+      "Married Filing Separately":{ zero: 47025,  fifteen: 291850 },
+      "Head of Household":        { zero: 63000,  fifteen: 551350 }
+    },
+    2025: {
+      "Single":                   { zero: 48350,  fifteen: 533400 },
+      "Married Filing Jointly":   { zero: 96700,  fifteen: 600050 },
+      "Married Filing Separately":{ zero: 48350,  fifteen: 300000 },
+      "Head of Household":        { zero: 64750,  fifteen: 566700 }
+    }
+  };
+  const buckets = CG_THRESHOLDS[year] || CG_THRESHOLDS[2023];
+  const { zero: z, fifteen: f } = buckets[filingStatus] || buckets["Single"];
 
-        // 2025 thresholds :contentReference[oaicite:3]{index=3}
-        2025: {
-          "Single":                  { zero: 48350,  fifteen: 533400 },
-          "Married Filing Jointly":  { zero: 96700,  fifteen: 600050 },
-          "Married Filing Separately": { zero: 48350,  fifteen: 300000 },
-          "Head of Household":       { zero: 64750,  fifteen: 566700 },
-        },
-    };
-    const t = (CG_THRESHOLDS[year] || CG_THRESHOLDS[2023])[filingStatus] ||
-              CG_THRESHOLDS[2023]["Single"];
-    const { zero: z, fifteen: f } = t;
-  
-    // 3 – how much gains taxed at 0% / 15% / 20%
-    const zeroAmt      = Math.max(0, Math.min(netGain, Math.max(0, z - ordinaryPortion)));
-    // only the gains that fall between (ordinaryPortion + zeroAmt) and f get the 15% rate
-    const fifteenAmt = Math.max(0,
-      Math.min(
-        netGain - zeroAmt,
-        Math.max(0, f - (ordinaryPortion + zeroAmt))
-      )
-    );
+  // 4) Allocate the *long-term+QD* piece into 0%, 15%, and 20% buckets
+  const zeroAmt = Math.max(
+    0,
+    Math.min(gainBase, Math.max(0, z - ordinaryPortion))
+  );
+  const fifteenAmt = Math.max(
+    0,
+    Math.min(
+      gainBase - zeroAmt,
+      Math.max(0, f - (ordinaryPortion + zeroAmt))
+    )
+  );
+  const twentyAmt = Math.max(0, gainBase - zeroAmt - fifteenAmt);
 
-    const twentyAmt    = Math.max(0, netGain - zeroAmt - fifteenAmt);
-  
-    const gainTax = zeroAmt * 0
-                  + fifteenAmt * 0.15
-                  + twentyAmt * 0.20;
-  
-    return ordinaryTax + gainTax;
+  // Step X: now handle the $3K capital‐loss offset
+  const lossDeduction = 
+    netCapitalGainLoss < 0 && filingStatus === 'Married Filing Jointly'
+      ? Math.min(3000, -netCapitalGainLoss)
+      : 0;
+
+  if (lossDeduction > 0) {
+    // find your marginal rate at the top of the ordinary portion
+   const brackets =
+     (ORDINARY_TAX_BRACKETS[year] || ORDINARY_TAX_BRACKETS[2024])[filingStatus];
+
+    let marginalRate = brackets.find(b => ordinaryPortion <= b.threshold).rate;
+    // subtract the tax “saved” by the $3K at that marginal rate
+    ordinaryTax  = ordinaryTax - (lossDeduction * marginalRate);
+  }
+
+  // 5) Compute preferential‐rate tax on *only* the long-term+QD portion
+  const gainTax = zeroAmt   * 0
+                + fifteenAmt * 0.15
+                + twentyAmt  * 0.20;
+
+  return ordinaryTax + gainTax;
 }
-  
+
 /**
  * Recalculates and writes:
  *   • tax (ordinary + cap‑gain, Schedule D)
