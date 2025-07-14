@@ -1566,17 +1566,27 @@ function getFieldValue(id) {
 }
 
 function formatCurrency(value) {
-    let numericValue = value.replace(/[^0-9.-]/g, '');
+    // 1) Ensure we're working with a string (even if the caller passed a number or null)
+    const str = value == null ? '' : String(value);
+
+    // 2) Strip out everything except digits, dot and minus
+    const numericValue = str.replace(/[^0-9.-]/g, '');
     if (numericValue === '') return '';
+
     let floatValue = parseFloat(numericValue);
     if (isNaN(floatValue)) return '';
-    let truncatedValue = parseInt(floatValue);
-    let absoluteVal = Math.abs(truncatedValue);
-    let formattedVal = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(absoluteVal);
-    formattedVal = formattedVal.replace(/(\.00)$/, '');
+
+    // 3) Truncate to integer, format with Intl, drop “.00”
+    const truncatedValue = parseInt(floatValue, 10);
+    const absoluteVal = Math.abs(truncatedValue);
+    let formattedVal = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(absoluteVal).replace(/\.00$/, '');
+
     return (truncatedValue < 0)
-        ? `(${formattedVal})`
-        : formattedVal;
+      ? `(${formattedVal})`
+      : formattedVal;
 }
 
 function unformatCurrency(value) {
@@ -5648,231 +5658,355 @@ function computeOrdinaryTax(income, filingStatus, year) {
     const statusBrackets =
       (ORDINARY_TAX_BRACKETS[year] || ORDINARY_TAX_BRACKETS[2024])[filingStatus];
     if (!statusBrackets) return 0;
+
+    console.log(`computeOrdinaryTax: taxing ${income} at ${filingStatus}/${year} brackets:`, statusBrackets);
   
     let remaining = income, lastThreshold = 0, tax = 0;
     for (let { threshold, rate } of statusBrackets) {
-      const chunk = Math.max(0, Math.min(remaining, threshold - lastThreshold));
-      tax += chunk * rate;
-      remaining -= chunk;
+      const slice = Math.max(0, Math.min(remaining, threshold - lastThreshold));
+      console.log(`  ▷ $${lastThreshold}–$${threshold} (@${rate*100}%): slice $${slice}`);
+      tax  += slice * rate;
+      remaining -= slice;
       lastThreshold = threshold;
       if (remaining <= 0) break;
     }
+    console.log(`  → ordinary tax total = $${tax}`);
     return tax;
 }
-  
-  
+// expose for console testing
+window.computeOrdinaryTax = computeOrdinaryTax;
+
+
 /**
-   * Implements IRS Schedule D worksheet (steps 1–47):
-   *   • Step 1: Form‑computed taxableIncome
-   *   • Step 2: netCapitalGain = qualifiedDividends + netLongTermGains
-   *   • Step 3: ordinaryPortion = max(0, taxableIncome − netCapitalGain)
-   *   • Step 4: ordinaryTax = computeOrdinaryTax(ordinaryPortion, …)
-   *   • Step 8–18: compute 0%/15%/20% thresholds
-   *   • Step 19–22: apply the 0/15/20% rates to the capital‑gain portion
-   *   • Sum them all
-*/
+ * Compute Schedule D tax exactly as Worksheet D (Lines 1–47),
+ * with console.log for every line item as “Step # (Line #)”.
+ */
+function computeWorksheetD(
+  taxableIncome,
+  qualifiedDividends,
+  longTermGains,
+  shortTermGains,
+  filingStatus,
+  year,
+  netInvestmentInterestExpense = 0,
+  unrecapturedSection1250Gain = 0,
+  collectiblesGain = 0,
+  priorLossCarryover = 0
+) {
+  // ————————————————————————————— Part I: Net gains (Lines 1–4h) —————————————————————————————
+  // Keep the raw figure for netting …
+  const stRaw = shortTermGains;           // −10 000 in your data
+ 
+  // …but line 1 itself may never be negative
+  const wd1   = Math.max(0, stRaw);       // 0   ← IRS rule
+  console.log('Step 1 (Line 1): net short-term gain =', wd1);
 
-function computeCapitalGainTax(taxableIncome, qualifiedDividends, longTermGains, shortTermGains, filingStatus, year) {
-  // 0a) Separate out short-term (ordinary) vs long-term (preferential)
-  const netShortTerm        = shortTermGains;
-  const netLongTermPlusQD   = qualifiedDividends + longTermGains;
-  // combined for loss deduction later
-  const netCapitalGainLoss  = netShortTerm + netLongTermPlusQD;
+  // Line 2: net long-term gain before QD (B)
+  const wd2 = longTermGains;
+  console.log('Step 2 (Line 2): net long-term gain =', wd2);
 
-  // 1) Ordinary‐income portion includes wages & *short-term* gains
-  //    so only subtract the *long-term+QD* piece
-  const positiveLongTermGain = Math.max(0, netLongTermPlusQD);
-  const ordinaryPortionRaw   = taxableIncome - positiveLongTermGain;
-  const ordinaryPortion    = Math.max(0, ordinaryPortionRaw);
-  let ordinaryTax        = computeOrdinaryTax(ordinaryPortion, filingStatus, year);
+  // NEW: net long-term gain after the short-term-loss offset (§1222)
+  const netLTCG = wd2 + Math.min(0, stRaw);   // if wd1 is negative it reduces LTCG
 
-   // -- new: use only the LT+QD piece for preferential buckets --
-   const gainBase = positiveLongTermGain;
+  // Line 3: qualified dividends (C)
+  const wd3 = qualifiedDividends;
+  console.log('Step 3 (Line 3): qualified dividends =', wd3);
 
-  // 3) Thresholds for 0% and 15% long-term rates by year & filing status
+  // Line 4a: Total preferential gain
+  const wd4a = netLTCG + wd3;
+  console.log('Step 4 (Line 4a): total preferential gain (B+C) =', wd4a);
+
+  // Line 4b: Enter taxable income
+  const wd4b = taxableIncome;
+  console.log('Step 5 (Line 4b): taxable income =', wd4b);
+
+  // Line 4c: Subtract NET capital gain or loss (STCG + preferential gain) from taxable income
+  const wd4c = Math.max(0, wd4b - (wd1 + wd4a));
+  console.log('Step 6 (Line 4c): ordinary portion =', wd4c);
+
+  // Line 4d: Net investment interest expense (§ 4952)
+  const wd4d = Math.max(0, netInvestmentInterestExpense);
+  console.log('Step 7 (Line 4d): net investment interest expense =', wd4d);
+
+  // Line 4e: Qualified dividends (col C)
+  const wd4e = wd3;
+  console.log('Step 8 (Line 4e): qualified dividends (col C) =', wd4e);
+
+  // Line 4f: Net LTCG (col B)
+  const wd4f = Math.max(0, netLTCG);
+  console.log('Step 9 (Line 4f): net long-term capital gain (col B) =', wd4f);
+
+  // Line 4g: Total preferential gain
+  const wd4g = wd4e + wd4f;
+  console.log('Step 10 (Line 4g): total preferential gain =', wd4g);
+
+  // Line 4h: Subtract 4d from 4c for the ordinary-income slice
+  const wd4h = Math.max(0, wd4c - wd4d);
+  console.log('Step 11 (Line 4h): ordinary-income slice for thresholds =', wd4h);
+
+  // Line 5: compute ordinary‐income tax on wd4h
+  const ordinaryTax = computeOrdinaryTax(wd4h, filingStatus, year);
+  console.log('Step 12 (Line 5): ordinary-income tax =', ordinaryTax);
+
+  // ——————————————————————————— Part II: Loss carry and $3,000 offset ———————————————————————————
+  // Line 6: net capital gain (or loss)
+  const netCapGain = stRaw + wd2;
+  console.log('Step 13 (Line 6): net capital gain (or loss) =', netCapGain);
+
+  const lossOffsetLimit =
+    filingStatus === 'Married Filing Separately' ? 1500 : 3000;
+  let lossOffset = 0;
+  let lossCarry = priorLossCarryover || 0;
+
+  if (netCapGain < 0) {
+    lossOffset = Math.min(lossOffsetLimit, -netCapGain);
+    lossCarry = (-netCapGain - lossOffset) + priorLossCarryover;
+  }
+  // Line 7
+  console.log('Step 14 (Line 7): loss offset applied =', lossOffset);
+  // Line 8
+  console.log('Step 15 (Line 8): loss carryover =', lossCarry);
+
+  // —————————————————————————— Part III–VII: Columns A–E & preferential buckets ——————————————————————————
+  // Column A (short-term): Line 9
+  const colA = wd1;
+  console.log('Step 16 (Line 9): short-term gain taxed at ordinary rates =', colA);
+
+  // Column B initial (LTCG only): Line 10
+  let colB = wd4f;
+  console.log('Step 17 (Line 10): long-term gain (column B) =', colB);
+
+  // Column C (QD only): Line 11
+  let colC = wd4e;
+  console.log('Step 18 (Line 11): qualified dividends (column C) =', colC);
+
+  // § 1250 at 25%: Line 12
+  const colD_1250 = Math.min(unrecapturedSection1250Gain, colB);
+  colB -= colD_1250;
+  console.log('Step 19 (Line 12): § 1250 gain (column D) =', colD_1250);
+
+  // Collectibles at 28%: Line 13
+  const colD_coll = Math.min(collectiblesGain, colB);
+  colB -= colD_coll;
+  console.log('Step 20 (Line 13): collectibles gain (column D) =', colD_coll);
+
+  // Remaining LTCG: Line 14
+  const colD = colB;
+  console.log('Step 21 (Line 14): other long-term gain (column D) =', colD);
+
+  // Column E = 0: Line 15
+  const colE = 0;
+  console.log('Step 22 (Line 15): column E =', colE);
+
+  // ————————————————————————— thresholds for 0%/15%/20% buckets —————————————————————————
   const CG_THRESHOLDS = {
     2022: {
-      "Single":                   { zero: 41675,  fifteen: 459750 },
-      "Married Filing Jointly":   { zero: 83350,  fifteen: 517200 },
-      "Married Filing Separately":{ zero: 41675,  fifteen: 258600 },
-      "Head of Household":        { zero: 55800,  fifteen: 488500 }
+      Single:   { zero: 41675,  fifteen: 459750 },
+      'Married Filing Jointly':   { zero: 83350,  fifteen: 517200 },
+      'Married Filing Separately':{ zero: 41675,  fifteen: 258600 },
+      'Head of Household':        { zero: 55800,  fifteen: 488500 }
     },
     2023: {
-      "Single":                   { zero: 44625,  fifteen: 492300 },
-      "Married Filing Jointly":   { zero: 89250,  fifteen: 553850 },
-      "Married Filing Separately":{ zero: 44625,  fifteen: 276900 },
-      "Head of Household":        { zero: 59750,  fifteen: 523050 }
+      Single:   { zero: 44625,  fifteen: 492300 },
+      'Married Filing Jointly':   { zero: 89250,  fifteen: 553850 },
+      'Married Filing Separately':{ zero: 44625,  fifteen: 276900 },
+      'Head of Household':        { zero: 59750,  fifteen: 523050 }
     },
     2024: {
-      "Single":                   { zero: 47025,  fifteen: 518900 },
-      "Married Filing Jointly":   { zero: 94050,  fifteen: 583750 },
-      "Married Filing Separately":{ zero: 47025,  fifteen: 291850 },
-      "Head of Household":        { zero: 63000,  fifteen: 551350 }
+      Single:   { zero: 47025,  fifteen: 518900 },
+      'Married Filing Jointly':   { zero: 94050,  fifteen: 583750 },
+      'Married Filing Separately':{ zero: 47025,  fifteen: 291850 },
+      'Head of Household':        { zero: 63000,  fifteen: 551350 }
     },
     2025: {
-      "Single":                   { zero: 48350,  fifteen: 533400 },
-      "Married Filing Jointly":   { zero: 96700,  fifteen: 600050 },
-      "Married Filing Separately":{ zero: 48350,  fifteen: 300000 },
-      "Head of Household":        { zero: 64750,  fifteen: 566700 }
+      Single:   { zero: 48350,  fifteen: 533400 },
+      'Married Filing Jointly':   { zero: 96700,  fifteen: 600050 },
+      'Married Filing Separately':{ zero: 48350,  fifteen: 300000 },
+      'Head of Household':        { zero: 64750,  fifteen: 566700 }
     }
   };
-  const buckets = CG_THRESHOLDS[year] || CG_THRESHOLDS[2023];
-  const { zero: z, fifteen: f } = buckets[filingStatus] || buckets["Single"];
+  const { zero: z, fifteen: f } =
+    (CG_THRESHOLDS[year] || CG_THRESHOLDS[2023])[filingStatus] ||
+    CG_THRESHOLDS[2023].Single;
+  console.log(`Step 23 (setup): thresholds for ${filingStatus} in ${year}: 0% up to ${z}, 15% up to ${f}`);
 
-  // 4) Allocate the *long-term+QD* piece into 0%, 15%, and 20% buckets
-  const zeroAmt = Math.max(
-    0,
-    Math.min(gainBase, Math.max(0, z - ordinaryPortion))
+  // ————————————————————————————— Part VIII: Bucket allocations & taxes —————————————————————————————
+  // Line 9: amount taxed at 0%
+  const available0    = Math.max(0, z - wd4h);
+  const bucket0_fromC = Math.min(colC, available0);
+  const bucket0_fromD = Math.min(colD, Math.max(0, available0 - bucket0_fromC));
+  const wd9 = bucket0_fromC + bucket0_fromD;
+  console.log('Step 24 (Line 9): amount taxed at 0% =', wd9);
+
+  // Line 18: amount taxed at 15% (net capital gain only)
+  const available15 = Math.max(0, f - (wd4h + wd9));
+  // the Worksheet says “15% on the smaller of (net capital gain) or (available 15% room)”
+  const wd18 = Math.min(wd4g, available15);
+  console.log('Step 25 (Line 18): amount taxed at 15% =', wd18);
+
+  // split that 15% bucket between QD (col C) and LTCG (col D)
+  const bucket15_fromC = Math.min(colC - bucket0_fromC, wd18);
+  const bucket15_fromD = wd18 - bucket15_fromC;
+
+  // Line 29: amount taxed at 20%
+  const bucket20_fromC = colC - bucket0_fromC - bucket15_fromC;
+  const bucket20_fromD = colD - bucket0_fromD - bucket15_fromD;
+  const wd29 = bucket20_fromC + bucket20_fromD;
+  console.log('Step 26 (Line 29): amount taxed at 20% =', wd29);
+
+  // Line 34: § 1250 gain at 25%
+  const wd34 = colD_1250;
+  console.log('Step 27 (Line 34): § 1250 gain at 25% =', wd34);
+
+  // Line 38: collectibles at 28%
+  const wd38 = colD_coll;
+  console.log('Step 28 (Line 38): collectibles at 28% =', wd38);
+
+  // Compute each bucket’s tax
+  const tax0  = wd9  * 0.00;
+  console.log('Step 29 (calc): tax on 0% bucket =', tax0);
+  const tax15 = wd18 * 0.15;
+  console.log('Step 30 (calc): tax on 15% bucket =', tax15);
+  const tax20 = wd29 * 0.20;
+  console.log('Step 31 (calc): tax on 20% bucket =', tax20);
+  const tax25 = wd34 * 0.25;
+  console.log('Step 32 (calc): tax on 25% § 1250 bracket =', tax25);
+  const tax28 = wd38 * 0.28;
+  console.log('Step 33 (calc): tax on 28% collectibles bracket =', tax28);
+
+  // Line 47: total Schedule D tax
+  const wd47 = tax0 + tax15 + tax20 + tax25 + tax28;
+  console.log('Step 47 (Line 47): total Schedule D tax =', wd47);
+
+  return {
+    worksheet: {
+      wd1, wd2, wd3,
+      wd4a, wd4b, wd4c, wd4d, wd4e, wd4f, wd4g, wd4h,
+      wd5: ordinaryTax,
+      wd9, wd18, wd29, wd34, wd38,
+      wd47,
+      lossOffset, lossCarry
+    },
+    totalTax: wd47
+  };
+}
+
+/**
+ * Combine ordinary‐rate tax + preferential tax buckets
+ */
+function computeCapitalGainTax(
+  taxableIncome, qDiv, ltcg, stcg, status, year,
+  netInvInterest=0, sec1250=0, collect=0, priorLoss=0
+) {
+  const { worksheet, totalTax: prefTax } = computeWorksheetD(
+    taxableIncome, qDiv, ltcg, stcg,
+    status, year,
+    netInvInterest,
+    sec1250,
+    collect,
+    priorLoss
   );
-  const fifteenAmt = Math.max(
-    0,
-    Math.min(
-      gainBase - zeroAmt,
-      Math.max(0, f - (ordinaryPortion + zeroAmt))
-    )
-  );
-  const twentyAmt = Math.max(0, gainBase - zeroAmt - fifteenAmt);
-
-  // Step X: now handle the $3K capital‐loss offset
-  const lossDeduction = 
-    netCapitalGainLoss < 0 && filingStatus === 'Married Filing Jointly'
-      ? Math.min(3000, -netCapitalGainLoss)
-      : 0;
-
-  if (lossDeduction > 0) {
-    // find your marginal rate at the top of the ordinary portion
-   const brackets =
-     (ORDINARY_TAX_BRACKETS[year] || ORDINARY_TAX_BRACKETS[2024])[filingStatus];
-
-    let marginalRate = brackets.find(b => ordinaryPortion <= b.threshold).rate;
-    // subtract the tax “saved” by the $3K at that marginal rate
-    ordinaryTax  = ordinaryTax - (lossDeduction * marginalRate);
-  }
-
-  // 5) Compute preferential‐rate tax on *only* the long-term+QD portion
-  const gainTax = zeroAmt   * 0
-                + fifteenAmt * 0.15
-                + twentyAmt  * 0.20;
-
-  return ordinaryTax + gainTax;
+  // worksheet.wd5 is your ordinary‐income portion taxed at ordinary rates
+  return worksheet.wd5 + prefTax;
 }
 
 /**
  * Recalculates and writes:
- *   • tax (ordinary + cap‑gain, Schedule D)
+ *   • tax (ordinary + cap-gain, Schedule D)
  *   • totalFederalTax
  *   • totalTax = totalFederalTax + stateTotalTax + employeeTaxes
  */
 function updateTotalTax() {
-    // 1) Gather the inputs you already have
-    const taxableIncome        = getFieldValue('taxableIncome');
-    const qualifiedDividends   = getFieldValue('qualifiedDividends');
-    const longTermGains        = getFieldValue('longTermCapitalGains');
-    const shortTermGains = getFieldValue('shortTermCapitalGains');
-    const filingStatus         = document.getElementById('filingStatus').value;
-    const year                 = parseInt(document.getElementById('year').value, 10);
+  // 1) Gather the inputs you already have
+  const taxableIncome      = getFieldValue('taxableIncome');
+  const qualifiedDividends = getFieldValue('qualifiedDividends');
+  const longTermGains      = getFieldValue('longTermCapitalGains');
+  const shortTermGains     = getFieldValue('shortTermCapitalGains');
+  const filingStatus       = document.getElementById('filingStatus').value;
+  const year               = parseInt(document.getElementById('year').value, 10);
 
-    // 2) Compute “tax” via your Schedule D function
-    const computedTax = Math.round(
-      computeCapitalGainTax(
-        taxableIncome,
-        qualifiedDividends,
-        longTermGains,
-        shortTermGains,
-        filingStatus,
-        year
-      )
-    );
+  // 2) Worksheet D–specific fields
+  //    net investment interest expense = Form 4952 line 4g minus line 4e (but not below 0)
+  const netInvestmentInterestExpense = Math.max(
+    0,
+    getFieldValue('form4952Line4g') - getFieldValue('form4952Line4e')
+  );
+  //    § 1250 unrecaptured gain
+  const unrecapturedSection1250Gain = getFieldValue('unrecapturedSection1250Gain');
+  //    Collectibles (§ 1202) gain
+  const collectiblesGain = getFieldValue('collectiblesGain');
 
-    // 3) Other income‑tax pieces
-    const additionalMedicare   = getFieldValue('additionalMedicareTax');
-    const netInvestment        = getFieldValue('netInvestmentTax');
-    const selfEmployment       = getFieldValue('selfEmploymentTax');
-    const otherTaxes           = getFieldValue('otherTaxes');
+  // 3) Compute Schedule D + ordinary tax
+  const computedTax = Math.round(
+    computeCapitalGainTax(
+      taxableIncome,
+      qualifiedDividends,
+      longTermGains,
+      shortTermGains,
+      filingStatus,
+      year,
+      netInvestmentInterestExpense,
+      unrecapturedSection1250Gain,
+      collectiblesGain
+    )
+  );
 
-    // 4) Credits
-    const foreignCredit        = getFieldValue('foreignTaxCredit');
-    const minTaxCredit         = getFieldValue('priorYearMinimumTaxCredit');
-    const personalCredits      = getFieldValue('nonrefundablePersonalCredits');
-    const businessCredit       = getFieldValue('generalBusinessCredit');
-    const childCredit          = getFieldValue('childTaxCredit');
-    const otherCredits         = getFieldValue('otherCredits');
+  // 4) Other income‐tax pieces
+  const additionalMedicare = getFieldValue('additionalMedicareTax');
+  const netInvestment      = getFieldValue('netInvestmentTax');
+  const selfEmployment     = getFieldValue('selfEmploymentTax');
+  const otherTaxes         = getFieldValue('otherTaxes');
 
-    // 5) State tax (California in your case)
-    const stateTotalTax        = getFieldValue('stateTotalTax');
+  // 5) Credits
+  const foreignCredit   = getFieldValue('foreignTaxCredit');
+  const minTaxCredit    = getFieldValue('priorYearMinimumTaxCredit');
+  const personalCredits = getFieldValue('nonrefundablePersonalCredits');
+  const businessCredit  = getFieldValue('generalBusinessCredit');
+  const childCredit     = getFieldValue('childTaxCredit');
+  const otherCredits    = getFieldValue('otherCredits');
 
-    // 6) Payroll tax lines (FICA)
-    const employeeFICA         = getFieldValue('employeeTaxes');
-    const employerFICA         = getFieldValue('employerTaxes');
+  // 6) State & payroll taxes
+  const stateTotalTax = getFieldValue('stateTotalTax');
+  const employeeFICA  = getFieldValue('employeeTaxes');
+  const employerFICA  = getFieldValue('employerTaxes');
 
-    console.log({
-        computedTax,
-        additionalMedicare,
-        netInvestment,
-        selfEmployment,
-        otherTaxes,
-        foreignCredit,
-        minTaxCredit,
-        personalCredits,
-        businessCredit,
-        childCredit,
-        otherCredits,
-        stateTotalTax,
-        employeeFICA,
-        employerFICA
-      });
-    
-      let totalFed =
-        computedTax +
-        additionalMedicare +
-        netInvestment +
-        selfEmployment +
-        otherTaxes -
-        foreignCredit -
-        minTaxCredit -
-        personalCredits -
-        businessCredit -
-        childCredit -
-        otherCredits;
-    
-      console.log('Total Federal Tax:', totalFed);
-    
-      const grandTotal = totalFed + stateTotalTax + employeeFICA + employerFICA;
-      console.log('Grand Total:', grandTotal);
+  // 7) Build your Total Federal Tax (income‐tax only)
+  let totalFed =
+      computedTax
+    + additionalMedicare
+    + netInvestment
+    + selfEmployment
+    + otherTaxes
+    - foreignCredit
+    - minTaxCredit
+    - personalCredits
+    - businessCredit
+    - childCredit
+    - otherCredits;
 
+  // 8) Formatting helper
+  function fmt(amount) {
+    const rounded = Math.round(amount);
+    const str     = formatCurrency(String(Math.abs(rounded)));
+    return rounded < 0 ? `(${str})` : str;
+  }
 
-    // 7) Build your Total Federal Tax (income‑tax only)
-    totalFed =
-        computedTax
-      + additionalMedicare
-      + netInvestment
-      + selfEmployment
-      + otherTaxes
-      - foreignCredit
-      - minTaxCredit
-      - personalCredits
-      - businessCredit
-      - childCredit
-      - otherCredits;
+  // 9) Write everything back to the form
+  const taxField   = document.getElementById('tax');
+  const fedField   = document.getElementById('totalFederalTax');
+  const balanceDueEl = document.getElementById('estimatedBalanceDue');
+  if (balanceDueEl) {
+    balanceDueEl.textContent = formatCurrency(fedField);
+  }
+  const totalField = document.getElementById('totalTax');
 
-    // 8) Formatting helper
-    function fmt(amount) {
-      const rounded = Math.round(amount);
-      const str     = formatCurrency(String(Math.abs(rounded)));
-      return rounded < 0 ? `(${str})` : str;
-    }
+  if (taxField)   taxField.value   = fmt(computedTax);
+  if (fedField)   fedField.value   = fmt(totalFed);
 
-    // 9) Write everything back to the form
-    const taxField   = document.getElementById('tax');
-    const fedField   = document.getElementById('totalFederalTax');
-    const totalField = document.getElementById('totalTax');
-
-    if (taxField)   taxField.value   = fmt(computedTax);
-    if (fedField)   fedField.value   = fmt(totalFed);
-
-    if (totalField) {
-      const grandTotal = totalFed + stateTotalTax + employeeFICA + employerFICA;
-      totalField.value = fmt(grandTotal);
-    }
+  if (totalField) {
+    const grandTotal = totalFed + stateTotalTax + employeeFICA + employerFICA;
+    totalField.value = fmt(grandTotal);
+  }
 }
+
   
