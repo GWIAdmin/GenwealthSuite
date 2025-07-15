@@ -5103,8 +5103,11 @@ function calculateDetailedSelfEmploymentTax() {
       const spouseSSTax = Math.min(spouseNetEarningsSE, spouseAvailableSS) * 0.124;
       const clientMedicareTax = clientNetEarningsSE * 0.029;
       const spouseMedicareTax = spouseNetEarningsSE * 0.029;
-      // Only the MEDICARE portion counts for SE Tax here:
-      const medOnlyTax = clientMedicareTax + spouseMedicareTax;
+
+      // Total SE-tax = Social Security + Medicare
+      const socialSecurityTax = clientSSTax + spouseSSTax;
+      const medicareTax       = clientMedicareTax + spouseMedicareTax;
+      const seTax             = socialSecurityTax + medicareTax;
   
       // 3f. Compute Additional Medicare Tax using Medicare wages if provided.
         const additionalMedicareTax = calculateAdditionalMedicareTax(
@@ -5113,7 +5116,7 @@ function calculateDetailedSelfEmploymentTax() {
   
       // 3g. Compute half SE tax deduction.
       // Half of that is the deductible piece:
-      const halfSelfEmploymentTaxDeduction = medOnlyTax / 2;
+      const halfSelfEmploymentTaxDeduction = seTax / 2;
   
       // Debug logs (optional)
       console.log("---------------------------------------------------------------------");
@@ -5129,7 +5132,7 @@ function calculateDetailedSelfEmploymentTax() {
       console.log("---------------------------------------------------------------------");
   
       return {
-        medOnlyTax,
+        seTax,
         additionalMedicareTax,
         halfSelfEmploymentTaxDeduction,
         client: {
@@ -5182,11 +5185,11 @@ function calculateDetailedSelfEmploymentTax() {
       const totalWagesForMedicare = effectiveW2ForMedicare + netEarningsSE;
       const additionalMedicareIncome = Math.max(0, totalWagesForMedicare - additionalMedicareThreshold);
       const additionalMedicareTax = additionalMedicareIncome * 0.009;
-      const seTaxExcludingAdditional = socialSecurityTax + medicareTax;
-      const halfSelfEmploymentTaxDeduction = seTaxExcludingAdditional / 2;
+      const seTax = socialSecurityTax + medicareTax;
+      const halfSelfEmploymentTaxDeduction = seTax / 2;
   
       return {
-        seTaxExcludingAdditional,
+        seTax,
         additionalMedicareTax,
         halfSelfEmploymentTaxDeduction,
         totalW2ForClient: effectiveW2,
@@ -5199,7 +5202,7 @@ function calculateDetailedSelfEmploymentTax() {
 function updateSelfEmploymentTax() {
     const taxResults = calculateDetailedSelfEmploymentTax();
     document.getElementById('selfEmploymentTax').value =
-      formatCurrency(String(Math.round(taxResults.medOnlyTax)));
+      formatCurrency(String(Math.round(taxResults.seTax)));
     document.getElementById('additionalMedicareTax').value =
       formatCurrency(String(Math.round(taxResults.additionalMedicareTax)));
     document.getElementById('halfSETax').value =
@@ -5996,7 +5999,7 @@ function updateTotalTax() {
   const fedField   = document.getElementById('totalFederalTax');
   const balanceDueEl = document.getElementById('estimatedBalanceDue');
   if (balanceDueEl) {
-    balanceDueEl.textContent = formatCurrency(fedField);
+    balanceDueEl.textContent = formatCurrency(totalFed);
   }
   const totalField = document.getElementById('totalTax');
 
