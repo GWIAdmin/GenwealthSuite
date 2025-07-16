@@ -3736,14 +3736,35 @@ function recalculateDeductions() {
         }
         
       };
-    const stdDeduction = STD[year]?.[status] || 0;
-    // pick the max of what you itemized vs. what IRS allows
-    const totalDeductionsVal = Math.max(detailSum, stdDeduction);
+    const baseStd = STD[year]?.[status] || 0;
 
-    document.getElementById('totalDeductions').value =
-      isNaN(totalDeductionsVal) ? '' : parseInt(totalDeductionsVal, 10);
+    // how many are 65 or older?
 
+    const count65 = parseInt(document.getElementById('olderthan65').value, 10) || 0;
+
+    // how many are blind? (your dropdown uses "Zero","One","Two")
+    const blindVal = document.getElementById('blind').value;
+    const countBlind =
+      blindVal === 'One' ? 1 :
+      blindVal === 'Two' ? 2 :
+      0;
+
+    // extra $500 per person
+    const extraStd = 500 * (count65 + countBlind);
+
+    // adjusted standard deduction
+    const adjustedStd = baseStd + extraStd;
+
+    // 4) Choose the greater of itemized vs. adjusted standard
+    const totalDeductionsVal = Math.max(detailSum, adjustedStd);
+
+    // 5) Write it back
+    document.getElementById('totalDeductions').value = parseInt(totalDeductionsVal, 10);
+
+    // 6) And recalc taxable income & state tax
     updateTaxableIncome();
+    recalcStateTax();
+
 }
 
 function updateTaxableIncome() {
@@ -5026,6 +5047,10 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 });
+
+// re-calculate deductions whenever age-65 or blind counts change
+document.getElementById('olderthan65').addEventListener('change', recalculateDeductions);
+document.getElementById('blind').addEventListener('change', recalculateDeductions);
 
 function updateAllBusinessReasonableComp() {
     const numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
