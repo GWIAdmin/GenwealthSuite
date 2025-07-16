@@ -1561,8 +1561,8 @@ function populateBusinessNameFields(index) {
 function getFieldValue(id) {
   const el = document.getElementById(id);
   if (!el) return 0;
-  // unformatCurrency will detect parentheses or a leading minus
-  return unformatCurrency(el.value || '0');
+  const raw = unformatCurrency(el.value || '0');
+  return isNaN(raw) ? 0 : raw;
 }
 
 function formatCurrency(value) {
@@ -3413,6 +3413,17 @@ function updateScheduleENet(index) {
     document.getElementById(`scheduleE${index}Net`).value = formatCurrency(netVal.toString());
 }
 
+function calcAutoUnrecaptured1250() {
+  let total = 0;
+  const dispCount = parseInt(document.getElementById('numPropertyDisps')?.value || '0', 10);
+  for (let i = 1; i <= dispCount; i++) {
+    const ltGain  = unformatCurrency(document.getElementById(`disp${i}LTGain`)?.value || '0');
+    const deprec  = unformatCurrency(document.getElementById(`disp${i}AccumDep`)?.value || '0');
+    total += Math.max(0, Math.min(ltGain, deprec));
+  }
+  return total;
+}
+
 /**
  * Computes your 3.8% Net Investment Income Tax.
  * NIIT = 3.8% × min( netInvIncome, max(0, MAGI − threshold) )
@@ -3662,34 +3673,34 @@ function recalculateTotals() {
 //-----------------------------------------------------//
 
 function recalculateDeductions() {
-    const medical = getFieldValue('medical');
-    const stateAndLocalTaxes = getFieldValue('stateAndLocalTaxes');
-    const otherTaxesFromSchK1 = getFieldValue('otherTaxesFromSchK-1');
-    const interest = getFieldValue('interest');
-    const contributions = getFieldValue('contributions');
-    const otherDeductions = getFieldValue('otherDeductions');
-    const carryoverLoss = getFieldValue('carryoverLoss');
-    const casualtyAndTheftLosses = getFieldValue('casualtyAndTheftLosses');
-    const miscellaneousDeductions = getFieldValue('miscellaneousDeductions');
-    const standardOrItemizedDeduction = getFieldValue('standardOrItemizedDeduction');
+   // 1) Grab the RAW inputs
+   const medical                    = getFieldValue('medical');
+   const stateAndLocalTaxes         = getFieldValue('stateAndLocalTaxes');
+   const otherTaxesFromSchK1        = getFieldValue('otherTaxesFromSchK-1');
+   const interest                   = getFieldValue('interest');
+   const contributions              = getFieldValue('contributions');
+   const otherDeductions            = getFieldValue('otherDeductions');
+   const carryoverLoss              = getFieldValue('carryoverLoss');
+   const casualtyAndTheftLosses     = getFieldValue('casualtyAndTheftLosses');
+   const miscellaneousDeductions    = getFieldValue('miscellaneousDeductions');
+   const standardOrItemizedDeduction= getFieldValue('standardOrItemizedDeduction');
 
-    let totalDeductionsVal =
-        medical +
-        stateAndLocalTaxes +
-        otherTaxesFromSchK1 +
-        interest +
-        contributions +
-        otherDeductions +
-        carryoverLoss +
-        casualtyAndTheftLosses +
-        miscellaneousDeductions +
-        standardOrItemizedDeduction;
+   // 2) Sum _just_ the itemized detail fields
+   const detailSum =
+       medical
+     + stateAndLocalTaxes
+     + otherTaxesFromSchK1
+     + interest
+     + contributions
+     + otherDeductions
+     + carryoverLoss
+     + casualtyAndTheftLosses
+     + miscellaneousDeductions;
 
-      // ←—— if nothing was entered, fall back to the IRS standard deduction
-    if (totalDeductionsVal === 0) {
-      const year   = parseInt(document.getElementById('year').value, 10);
-      const status = document.getElementById('filingStatus').value;
-      const STD = {
+    // 3) Pick between detail or standard deduction
+    const year   = parseInt(document.getElementById('year').value, 10);
+    const status = document.getElementById('filingStatus').value;
+     const STD = {
         2022: {
             "Single":                   12950,
             "Married Filing Jointly":   25900,
@@ -3720,8 +3731,9 @@ function recalculateDeductions() {
         }
         
       };
-      totalDeductionsVal = STD[year]?.[status] || 0;
-    }
+    const stdDeduction = STD[year]?.[status] || 0;
+    // pick the max of what you itemized vs. what IRS allows
+    const totalDeductionsVal = Math.max(detailSum, stdDeduction);
 
     document.getElementById('totalDeductions').value =
       isNaN(totalDeductionsVal) ? '' : parseInt(totalDeductionsVal, 10);
@@ -3747,6 +3759,9 @@ function updateTaxableIncome() {
         isNaN(taxableIncome)
             ? ''
             : formatCurrency(String(parseInt(taxableIncome, 10)));
+
+    // 6. Now that taxable income changed, recalculate all the taxes
+    updateTotalTax();
 }
 
 //-----------------------------------------------------------//
@@ -3765,6 +3780,8 @@ const fieldsToWatch = [
     'pensions',
     'longTermCapitalGains',
     'shortTermCapitalGains',
+    'unrecapturedSection1250Gain',
+    'collectiblesGain',
     'otherIncome',
     'interestPrivateBonds',
     'passiveActivityLossAdjustments',
@@ -4967,6 +4984,17 @@ function addW2Block() {
     });
 }
 
+document.addEventListener('DOMContentLoaded', function () {
+  const toggleHead = document.querySelector('#specialGains h2');
+  const content = document.getElementById('specialGainsContainer');
+
+  if (toggleHead && content) {
+    toggleHead.addEventListener('click', () => {
+      content.classList.toggle('active');
+    });
+  }
+});
+
 function updateAllBusinessReasonableComp() {
     const numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
     for (let i = 1; i <= numBusinesses; i++) {
@@ -5679,238 +5707,135 @@ function computeOrdinaryTax(income, filingStatus, year) {
 // expose for console testing
 window.computeOrdinaryTax = computeOrdinaryTax;
 
+  const CG_THRESHOLDS = {
+    2022: {
+      Single:   { zero: 41675, fifteen: 459750 },
+      'Married Filing Jointly':    { zero: 83350, fifteen: 517200 },
+      'Married Filing Separately': { zero: 41675, fifteen: 258600 },
+      'Head of Household':         { zero: 55800, fifteen: 488500 }
+    },
+    2023: {
+      Single:   { zero: 44625, fifteen: 492300 },
+      'Married Filing Jointly':    { zero: 89250, fifteen: 553850 },
+      'Married Filing Separately': { zero: 44625, fifteen: 276900 },
+      'Head of Household':         { zero: 59750, fifteen: 523050 }
+    },
+    2024: {
+      Single:   { zero: 47025, fifteen: 518900 },
+      'Married Filing Jointly':    { zero: 94050, fifteen: 583750 },
+      'Married Filing Separately': { zero: 47025, fifteen: 291850 },
+      'Head of Household':         { zero: 63000, fifteen: 551350 }
+    },
+    2025: {
+      Single:   { zero: 48350, fifteen: 533400 },
+      'Married Filing Jointly':    { zero: 96700, fifteen: 600050 },
+      'Married Filing Separately': { zero: 48350, fifteen: 300000 },
+      'Head of Household':         { zero: 64750, fifteen: 566700 }
+    }
+  };
 
-/**
- * Compute Schedule D tax exactly as Worksheet D (Lines 1–47),
- * with console.log for every line item as “Step # (Line #)”.
- */
-function computeWorksheetD(
+function computeCapitalGainTax(
   taxableIncome,
   qualifiedDividends,
   longTermGains,
   shortTermGains,
   filingStatus,
   year,
-  netInvestmentInterestExpense = 0,
-  unrecapturedSection1250Gain = 0,
-  collectiblesGain = 0,
-  priorLossCarryover = 0
+  netInvInterest = 0,
+  sec1250Gain    = 0,
+  collectibles   = 0
 ) {
-  // ————————————————————————————— Part I: Net gains (Lines 1–4h) —————————————————————————————
-  // Keep the raw figure for netting …
-  const stRaw = shortTermGains;           // −10 000 in your data
- 
-  // …but line 1 itself may never be negative
-  const wd1   = Math.max(0, stRaw);       // 0   ← IRS rule
-  console.log('Step 1 (Line 1): net short-term gain =', wd1);
+  /* ────────────────────────────────────────────────────────────────
+     STEP 0 –  **MANDATORY NETTING (Sched D Part III)**
+               •  First offset ST‑losses against LT‑gains *or*
+                  LT‑losses against ST‑gains, per §1222.
+               •  Only the residual LT‑gain (if positive) is eligible
+                  for preferential rates.
+  ──────────────────────────────────────────────────────────────── */
 
-  // Line 2: net long-term gain before QD (B)
-  const wd2 = longTermGains;
-  console.log('Step 2 (Line 2): net long-term gain =', wd2);
+  let netST  = shortTermGains;          // can be ±
+  let netLT  = longTermGains;           // can be ±
 
-  // NEW: net long-term gain after the short-term-loss offset (§1222)
-  const netLTCG = wd2 + Math.min(0, stRaw);   // if wd1 is negative it reduces LTCG
-
-  // Line 3: qualified dividends (C)
-  const wd3 = qualifiedDividends;
-  console.log('Step 3 (Line 3): qualified dividends =', wd3);
-
-  // Line 4a: Total preferential gain
-  const wd4a = netLTCG + wd3;
-  console.log('Step 4 (Line 4a): total preferential gain (B+C) =', wd4a);
-
-  // Line 4b: Enter taxable income
-  const wd4b = taxableIncome;
-  console.log('Step 5 (Line 4b): taxable income =', wd4b);
-
-  // Line 4c: Subtract NET capital gain or loss (STCG + preferential gain) from taxable income
-  const wd4c = Math.max(0, wd4b - (wd1 + wd4a));
-  console.log('Step 6 (Line 4c): ordinary portion =', wd4c);
-
-  // Line 4d: Net investment interest expense (§ 4952)
-  const wd4d = Math.max(0, netInvestmentInterestExpense);
-  console.log('Step 7 (Line 4d): net investment interest expense =', wd4d);
-
-  // Line 4e: Qualified dividends (col C)
-  const wd4e = wd3;
-  console.log('Step 8 (Line 4e): qualified dividends (col C) =', wd4e);
-
-  // Line 4f: Net LTCG (col B)
-  const wd4f = Math.max(0, netLTCG);
-  console.log('Step 9 (Line 4f): net long-term capital gain (col B) =', wd4f);
-
-  // Line 4g: Total preferential gain
-  const wd4g = wd4e + wd4f;
-  console.log('Step 10 (Line 4g): total preferential gain =', wd4g);
-
-  // Line 4h: Subtract 4d from 4c for the ordinary-income slice
-  const wd4h = Math.max(0, wd4c - wd4d);
-  console.log('Step 11 (Line 4h): ordinary-income slice for thresholds =', wd4h);
-
-  // Line 5: compute ordinary‐income tax on wd4h
-  const ordinaryTax = computeOrdinaryTax(wd4h, filingStatus, year);
-  console.log('Step 12 (Line 5): ordinary-income tax =', ordinaryTax);
-
-  // ——————————————————————————— Part II: Loss carry and $3,000 offset ———————————————————————————
-  // Line 6: net capital gain (or loss)
-  const netCapGain = stRaw + wd2;
-  console.log('Step 13 (Line 6): net capital gain (or loss) =', netCapGain);
-
-  const lossOffsetLimit =
-    filingStatus === 'Married Filing Separately' ? 1500 : 3000;
-  let lossOffset = 0;
-  let lossCarry = priorLossCarryover || 0;
-
-  if (netCapGain < 0) {
-    lossOffset = Math.min(lossOffsetLimit, -netCapGain);
-    lossCarry = (-netCapGain - lossOffset) + priorLossCarryover;
+  if (netST * netLT < 0) {              // opposite signs → they offset
+      const offset = Math.min(Math.abs(netST), Math.abs(netLT));
+      if (netLT > 0) {                  // ST loss vs LT gain
+          netLT += netST;               // reduce LT gain
+          netST  = 0;
+      } else {                          // LT loss vs ST gain
+          netST += netLT;               // reduce ST gain
+          netLT  = 0;
+      }
   }
-  // Line 7
-  console.log('Step 14 (Line 7): loss offset applied =', lossOffset);
-  // Line 8
-  console.log('Step 15 (Line 8): loss carryover =', lossCarry);
 
-  // —————————————————————————— Part III–VII: Columns A–E & preferential buckets ——————————————————————————
-  // Column A (short-term): Line 9
-  const colA = wd1;
-  console.log('Step 16 (Line 9): short-term gain taxed at ordinary rates =', colA);
+  /* ---------------------------------------------------------------
+     STEP 1 – Separate the special‑rate pieces *after* netting
+  --------------------------------------------------------------- */
+  const cg25 = Math.max(0, sec1250Gain);           // always 25 %
+  const cg28 = Math.max(0, collectibles);          // always 28 %
 
-  // Column B initial (LTCG only): Line 10
-  let colB = wd4f;
-  console.log('Step 17 (Line 10): long-term gain (column B) =', colB);
-
-  // Column C (QD only): Line 11
-  let colC = wd4e;
-  console.log('Step 18 (Line 11): qualified dividends (column C) =', colC);
-
-  // § 1250 at 25%: Line 12
-  const colD_1250 = Math.min(unrecapturedSection1250Gain, colB);
-  colB -= colD_1250;
-  console.log('Step 19 (Line 12): § 1250 gain (column D) =', colD_1250);
-
-  // Collectibles at 28%: Line 13
-  const colD_coll = Math.min(collectiblesGain, colB);
-  colB -= colD_coll;
-  console.log('Step 20 (Line 13): collectibles gain (column D) =', colD_coll);
-
-  // Remaining LTCG: Line 14
-  const colD = colB;
-  console.log('Step 21 (Line 14): other long-term gain (column D) =', colD);
-
-  // Column E = 0: Line 15
-  const colE = 0;
-  console.log('Step 22 (Line 15): column E =', colE);
-
-  // ————————————————————————— thresholds for 0%/15%/20% buckets —————————————————————————
-  const CG_THRESHOLDS = {
-    2022: {
-      Single:   { zero: 41675,  fifteen: 459750 },
-      'Married Filing Jointly':   { zero: 83350,  fifteen: 517200 },
-      'Married Filing Separately':{ zero: 41675,  fifteen: 258600 },
-      'Head of Household':        { zero: 55800,  fifteen: 488500 }
-    },
-    2023: {
-      Single:   { zero: 44625,  fifteen: 492300 },
-      'Married Filing Jointly':   { zero: 89250,  fifteen: 553850 },
-      'Married Filing Separately':{ zero: 44625,  fifteen: 276900 },
-      'Head of Household':        { zero: 59750,  fifteen: 523050 }
-    },
-    2024: {
-      Single:   { zero: 47025,  fifteen: 518900 },
-      'Married Filing Jointly':   { zero: 94050,  fifteen: 583750 },
-      'Married Filing Separately':{ zero: 47025,  fifteen: 291850 },
-      'Head of Household':        { zero: 63000,  fifteen: 551350 }
-    },
-    2025: {
-      Single:   { zero: 48350,  fifteen: 533400 },
-      'Married Filing Jointly':   { zero: 96700,  fifteen: 600050 },
-      'Married Filing Separately':{ zero: 48350,  fifteen: 300000 },
-      'Head of Household':        { zero: 64750,  fifteen: 566700 }
-    }
-  };
-  const { zero: z, fifteen: f } =
-    (CG_THRESHOLDS[year] || CG_THRESHOLDS[2023])[filingStatus] ||
-    CG_THRESHOLDS[2023].Single;
-  console.log(`Step 23 (setup): thresholds for ${filingStatus} in ${year}: 0% up to ${z}, 15% up to ${f}`);
-
-  // ————————————————————————————— Part VIII: Bucket allocations & taxes —————————————————————————————
-  // Line 9: amount taxed at 0%
-  const available0    = Math.max(0, z - wd4h);
-  const bucket0_fromC = Math.min(colC, available0);
-  const bucket0_fromD = Math.min(colD, Math.max(0, available0 - bucket0_fromC));
-  const wd9 = bucket0_fromC + bucket0_fromD;
-  console.log('Step 24 (Line 9): amount taxed at 0% =', wd9);
-
-  // Line 18: amount taxed at 15% (net capital gain only)
-  const available15 = Math.max(0, f - (wd4h + wd9));
-  // the Worksheet says “15% on the smaller of (net capital gain) or (available 15% room)”
-  const wd18 = Math.min(wd4g, available15);
-  console.log('Step 25 (Line 18): amount taxed at 15% =', wd18);
-
-  // split that 15% bucket between QD (col C) and LTCG (col D)
-  const bucket15_fromC = Math.min(colC - bucket0_fromC, wd18);
-  const bucket15_fromD = wd18 - bucket15_fromC;
-
-  // Line 29: amount taxed at 20%
-  const bucket20_fromC = colC - bucket0_fromC - bucket15_fromC;
-  const bucket20_fromD = colD - bucket0_fromD - bucket15_fromD;
-  const wd29 = bucket20_fromC + bucket20_fromD;
-  console.log('Step 26 (Line 29): amount taxed at 20% =', wd29);
-
-  // Line 34: § 1250 gain at 25%
-  const wd34 = colD_1250;
-  console.log('Step 27 (Line 34): § 1250 gain at 25% =', wd34);
-
-  // Line 38: collectibles at 28%
-  const wd38 = colD_coll;
-  console.log('Step 28 (Line 38): collectibles at 28% =', wd38);
-
-  // Compute each bucket’s tax
-  const tax0  = wd9  * 0.00;
-  console.log('Step 29 (calc): tax on 0% bucket =', tax0);
-  const tax15 = wd18 * 0.15;
-  console.log('Step 30 (calc): tax on 15% bucket =', tax15);
-  const tax20 = wd29 * 0.20;
-  console.log('Step 31 (calc): tax on 20% bucket =', tax20);
-  const tax25 = wd34 * 0.25;
-  console.log('Step 32 (calc): tax on 25% § 1250 bracket =', tax25);
-  const tax28 = wd38 * 0.28;
-  console.log('Step 33 (calc): tax on 28% collectibles bracket =', tax28);
-
-  // Line 47: total Schedule D tax
-  const wd47 = tax0 + tax15 + tax20 + tax25 + tax28;
-  console.log('Step 47 (Line 47): total Schedule D tax =', wd47);
-
-  return {
-    worksheet: {
-      wd1, wd2, wd3,
-      wd4a, wd4b, wd4c, wd4d, wd4e, wd4f, wd4g, wd4h,
-      wd5: ordinaryTax,
-      wd9, wd18, wd29, wd34, wd38,
-      wd47,
-      lossOffset, lossCarry
-    },
-    totalTax: wd47
-  };
-}
-
-/**
- * Combine ordinary‐rate tax + preferential tax buckets
- */
-function computeCapitalGainTax(
-  taxableIncome, qDiv, ltcg, stcg, status, year,
-  netInvInterest=0, sec1250=0, collect=0, priorLoss=0
-) {
-  const { worksheet, totalTax: prefTax } = computeWorksheetD(
-    taxableIncome, qDiv, ltcg, stcg,
-    status, year,
-    netInvInterest,
-    sec1250,
-    collect,
-    priorLoss
+  // only the *net* LT gain is eligible for 0/15/20 % treatment
+  const prefGain = Math.max(
+      0,
+      qualifiedDividends + netLT - cg25 - cg28
   );
-  // worksheet.wd5 is your ordinary‐income portion taxed at ordinary rates
-  return worksheet.wd5 + prefTax;
+
+  // Ordinary slice = taxable income that is *not* in any preferential bucket
+  const ordinarySlice = Math.max(
+      0,
+      taxableIncome - (prefGain + cg25 + cg28)
+  );
+
+  // 2) Compute ordinary-rate tax on the ordinary slice:
+  const ordinaryTax = computeOrdinaryTax(ordinarySlice, filingStatus, year);
+
+  // 3) Map your 2-letter codes back to the full labels in CG_THRESHOLDS:
+  const STATUS_MAP = {
+    Single: "Single",
+    MFJ:    "Married Filing Jointly",
+    MFS:    "Married Filing Separately",
+    HOH:    "Head of Household",
+    QW:     "Qualifying Widow(er)"
+  };
+  const statusKey = STATUS_MAP[filingStatus] || filingStatus;
+
+  // 4) Pick the correct year-block (default 2023) and then the status block (default MFJ)
+  const yearBlock = CG_THRESHOLDS[year] || CG_THRESHOLDS[2023];
+  const { zero: Z0, fifteen: F15 } =
+        yearBlock[statusKey] || yearBlock["Married Filing Jointly"];
+
+  // 5) Allocate the pref-gain into 0% / 15% / 20% buckets:
+
+  /* --------------------------------------------------------------------
+     STEP A – figure out how much 0 % room is left *after* ordinary income
+  -------------------------------------------------------------------- */
+  const zeroRoom = Math.max(0, Z0 - ordinarySlice);
+  const zeroRatePortion = Math.min(prefGain, zeroRoom);
+
+  /* --------------------------------------------------------------------
+     STEP B – how much 15 % room is left after ordinary income
+              (and after any 0 % portion we just used)?
+  -------------------------------------------------------------------- */
+  const ordinaryUsed15 = Math.max(0, ordinarySlice - Z0);          // part of the 15 % bracket
+  const avail15        = Math.max(0, F15 - Z0 - ordinaryUsed15);   // left‑over 15 % room
+  const remAfterZero   = prefGain - zeroRatePortion;
+  const fifteenRatePortion = Math.min(remAfterZero, avail15);
+
+  /* --------------------------------------------------------------------
+     STEP C – whatever is still left is taxed at 20 %
+  -------------------------------------------------------------------- */
+  const twentyRatePortion = Math.max(0, remAfterZero - fifteenRatePortion);
+
+  /* ---------------------------------------------------------------
+     STEP 6 – Apply the statutory rates
+  --------------------------------------------------------------- */
+  const tax15   = fifteenRatePortion * 0.15;
+  const tax20   = twentyRatePortion  * 0.20;
+  const tax1250 = cg25              * 0.25;
+  const tax28   = cg28              * 0.28;
+
+  const prefTax = tax15 + tax20 + tax1250 + tax28;
+
+  return { ordinaryTax, prefTax };
 }
 
 /**
@@ -5922,6 +5847,9 @@ function computeCapitalGainTax(
 function updateTotalTax() {
   // 1) Gather the inputs you already have
   const taxableIncome      = getFieldValue('taxableIncome');
+  // taxableIncome already has either the standard or the itemized
+  // deduction baked in, so send it straight to Schedule D:
+  const taxableForCalculation = taxableIncome;
   const qualifiedDividends = getFieldValue('qualifiedDividends');
   const longTermGains      = getFieldValue('longTermCapitalGains');
   const shortTermGains     = getFieldValue('shortTermCapitalGains');
@@ -5934,25 +5862,28 @@ function updateTotalTax() {
     0,
     getFieldValue('form4952Line4g') - getFieldValue('form4952Line4e')
   );
+
   //    § 1250 unrecaptured gain
-  const unrecapturedSection1250Gain = getFieldValue('unrecapturedSection1250Gain');
+  let unrecapturedSection1250Gain = getFieldValue('unrecapturedSection1250Gain'); 
+  unrecapturedSection1250Gain = Math.max(0, unrecapturedSection1250Gain); 
+  
   //    Collectibles (§ 1202) gain
   const collectiblesGain = getFieldValue('collectiblesGain');
 
   // 3) Compute Schedule D + ordinary tax
-  const computedTax = Math.round(
-    computeCapitalGainTax(
-      taxableIncome,
-      qualifiedDividends,
-      longTermGains,
-      shortTermGains,
-      filingStatus,
-      year,
-      netInvestmentInterestExpense,
-      unrecapturedSection1250Gain,
-      collectiblesGain
-    )
+  const { ordinaryTax, prefTax } = computeCapitalGainTax(
+    taxableForCalculation,
+    qualifiedDividends,
+    longTermGains,
+    shortTermGains,
+    filingStatus,
+    year,
+    netInvestmentInterestExpense,
+    unrecapturedSection1250Gain,
+    collectiblesGain
   );
+  // IRS wants the combined tax rounded to the nearest dollar
+  const computedTax = Math.round(ordinaryTax + prefTax);
 
   // 4) Other income‐tax pieces
   const additionalMedicare = getFieldValue('additionalMedicareTax');
@@ -6011,5 +5942,3 @@ function updateTotalTax() {
     totalField.value = fmt(grandTotal);
   }
 }
-
-  
