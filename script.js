@@ -3515,22 +3515,27 @@ function getClientOwnershipPortion(businessIndex, netVal) {
 
 // Sums up the wages from all dynamic W-2 blocks
 function sumW2Wages() {
-    const w2Container = document.getElementById('w2sContainer');
-    let totalW2Wages = 0;
-    let totalMedicareWages = 0;
-    
-    if (w2Container) {
-        const w2Blocks = w2Container.querySelectorAll(".w2-block");
-        w2Blocks.forEach(block => {
-            const wageInput = block.querySelector("input[id^='w2Wages_']");
-            const medicareInput = block.querySelector("input[id^='w2MedicareWages_']");
-            let wageVal = unformatCurrency(wageInput?.value || '0');
-            let medicareVal = unformatCurrency(medicareInput?.value || '0');
-            totalW2Wages += wageVal;
-            totalMedicareWages += medicareVal;
-        });
-    }
-    return { totalW2Wages, totalMedicareWages };
+  const w2Container = document.getElementById('w2sContainer');
+  let totalW2Wages      = 0;
+  let totalMedicareWages= 0;
+  let totalSSWages      = 0;
+
+  if (w2Container) {
+    Object.values(w2WageMap).forEach(mapping => {
+      // Box 1
+      totalW2Wages       += mapping.wage;
+      // Box 5 override
+      totalMedicareWages += mapping.medicareWages  > 0
+                             ? mapping.medicareWages
+                             : mapping.wage;
+      // Box 3 override
+      totalSSWages       += mapping.socialSecurityWages > 0
+                             ? mapping.socialSecurityWages
+                             : mapping.wage;
+    });
+  }
+
+  return { totalW2Wages, totalMedicareWages, totalSSWages };
 }
 
 let isRecalculating = false;
@@ -4643,6 +4648,8 @@ function addW2Block() {
         let wageVal = unformatCurrency(wagesInput.value || '0');
         let medicareWagesVal = unformatCurrency(medicareWagesInput.value || '0');
         let finalWage = (medicareWagesVal > 0) ? medicareWagesVal : wageVal;
+        let ssWagesVal = unformatCurrency(ssWagesInput.value || '0');
+        let finalSSWage = (ssWagesVal > 0) ? ssWagesVal : wageVal;
 
         if (finalWage <= 0) {
             delete w2WageMap[w2Block.id];
@@ -4653,6 +4660,7 @@ function addW2Block() {
         let mapping = {
             wage: wageVal,
             medicareWages: medicareWagesVal,
+            socialSecurityWages: finalSSWage,
             isBusinessRelated: isBusinessRelated,
             futaValue: 0,
             unemploymentTax: 0
@@ -4763,6 +4771,30 @@ function addW2Block() {
     medicareTaxInput.classList.add('currency-field');
     medicareTaxGroup.appendChild(medicareTaxInput);
     collapsibleContent.appendChild(medicareTaxGroup);  
+
+    // --- Social Security Wages --- 
+    const ssWagesGroup = document.createElement('div');
+    ssWagesGroup.classList.add('form-group');
+    const ssWagesLabel = document.createElement('label');
+    ssWagesLabel.setAttribute('for', 'w2SSWages_' + w2Counter);
+    ssWagesLabel.textContent = 'Social Security Wages:';
+    ssWagesGroup.appendChild(ssWagesLabel);
+
+    const ssWagesInput = document.createElement('input');
+    ssWagesInput.type = 'text';
+    ssWagesInput.id = 'w2SSWages_' + w2Counter;
+    ssWagesInput.name = 'w2SSWages_' + w2Counter;
+    ssWagesInput.classList.add('currency-field');
+    ssWagesGroup.appendChild(ssWagesInput);
+
+    collapsibleContent.appendChild(ssWagesGroup);
+
+    ssWagesInput.addEventListener('blur', function () {
+    let ssVal = unformatCurrency(ssWagesInput.value || '0');
+    ssWagesInput.value = (ssVal > 0) ? formatCurrency(String(ssVal)) : '';
+    updateW2Mapping();
+    recalculateTotals();
+    });
 
     // --- Employer State Unemployment Tax Question ---
     const stateTaxGroup = document.createElement('div');
@@ -5062,13 +5094,14 @@ function calculateDetailedSelfEmploymentTax() {
         for (let key in w2WageMap) {
           if (w2WageMap.hasOwnProperty(key)) {
             const mapping = w2WageMap[key];
-            // For SE tax, use the wages field value.
+            const ssW = mapping.socialSecurityWages > 0 ? mapping.socialSecurityWages : mapping.wage;
+
             if (mapping.client === clientFirst) {
-              clientW2 += mapping.wage;
+              clientW2 += ssW;
               // For Additional Medicare Tax, use Medicare wages if provided; else use wage.
               clientW2ForMedicare += (mapping.medicareWages > 0 ? mapping.medicareWages : mapping.wage);
             } else if (mapping.client === spouseFirst) {
-              spouseW2 += mapping.wage;
+              spouseW2 += ssW;
               spouseW2ForMedicare += (mapping.medicareWages > 0 ? mapping.medicareWages : mapping.wage);
             }
           }
@@ -5183,8 +5216,10 @@ function calculateDetailedSelfEmploymentTax() {
     else {
 
     // Destructure the returned object from sumW2Wages() and determine effective wages.
-      const { totalW2Wages } = sumW2Wages(); // if you still need the total wages elsewhere
-      const effectiveW2 = totalW2Wages;
+      const { totalW2Wages, totalSSWages } = sumW2Wages();
+      const effectiveW2 = totalSSWages > 0
+                        ? totalSSWages
+                        : totalW2Wages;
       const effectiveW2ForMedicare = sumEffectiveW2ForMedicare();
     
       let seIncome = 0;
@@ -5295,10 +5330,11 @@ function calculateEmployerEmployeeTaxes() {
         for (let key in w2WageMap) {
             if (!w2WageMap.hasOwnProperty(key)) continue;
             const mapping = w2WageMap[key];
+            const ssW = (mapping.socialSecurityWages > 0 ? mapping.socialSecurityWages : mapping.wage);
             if (mapping.client === clientName) {
-                clientW2Total += mapping.wage;
+                clientW2Total += ssW;
             } else if (mapping.client === spouseName) {
-                spouseW2Total += mapping.wage;
+                spouseW2Total += ssW;
             }
         }
         const clientSSTax = Math.min(clientW2Total, SOCIAL_SECURITY_WAGE_BASE) * 0.062;
@@ -5308,9 +5344,28 @@ function calculateEmployerEmployeeTaxes() {
         employeeSocialSecurityTax = clientSSTax + spouseSSTax;
         employeeMedicareTax = clientMedTax + spouseMedTax;
     } else {
-        const { totalW2Wages } = sumW2Wages();
-        employeeSocialSecurityTax = Math.min(totalW2Wages, SOCIAL_SECURITY_WAGE_BASE) * 0.062;
-        employeeMedicareTax = totalW2Wages * 0.0145;
+        // ── CHANGE START ──
+        // pull overrides for Box 5 (Medicare) and Box 3 (SS) as well as total wages
+        const {
+          totalW2Wages,
+          totalMedicareWages,
+          totalSSWages
+        } = sumW2Wages();
+
+        // Medicare base: use Box 5 override if present, otherwise Box 1
+        const medBase = totalMedicareWages > 0
+          ? totalMedicareWages
+          : totalW2Wages;
+
+        // Social‐Security base: use Box 3 override if present, otherwise Box 1
+        const ssBase  = totalSSWages > 0
+          ? totalSSWages
+          : totalW2Wages;
+
+        // now compute FICA
+        employeeSocialSecurityTax = Math.min(ssBase, SOCIAL_SECURITY_WAGE_BASE) * 0.062;
+        employeeMedicareTax       = medBase                                  * 0.0145;
+        // ── CHANGE END ──
     }
     const totalEmployeeTax = employeeSocialSecurityTax + employeeMedicareTax;
 
