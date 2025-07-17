@@ -1,3 +1,5 @@
+// Author: Genwealth 360 Inc.
+
 import { STATE_STD_DED } from './stateStdDeduction.js';
 import { calculateStateTax, getBrackets } from './stateTax.js';
 

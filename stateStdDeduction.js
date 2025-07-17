@@ -1,3 +1,5 @@
+// Author: Genwealth 360 Inc.
+
 export const STATE_STD_DED = {
     CA: {
       2024: {
