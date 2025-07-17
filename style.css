@@ -897,3 +897,20 @@ body.dark-mode .res-comp-btn {
 .collapsible-content.active {
   max-height: 2000px;
 }
+
+#petSprite {
+  transition: top 1.0s ease-in-out, left 1.0s ease-in-out;
+  pointer-events: none;
+}
+
+#doNotTouchBtn {
+  background-color: #ff4f4f;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  padding: 10px 20px;
+  font-size: 1rem;
+  border-radius: 20px;
+  margin-top: 15px;
+  transition: background-color 0.3s ease;
+}
