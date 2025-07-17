@@ -1,3 +1,5 @@
+// Author: Genwealth 360 Inc.
+
 // 1) Simple JSON‑Pointer resolver (for "$ref": "#/XX/2022")
 function resolveJsonPointer(obj, pointer) {
   const parts = pointer.replace(/^#\//, '').split('/');
