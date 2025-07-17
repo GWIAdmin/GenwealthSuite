@@ -5272,8 +5272,8 @@ function calculateDetailedSelfEmploymentTax() {
       const ssTaxable = Math.min(netEarningsSE, availableSSBase);
       const socialSecurityTax = ssTaxable * 0.124;
       const medicareTax = netEarningsSE * 0.029;
-      const totalWagesForMedicare = effectiveW2ForMedicare + netEarningsSE;
-      const additionalMedicareIncome = Math.max(0, totalWagesForMedicare - additionalMedicareThreshold);
+      // Additional Medicare Tax is withheld only on wages (Box 5)
+      const additionalMedicareIncome = Math.max(0, effectiveW2ForMedicare - additionalMedicareThreshold);
       const additionalMedicareTax = additionalMedicareIncome * 0.009;
       const seTax = socialSecurityTax + medicareTax;
       const halfSelfEmploymentTaxDeduction = seTax / 2;
@@ -5302,12 +5302,16 @@ function updateSelfEmploymentTax() {
 //-----------------------------------------//
 // 26. ADDITIONAL MEDICARE TAX CALCULATION //
 //-----------------------------------------//
-function calculateAdditionalMedicareTax(clientW2, spouseW2, clientNetEarningsSE, spouseNetEarningsSE, additionalMedicareThreshold) {
-    const totalW2Combined = clientW2 + spouseW2;
-    const totalNetEarningsSE = clientNetEarningsSE + spouseNetEarningsSE;
-    const combinedForMedicare = totalW2Combined + totalNetEarningsSE;
-    const additionalMedicareIncome = Math.max(0, combinedForMedicare - additionalMedicareThreshold);
-    return additionalMedicareIncome * 0.009;
+function calculateAdditionalMedicareTax(
+  clientW2, spouseW2,
+  /*clientNetEarningsSE, spouseNetEarningsSE,*/ 
+  additionalMedicareThreshold
+) {
+  // Only wages (Box 5) enter the withholding calculation:
+  const totalW2Combined = clientW2 + spouseW2;
+  const additionalMedicareIncome =
+    Math.max(0, totalW2Combined - additionalMedicareThreshold);
+  return additionalMedicareIncome * 0.009;
 }
 
 function sumEffectiveW2ForMedicare() {
