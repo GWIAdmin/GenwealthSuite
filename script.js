@@ -6022,3 +6022,31 @@ function updateTotalTax() {
     totalField.value = fmt(grandTotal);
   }
 }
+
+const pet = document.getElementById('petSprite');
+let petVisible = false;
+
+document.getElementById('doNotTouchBtn').addEventListener('click', function () {
+  if (!petVisible) {
+    // Show pet and start following the cursor
+    pet.style.display = 'block';
+    petVisible = true;
+
+    document.addEventListener('mousemove', followCursor);
+  } else {
+    // Stop following and hide pet
+    document.removeEventListener('mousemove', followCursor);
+    pet.style.display = 'none';
+    petVisible = false;
+  }
+});
+
+function followCursor(event) {
+  const offsetX = 20; // Adjust if you want pet slightly offset from cursor
+  const offsetY = 20;
+
+  pet.style.left = `${event.clientX + offsetX}px`;
+  pet.style.top = `${event.clientY + offsetY}px`;
+}
+
+
