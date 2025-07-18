@@ -4429,8 +4429,10 @@ function recalculateDeductions() {
     // 4) Choose the greater of itemized vs. adjusted standard
     const totalDeductionsVal = Math.max(detailSum, adjustedStd);
 
+    formatCurrency(totalDeductionsVal);
+
     // 5) Write it back
-    document.getElementById('totalDeductions').value = parseInt(totalDeductionsVal, 10);
+    document.getElementById('totalDeductions').value = formatCurrency(totalDeductionsVal);
 
     // 6) And recalc taxable income & state tax
     updateTaxableIncome();
