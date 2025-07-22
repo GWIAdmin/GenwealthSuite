@@ -1313,103 +1313,6 @@ function generateCreditCalculationDetails(dependentCounts, config, phaseOutThres
 }
 
 /**
- * Validate Child Tax Credit calculation against IRS test cases
- * This function can be called during development/testing to ensure compliance
- * 
- * @returns {boolean} True if all test cases pass
- */
-function validateChildTaxCreditCalculation() {
-    console.log('Validating Child Tax Credit calculation logic...');
-    
-    // Test Case 1: Single filer with 2 children under 17, low income
-    const test1 = calculateChildTaxCredit(50000, 'Single', 2023);
-    const expected1 = 4000; // 2 × $2,000 = $4,000 (no phase-out)
-    
-    // Test Case 2: MFJ with 1 child under 17 and 1 dependent over 17, high income with phase-out
-    const test2 = calculateChildTaxCredit(450000, 'Married Filing Jointly', 2023);
-    // Should phase out: $450k - $400k = $50k excess
-    // Phase-out: Math.ceil(50000/1000) × $50 = 50 × $50 = $2,500
-    // Base credit: $2,000 + $500 = $2,500
-    // Final credit: $2,500 - $2,500 = $0
-    
-    // Test Case 3: Head of Household with 3 children under 17, moderate income
-    const test3 = calculateChildTaxCredit(150000, 'Head of Household', 2023);
-    const expected3 = 6000; // 3 × $2,000 = $6,000 (no phase-out)
-    
-    const results = [
-        { test: 'Low income single', expected: expected1, actual: test1.totalCredit, passed: test1.totalCredit === expected1 },
-        { test: 'High income MFJ with phase-out', expected: 0, actual: test2.totalCredit, passed: test2.totalCredit === 0 },
-        { test: 'Moderate income HOH', expected: expected3, actual: test3.totalCredit, passed: test3.totalCredit === expected3 }
-    ];
-    
-    console.table(results);
-    
-    const allPassed = results.every(r => r.passed);
-    console.log(allPassed ? '✅ All Child Tax Credit validation tests passed!' : '❌ Some validation tests failed!');
-    
-    return allPassed;
-}
-
-/**
- * Export Child Tax Credit calculation for external testing
- * This allows other systems to validate the calculation logic
- * 
- * @param {Object} params - Calculation parameters
- * @returns {Object} Calculation results
- */
-function exportChildTaxCreditCalculation(params) {
-    const { agi, filingStatus, taxYear, dependents } = params;
-    
-    // Temporarily set form values for calculation
-    const originalValues = {};
-    
-    // Store original values
-    const numDependentsField = document.getElementById('numberOfDependents');
-    if (numDependentsField) {
-        originalValues.numberOfDependents = numDependentsField.value;
-        numDependentsField.value = dependents.length;
-    }
-    
-    // Clear and set dependent information
-    const dependentsContainer = document.getElementById('dependentsContainer');
-    if (dependentsContainer) {
-        originalValues.dependentsHTML = dependentsContainer.innerHTML;
-        dependentsContainer.innerHTML = '';
-        
-        if (dependents.length > 0) {
-            const heading = document.createElement('h1');
-            heading.textContent = 'Children / Dependents Details';
-            dependentsContainer.appendChild(heading);
-            
-            dependents.forEach((dep, index) => {
-                const i = index + 1;
-                createDependentFields(dependentsContainer, i);
-                
-                // Set dependent values
-                const ageField = document.getElementById(`dependent${i}Age`);
-                const creditField = document.getElementById(`dependent${i}Credit`);
-                
-                if (ageField) ageField.value = dep.age;
-                if (creditField) creditField.value = dep.qualifiesForCredit ? 'Yes' : 'No';
-            });
-        }
-    }
-    
-    // Calculate with temporary values
-    const result = calculateChildTaxCredit(agi, filingStatus, taxYear);
-    
-    // Restore original values
-    if (numDependentsField) {
-        numDependentsField.value = originalValues.numberOfDependents;
-    }
-    if (dependentsContainer) {
-        dependentsContainer.innerHTML = originalValues.dependentsHTML;
-    }
-    
-    return result;
-}
-
-/**
  * Initialize Child Tax Credit system
  * Called during page load to set up all necessary components
  */
@@ -4674,20 +4577,12 @@ function showBlackDisclaimer(message, containerId) {
     disclaimer.textContent = message;
 }
 
-function removeBlackDisclaimer(containerId) {
-    const disclaimer = document.getElementById(`black-disclaimer-${containerId}`);
-    if (disclaimer && disclaimer.parentNode) {
-        disclaimer.parentNode.removeChild(disclaimer);
-    }
-}
-
 //-------------------//
 // 20. NOTES FEATURE //
 //-------------------//
 
 const notesButton = document.getElementById('notesButton');
 const notesContainer = document.getElementById('notesContainer');
-const notesEditor = document.getElementById('notesEditor');
 const boldBtn = document.getElementById('notesBoldBtn');
 const highlightBtn = document.getElementById('notesHighlightBtn');
 
@@ -5747,30 +5642,6 @@ document.addEventListener('DOMContentLoaded', function () {
 // re-calculate deductions whenever age-65 or blind counts change
 document.getElementById('olderthan65').addEventListener('change', recalculateDeductions);
 document.getElementById('blind').addEventListener('change', recalculateDeductions);
-
-function updateAllBusinessReasonableComp() {
-    const numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
-    for (let i = 1; i <= numBusinesses; i++) {
-        updateBusinessReasonableComp(i);
-    }
-}
-
-function updateBusinessReasonableComp(businessIndex) {
-    let totalWage = 0;
-    for (let key in w2WageMap) {
-        if (w2WageMap.hasOwnProperty(key)) {
-            let mapping = w2WageMap[key];
-            if (mapping.businessIndex === businessIndex) {
-                totalWage = totalWage + mapping.wage;
-            }
-        }
-    }
-    // Update the “Reasonable Compensation” field for this business.
-    const compField = document.getElementById(`business${businessIndex}ReasonableComp`);
-    if (compField) {
-        compField.value = formatCurrency(String(totalWage));
-    }
-}
 
 //-------------------------------------//
 // 25. SELF-EMPLOYMENT TAX CALCULATION //
