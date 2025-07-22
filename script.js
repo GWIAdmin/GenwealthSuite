@@ -5429,6 +5429,45 @@ function addW2Block() {
     federalTaxGroup.appendChild(federalTaxInput);
     collapsibleContent.appendChild(federalTaxGroup);   
 
+    // --- Social Security Wages --- 
+    const ssWagesGroup = document.createElement('div');
+    ssWagesGroup.classList.add('form-group');
+    const ssWagesLabel = document.createElement('label');
+    ssWagesLabel.setAttribute('for', 'w2SSWages_' + w2Counter);
+    ssWagesLabel.textContent = 'Social Security Wages:';
+    ssWagesGroup.appendChild(ssWagesLabel);
+
+    const ssWagesInput = document.createElement('input');
+    ssWagesInput.type = 'text';
+    ssWagesInput.id = 'w2SSWages_' + w2Counter;
+    ssWagesInput.name = 'w2SSWages_' + w2Counter;
+    ssWagesInput.classList.add('currency-field');
+    ssWagesGroup.appendChild(ssWagesInput);
+
+    collapsibleContent.appendChild(ssWagesGroup);
+
+    ssWagesInput.addEventListener('blur', function () {
+    let ssVal = unformatCurrency(ssWagesInput.value || '0');
+    ssWagesInput.value = (ssVal > 0) ? formatCurrency(String(ssVal)) : '';
+    updateW2Mapping();
+    recalculateTotals();
+    });
+
+    // --- Social Security Tax Withheld ---
+    const SSTaxGroup = document.createElement('div');
+    SSTaxGroup.classList.add('form-group');
+    const SSTaxLabel = document.createElement('label');
+    SSTaxLabel.setAttribute('for', 'w2SocialSecurityTaxWithheld_' + w2Counter);
+    SSTaxLabel.textContent = 'Social Security Tax Withheld:';
+    SSTaxGroup.appendChild(SSTaxLabel);
+    const SSTaxInput = document.createElement('input');
+    SSTaxInput.type = 'text';
+    SSTaxInput.id = 'w2SocialSecurityTaxWithheld_' + w2Counter;
+    SSTaxInput.name = 'w2SocialSecurityTaxWithheld_' + w2Counter;
+    SSTaxInput.classList.add('currency-field');
+    SSTaxGroup.appendChild(SSTaxInput);
+    collapsibleContent.appendChild(SSTaxGroup);
+
     // --- Medicare Wages and Tips ---
     const medicareWagesGroup = document.createElement('div');
     medicareWagesGroup.classList.add('form-group');
@@ -5473,30 +5512,6 @@ function addW2Block() {
     medicareTaxInput.classList.add('currency-field');
     medicareTaxGroup.appendChild(medicareTaxInput);
     collapsibleContent.appendChild(medicareTaxGroup);  
-
-    // --- Social Security Wages --- 
-    const ssWagesGroup = document.createElement('div');
-    ssWagesGroup.classList.add('form-group');
-    const ssWagesLabel = document.createElement('label');
-    ssWagesLabel.setAttribute('for', 'w2SSWages_' + w2Counter);
-    ssWagesLabel.textContent = 'Social Security Wages:';
-    ssWagesGroup.appendChild(ssWagesLabel);
-
-    const ssWagesInput = document.createElement('input');
-    ssWagesInput.type = 'text';
-    ssWagesInput.id = 'w2SSWages_' + w2Counter;
-    ssWagesInput.name = 'w2SSWages_' + w2Counter;
-    ssWagesInput.classList.add('currency-field');
-    ssWagesGroup.appendChild(ssWagesInput);
-
-    collapsibleContent.appendChild(ssWagesGroup);
-
-    ssWagesInput.addEventListener('blur', function () {
-    let ssVal = unformatCurrency(ssWagesInput.value || '0');
-    ssWagesInput.value = (ssVal > 0) ? formatCurrency(String(ssVal)) : '';
-    updateW2Mapping();
-    recalculateTotals();
-    });
 
     // --- Employer State Unemployment Tax Question ---
     const stateTaxGroup = document.createElement('div');
@@ -5756,7 +5771,6 @@ function updateBusinessReasonableComp(businessIndex) {
         compField.value = formatCurrency(String(totalWage));
     }
 }
-
 
 //-------------------------------------//
 // 25. SELF-EMPLOYMENT TAX CALCULATION //
