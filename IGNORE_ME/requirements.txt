@@ -1,7 +1,0 @@
-flask
-openpyxl
-pandas
-# or xlwings, or pywin32 if you prefer direct Excel COM automation
-requests
-# For GPT-4 integration, you'll have your OpenAI or Azure library as well
-openai
