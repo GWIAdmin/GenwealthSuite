@@ -1,0 +1,27 @@
+{
+  "name": "genwealthsuite",
+  "version": "1.0.0",
+  "description": "GenwealthSuite is an internal software project maintained by Genwealth 360 Inc. The repository is designed to support internal operations and is not intended for external or public-facing use.",
+  "main": "script.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GWIAdmin/GenwealthSuite.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/GWIAdmin/GenwealthSuite/issues"
+  },
+  "homepage": "https://github.com/GWIAdmin/GenwealthSuite#readme",
+  "dependencies": {
+    "@azure/msal-node": "^3.6.4",
+    "dotenv": "^17.2.0",
+    "express": "^5.1.0",
+    "node-fetch": "^3.3.2"
+  }
+}
