@@ -1,22 +1,34 @@
+// server/index.js
 require('dotenv').config({ path: __dirname + '/.env' });
+const fetch = require('node-fetch');
+global.fetch = fetch;
 const express = require('express');
-const { calculateTax } = require('./taxGraph');
-const app = express();
+const path    = require('path');
+const { calculateMultiple } = require('./taxGraph');
 
+const app = express();
 app.use(express.json());
 
-app.post('/api/calculateTax', async (req, res) => {
-  console.log('▶️  Incoming body:', req.body);               // log the parsed body
+// ─── STATIC FILE SERVING ──────────────────────────────────────────────────────
+// Serve any file in the parent folder (your project root),
+app.use(express.static(path.join(__dirname, '..')));
+
+// Optional: explicit GET / to send index.html
+app.get('/', (req, res) =>
+  res.sendFile(path.join(__dirname, '..', 'index.html'))
+);
+// ───────────────────────────────────────────────────────────────────────────────
+
+app.post('/api/sheetData', async (req, res) => {
+  const { writes, readCells } = req.body;
   try {
-    const tax = await calculateTax(req.body.a, req.body.b);
-    console.log('✅  Calculation result:', tax);
-    res.json({ tax });
+    const results = await calculateMultiple(writes, readCells);
+    res.json({ results });
   } catch (err) {
-    console.error('❌ Calculation error:', err);
-    // return the actual error message so we can see it in PowerShell
-    res.status(500).json({ error: err.message || 'Unknown error' });
+    console.error('SheetData error:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`API listening on port ${PORT}`));
+app.listen(PORT, () => console.log(`Listening on ${PORT}`));
