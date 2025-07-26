@@ -204,35 +204,45 @@ const FS_MAP = {
 
 const ORDINARY_TAX_BRACKETS = BRACKETS;
   
-let stateTaxData;
 window.addEventListener('DOMContentLoaded', async () => {
-  try {
-    const res = await fetch('./state_tax_data.json');
-    if (!res.ok) throw new Error(res.status);
-    stateTaxData = await res.json();
-        // ─── Add these three lines ───
-        window.stateTaxData       = stateTaxData;
-        window.getBrackets        = getBrackets;
-        window.calculateStateTax  = calculateStateTax;
-        // ─────────────────────────────
     initCollapsibles();
     initUI();
+
+    const rcField = ensureGlobalRCField();
+    // Append it to the document, for example, to the body or a specific container:
+    document.body.appendChild(rcField);
+
+    const userPrefersDark = localStorage.getItem('preferred-theme') === 'dark';
+    if (userPrefersDark) {
+      darkModeCheckbox.checked = true;
+      document.body.classList.add('dark-mode');
+    }
+
+    // ─── NOW wire up your live‑update mapping ───
+    mappings
+      .filter(m => m.type === 'write')
+      .forEach(({ id }) => {
+        const el = document.getElementById(id);
+        if (el) {
+          // for text inputs use `input`, for selects use `change`
+          const evt = el.tagName === 'SELECT' ? 'change' : 'input';
+          el.addEventListener(evt, debounce(fetchSheetData));
+        }
+      });
+
+    // initial load of the sheet
+    fetchSheetData();
 
     // Initialize Child Tax Credit calculation system
     initializeChildTaxCreditSystem();
 
     // kick‐off one initial recalculation now that data is in place
-    recalcStateTax();            // populate stateTotalTax
     updateAllBusinessOwnerResCom(); // fill in each business’s OwnerComp from W‑2s
     updateAggregateResComp();       // sum into the global RC field
     recalculateTotals();            // re‑run your full totals (incl. state & employer FICA)
 
-  } catch (e) {
-    console.error('Failed to load stateTaxData:', e);
-  }
-});
+  });
 
-window.stateTaxData       = stateTaxData;
 window.getBrackets        = getBrackets;
 window.calculateStateTax  = calculateStateTax;
 
@@ -255,12 +265,6 @@ function initCollapsibles() {
 }
 
 function initUI() {
-  // Example: hook up your “State” dropdown to calculate state tax
-  const stateSelect = document.getElementById('state');
-  const stateTotalField = document.getElementById('stateTotalTax');
-
-  stateSelect.addEventListener('change', recalcStateTax);
-
   // Back‑to‑top button
   const backBtn = document.getElementById('backToTopBtn');
   backBtn.addEventListener('click', () =>
@@ -275,8 +279,6 @@ function initUI() {
   dmToggle.addEventListener('change', () => {
     document.body.classList.toggle('dark-mode', dmToggle.checked);
   });
-
-  // (…any other wiring: spouse‑section show/hide, dynamic dependents/businesses, notes UI, form submit, etc…)
 }
 
 //-------------------------------//
@@ -314,7 +316,6 @@ function displayResults(resultData) {
 
     // first update the form’s Taxable Income and re‑calc state tax
     document.getElementById('taxableIncome').value = parseInt(resultData.taxableIncome, 10);
-    recalcStateTax();  // ← now #stateTotalTax.value is in sync
 
     const fedTax = parseInt(resultData.totalTax, 10);
 
@@ -639,61 +640,6 @@ function createResCompSection(businessIndex, ownerIndex, isOtherOwner = false) {
     return container;
 }
 
-/**
- * Pull taxable income from the form, run it through
- * computeStateTax, and render into #stateTotalTax.
- */
-function recalcStateTax() {
-    if (!window.stateTaxData) return;
-  
-    const stateAbbrev = document.getElementById('state').value;
-    const year        = document.getElementById('year').value;
-    const uiStatus    = document.getElementById('filingStatus').value;
-    const statusKey   = FS_MAP[uiStatus] || 'Single';
-  
-    // 1) pull out exactly the one bracket‐array you need:
-    const brackets = getBrackets(
-      stateTaxData,
-      stateAbbrev,
-      year,
-      statusKey
-    );
-  
-    if (!Array.isArray(brackets)) {
-      console.error('getBrackets did not return an array:', brackets);
-      document.getElementById('stateTotalTax').value = '0.00';
-      return;
-    }
-  
-    // 2) compute state‐taxable income
-    const agi    = getFieldValue('totalAdjustedGrossIncome');
-    const stdDed = (
-      STATE_STD_DED[stateAbbrev]?.[year]?.[statusKey]
-    ) || 0;
-    const stateTaxableIncome = Math.max(0, agi - stdDed);
-  
-    console.log(`State AGI: ${agi}, STD: ${stdDed}, Taxable: ${stateTaxableIncome}`);
-  
-    // 3) pass the bracket array + taxable income into the calculator
-    const owed = calculateStateTax(brackets, stateTaxableIncome);
-  
-    console.log('Brackets used:', brackets);
-    console.table(
-      brackets.map(({ threshold, rate }) => ({
-        threshold,
-        rate: (typeof rate === 'string' ? rate : (rate * 100).toFixed(1) + '%')
-      }))
-    );
-  
-    // 4) render result
-    document.getElementById('stateTotalTax').value = owed.toFixed(2);
-}
-  
-  
-document.getElementById('state').addEventListener('change', recalcStateTax);
-document.getElementById('year' ).addEventListener('change', recalcStateTax);
-document.getElementById('filingStatus').addEventListener('change', recalcStateTax);
-
 function updateRCSectionForOwner(businessIndex, ownerIndex, isOther) {
     const rcSection = document.getElementById(`rcSection_${businessIndex}_${ownerIndex}`);
     if (!rcSection) return;
@@ -719,12 +665,6 @@ function ensureGlobalRCField() {
     }
     return rcField;
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    const rcField = ensureGlobalRCField();
-    // Append it to the document, for example, to the body or a specific container:
-    document.body.appendChild(rcField);
-});
 
 function updateAggregateResComp() {
     let totalRC = 0;
@@ -4120,7 +4060,6 @@ function recalculateTotals() {
     document.querySelectorAll('.w2-block').forEach(block => updateW2Mapping(block.id));
 
     recalculateDeductions();
-    recalcStateTax();
 
     // 1. Get updated wage values.
     let {totalW2Wages} = sumW2Wages();
@@ -4238,7 +4177,6 @@ function recalculateTotals() {
         recalculateChildTaxCredit();
 
         updateTaxableIncome();
-        recalcStateTax();
         updateNetInvestmentTax();
         updateAggregateResComp();
         calculateEmployerEmployeeTaxes();
@@ -4339,8 +4277,6 @@ function recalculateDeductions() {
 
     // 6) And recalc taxable income & state tax
     updateTaxableIncome();
-    recalcStateTax();
-
 }
 
 function updateTaxableIncome() {
@@ -4460,10 +4396,6 @@ document.addEventListener('blur', function(event) {
 
 document.addEventListener('DOMContentLoaded', function() {
 
-    document.getElementById('taxableIncome').addEventListener('input', recalcStateTax);
-    document.getElementById('state').addEventListener('change',   recalcStateTax);
-    document.getElementById('year').addEventListener('change',    recalcStateTax);
-
     recalculateTotals();
     recalculateDeductions();
     updateBlindOptions();
@@ -4490,8 +4422,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
-
-document.getElementById('filingStatus').addEventListener('change', recalcStateTax);
 
 //--------------------------------------//
 // 16. AUTO-COPY STATE TO "SELECTSTATE" //
@@ -4815,15 +4745,6 @@ function populateBusinessDetailFields(index) {
 //----------------------//
 
 const darkModeCheckbox = document.getElementById('darkModeToggle');
-
-
-document.addEventListener('DOMContentLoaded', () => {
-  const userPrefersDark = localStorage.getItem('preferred-theme') === 'dark';
-  if (userPrefersDark) {
-    darkModeCheckbox.checked = true;
-    document.body.classList.add('dark-mode');
-  }
-});
 
 darkModeCheckbox.addEventListener('change', () => {
   if (darkModeCheckbox.checked) {
@@ -6619,4 +6540,146 @@ function followCursor(event) {
   pet.style.top = `${event.clientY + offsetY}px`;
 }
 
+//-------------------------------------//
+// 29. SHEET DATA FETCHING AND MAPPING //
+//-------------------------------------//
 
+// 1) declare all your mappings here
+
+const mappings = [
+    // Personal Information
+    { id: 'year',                                   type: 'write', cell: 'B1' },
+    { id: 'filingStatus',                           type: 'write', cell: 'B2' },
+    { id: 'state',                                  type: 'write', cell: 'B3' },
+    { id: 'residentInState',                        type: 'write', cell: 'B4' },
+    { id: 'olderthan65',                            type: 'write', cell: 'B11' },
+    { id: 'blind',                                  type: 'write', cell: 'B12' },
+
+    // Income       
+    { id: 'wages',                                  type: 'write', cell: 'B26' },
+    { id: 'taxExemptInterest',                      type: 'write', cell: 'B30' },
+    { id: 'taxableInterest',                        type: 'write', cell: 'B31' },
+    { id: 'taxableIRA',                             type: 'write', cell: 'B32' },
+    { id: 'taxableDividends',                       type: 'write', cell: 'B33' },
+    { id: 'qualifiedDividends',                     type: 'write', cell: 'B34' },
+    { id: 'iraDistributions',                       type: 'write', cell: 'B35' },
+    { id: 'pensions',                               type: 'write', cell: 'B36' },
+    { id: 'longTermCapitalGains',                   type: 'write', cell: 'B37' },
+    { id: 'shortTermCapitalGains',                  type: 'write', cell: 'B38' },
+    { id: 'otherIncome',                            type: 'write', cell: 'B51' },
+    { id: 'interestPrivateBonds',                   type: 'write', cell: 'B52' },
+    { id: 'passiveActivityLossAdjustments',         type: 'write', cell: 'B54' },
+    { id: 'qualifiedBusinessDeduction',             type: 'write', cell: 'B55' },
+
+    // Adjusted Gross Income        
+    { id: 'retirementDeduction',                    type: 'write', cell: 'B60' },
+    { id: 'medicalReimbursementPlan',               type: 'write', cell: 'B61' },
+    { id: 'SEHealthInsurance',                      type: 'write', cell: 'B62' },
+    { id: 'alimonyPaid',                            type: 'write', cell: 'B63' },
+    { id: 'otherAdjustments',                       type: 'write', cell: 'B64' },
+
+    // Deductions           
+    { id: 'medical',                                type: 'write', cell: 'B68' },
+    { id: 'stateAndLocalTaxes',                     type: 'write', cell: 'B69' },
+    { id: 'otherTaxesFromSchK-1',                     type: 'write', cell: 'B70' },
+    { id: 'interest',                               type: 'write', cell: 'B71' },
+    { id: 'contributions',                          type: 'write', cell: 'B72' },
+    { id: 'otherDeductions',                        type: 'write', cell: 'B73' },
+    { id: 'carryoverLoss',                          type: 'write', cell: 'B74' },
+    { id: 'casualtyAndTheftLosses',                 type: 'write', cell: 'B75' },
+    { id: 'miscellaneousDeductions',                type: 'write', cell: 'B76' },
+
+    // Taxes and Credits        
+    { id: 'otherTaxes',                             type: 'write', cell: 'B85' },
+    { id: 'foreignTaxCredit',                       type: 'write', cell: 'B86' },
+    { id: 'priorYearMinimumTaxCredit',              type: 'write', cell: 'B87' },
+    { id: 'nonrefundablePersonalCredits',           type: 'write', cell: 'B88' },
+    { id: 'generalBusinessCredit',                  type: 'write', cell: 'B89' },
+    { id: 'childTaxCredit',                         type: 'write', cell: 'B90' },
+    { id: 'otherCredits',                           type: 'write', cell: 'B91' },
+
+    // Payments
+    { id: 'withholdings',                           type: 'write', cell: 'B96' },
+    { id: 'withholdingsOnAdditionalMedicareWages',  type: 'write', cell: 'B97' },
+    { id: 'otherPaymentsAndCredits',                type: 'write', cell: 'B99' },
+    { id: 'penalty',                                type: 'write', cell: 'B100' },
+    { id: 'estimatedRefundOverpayment',             type: 'write', cell: 'B101' },
+    { id: 'estimatedBalanceDue',                    type: 'write', cell: 'B102' },
+
+    // Employer and Employee Taxes
+    { id: 'employeeTaxes',                          type: 'write', cell: 'B104' },
+    { id: 'employerTaxes',                          type: 'write', cell: 'B105' },
+
+    // State Taxable Income
+    { id: 'stateTaxableIncome',                     type: 'read', cell: 'B107' },
+    { id: 'localTaxAfterCredits',                   type: 'write', cell: 'B109' },
+    { id: 'stateTotalTax',                          type: 'read', cell: 'B110' },
+    { id: 'stateWithholdings',                      type: 'write', cell: 'B111' },
+    { id: 'statePaymentsAndCredits',                type: 'write', cell: 'B112' },
+    { id: 'stateInterest',                          type: 'write', cell: 'B113' },
+    { id: 'statePenalty',                           type: 'write', cell: 'B114' },
+    { id: 'stateEstimatedRefundOverpayment',        type: 'read', cell: 'B115' },
+    { id: 'stateEstimatedBalanceDue',               type: 'read', cell: 'B116' },
+    { id: 'totalTax',                               type: 'read', cell: 'B117' },
+];
+
+// 2) debounce helper to limit calls
+function debounce(fn, delay = 300) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+}
+
+async function fetchSheetData() {
+  // build writes, skipping any missing elements
+  const writes = mappings
+    .filter(m => m.type === 'write')
+    .map(({ id, cell }) => {
+      const el = document.getElementById(id);
+      if (!el) {
+        console.warn(`⚠️ write‐mapping: no element with ID '${id}'`);
+        return null;
+      }
+      const raw = el.value;
+      const val = el.type === 'number'
+        ? parseFloat(raw) || 0
+        : raw;
+      return { cell, value: val };
+    })
+    .filter(x => x);
+
+  // build read cell list
+  const readCells = mappings
+    .filter(m => m.type === 'read')
+    .map(m => m.cell);
+
+  try {
+    const res = await fetch('/api/sheetData', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ writes, readCells })
+    });
+    const { results } = await res.json();
+
+    // update DOM, skipping missing elements
+    results.forEach(({ cell, value }) => {
+      const map = mappings.find(m => m.cell === cell);
+      const el  = map && document.getElementById(map.id);
+      if (!el) {
+        console.warn(`⚠️ read‐mapping: no element with ID '${map?.id}'`);
+        return;
+      }
+      if (el.tagName === 'INPUT' || el.tagName === 'SELECT') {
+        el.value = value;
+      } else {
+        el.textContent = (typeof value === 'number')
+          ? value.toFixed(2)
+          : value;
+      }
+    });
+  } catch (err) {
+    console.error('Error fetching sheet data:', err);
+  }
+}
