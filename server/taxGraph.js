@@ -4,10 +4,20 @@ const fetch = require('node-fetch');
 const { getToken } = require('./auth');
 
 const DRIVE_ID   = process.env.DRIVE_ID;
-const ITEM_ID    = process.env.ITEM_ID;
+const ITEM_ID    = process.env.DRIVE_ITEM_ID;
 const SHEET_NAME = process.env.WORKSHEET;
 const BASE_URL   = `https://graph.microsoft.com/v1.0/drives/${DRIVE_ID}/items/${ITEM_ID}/workbook`;
 const SHEET_URL  = `${BASE_URL}/worksheets('${SHEET_NAME}')`;
+
+console.log('ENV →', {
+  DRIVE_ID,
+  ITEM_ID,
+  SHEET_NAME,
+  TENANT: process.env.TENANT_ID?.slice(0,8) + '…'
+});
+console.log('BASE_URL:', BASE_URL);
+console.log('SHEET_URL:', SHEET_URL);
+
 
 async function calculateMultiple(writes, readCells) {
   const token = await getToken();
@@ -44,7 +54,7 @@ async function calculateMultiple(writes, readCells) {
     );
     if (!res.ok) {
   const errorText = await res.text();
-  console.error(`Error during ${method} ${cell}: ${errorText}`);
+  console.error(`Error during GET for cell "${cell}":`, errorText);
   throw new Error(errorText);
 }
     const { values: [[ result ]] } = await res.json();
