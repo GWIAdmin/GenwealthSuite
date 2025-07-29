@@ -247,8 +247,7 @@ window.getBrackets        = getBrackets;
 window.calculateStateTax  = calculateStateTax;
 
 function initCollapsibles() {
-  document
-    .querySelectorAll('h2[data-target]')
+  document.querySelectorAll('h2[data-target], h3[data-target]')
     .forEach(header => {
       const content = document.getElementById(header.dataset.target);
       if (!content) return;
