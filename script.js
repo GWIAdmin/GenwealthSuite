@@ -319,14 +319,8 @@ function displayResults(resultData) {
 
     const fedTax = parseInt(resultData.totalTax, 10);
 
-      // pull the computed state tax from your UI
-      // allow digits, minus and decimal point, then parseFloat
-      const stateTax = parseFloat(
-        document
-          .getElementById('stateTotalTax')
-          .value
-          .replace(/[^0-9.\-]/g, '')   // now keeps the dot
-      ) || 0;
+    // use the server‑returned state income tax directly
+    const stateTax = parseInt(resultData.stateTotalTax, 10) || 0;
 
     const totalTax = fedTax + stateTax;
     let refundOrDue = parseInt(resultData.refundOrDue, 10);
@@ -5757,9 +5751,14 @@ function calculateDetailedSelfEmploymentTax() {
       const ssTaxable = Math.min(netEarningsSE, availableSSBase);
       const socialSecurityTax = ssTaxable * 0.124;
       const medicareTax = netEarningsSE * 0.029;
-      // Additional Medicare Tax is withheld only on wages (Box 5)
-      const additionalMedicareIncome = Math.max(0, effectiveW2ForMedicare - additionalMedicareThreshold);
-      const additionalMedicareTax = additionalMedicareIncome * 0.009;
+      // Additional Medicare Tax on (wages + SE earnings)
+      const additionalMedicareTax = calculateAdditionalMedicareTax(
+        effectiveW2ForMedicare,  // client W‑2 wages
+        0,                       // spouse W‑2 wages (none for single/MFS/HOH/QW)
+        netEarningsSE,           // client net SE earnings
+        0,                       // spouse net SE earnings
+        additionalMedicareThreshold
+      );
       const seTax = socialSecurityTax + medicareTax;
       const halfSelfEmploymentTaxDeduction = seTax / 2;
   
@@ -5788,15 +5787,16 @@ function updateSelfEmploymentTax() {
 // 26. ADDITIONAL MEDICARE TAX CALCULATION //
 //-----------------------------------------//
 function calculateAdditionalMedicareTax(
-  clientW2, spouseW2,
-  /*clientNetEarningsSE, spouseNetEarningsSE,*/ 
+  clientW2,
+  spouseW2,
+  clientNetEarningsSE,
+  spouseNetEarningsSE,
   additionalMedicareThreshold
 ) {
-  // Only wages (Box 5) enter the withholding calculation:
-  const totalW2Combined = clientW2 + spouseW2;
-  const additionalMedicareIncome =
-    Math.max(0, totalW2Combined - additionalMedicareThreshold);
-  return additionalMedicareIncome * 0.009;
+  // Full IRS base: wages (Box 5) + net SE earnings
+  const totalIncome = clientW2 + spouseW2 + clientNetEarningsSE + spouseNetEarningsSE;
+  const excess      = Math.max(0, totalIncome - additionalMedicareThreshold);
+  return excess * 0.009;
 }
 
 function sumEffectiveW2ForMedicare() {
@@ -6581,7 +6581,7 @@ const mappings = [
     // Deductions           
     { id: 'medical',                                type: 'write', cell: 'B68' },
     { id: 'stateAndLocalTaxes',                     type: 'write', cell: 'B69' },
-    { id: 'otherTaxesFromSchK-1',                     type: 'write', cell: 'B70' },
+    { id: 'otherTaxesFromSchK-1',                   type: 'write', cell: 'B70' },
     { id: 'interest',                               type: 'write', cell: 'B71' },
     { id: 'contributions',                          type: 'write', cell: 'B72' },
     { id: 'otherDeductions',                        type: 'write', cell: 'B73' },
@@ -6611,7 +6611,6 @@ const mappings = [
     { id: 'employerTaxes',                          type: 'write', cell: 'B105' },
 
     // State Taxable Income
-    { id: 'stateTaxableIncome',                     type: 'read', cell: 'B107' },
     { id: 'localTaxAfterCredits',                   type: 'write', cell: 'B109' },
     { id: 'stateTotalTax',                          type: 'read', cell: 'B110' },
     { id: 'stateWithholdings',                      type: 'write', cell: 'B111' },
@@ -6633,24 +6632,49 @@ function debounce(fn, delay = 300) {
 }
 
 async function fetchSheetData() {
-  // build writes, skipping any missing elements
   const writes = mappings
     .filter(m => m.type === 'write')
     .map(({ id, cell }) => {
       const el = document.getElementById(id);
-      if (!el) {
-        console.warn(`⚠️ write‐mapping: no element with ID '${id}'`);
-        return null;
-      }
-      const raw = el.value;
-      const val = el.type === 'number'
-        ? parseFloat(raw) || 0
-        : raw;
-      return { cell, value: val };
-    })
-    .filter(x => x);
+      if (!el) return null;
 
-  // build read cell list
+      const raw = el.value.trim();
+      // 1) if it’s blank, skip it entirely
+      if (raw === '') return null;
+
+      // 2) special transforms:
+      let value = raw;
+      if (id === 'state') {
+        value = raw + ' Taxes';
+      }
+      if (id === 'filingStatus') {
+        value = ({
+          'Single': 'Single',
+          'Married Filing Jointly': 'MFJ',
+          'Married Filing Separately': 'MFS',
+          'Head of Household': 'HOH',
+          'Qualifying Widow(er)': 'QW'
+        })[raw] || raw;
+      }
+
+      // 3) parse numbers only if non‑blank
+        if (el.classList.contains('currency-field') || el.type === 'number') {
+          // remove "$", commas, non‑numeric junk
+          const cleaned = raw.replace(/[^0-9.-]/g, '');
+          const n = parseFloat(cleaned);
+          if (isNaN(n)) {
+            console.warn(`Skipping invalid number for ${id}:`, raw);
+            return null;
+          }
+          value = n;
+        }
+
+      return { cell, value };
+    })
+    .filter(x => x !== null);
+
+  console.log('✍️ writes:', writes);
+
   const readCells = mappings
     .filter(m => m.type === 'read')
     .map(m => m.cell);
@@ -6663,22 +6687,36 @@ async function fetchSheetData() {
     });
     const { results } = await res.json();
 
+    console.log('✍️ Reads:', results);
+
     // update DOM, skipping missing elements
     results.forEach(({ cell, value }) => {
-      const map = mappings.find(m => m.cell === cell);
-      const el  = map && document.getElementById(map.id);
-      if (!el) {
-        console.warn(`⚠️ read‐mapping: no element with ID '${map?.id}'`);
-        return;
-      }
-      if (el.tagName === 'INPUT' || el.tagName === 'SELECT') {
-        el.value = value;
+    const map = mappings.find(m => m.cell === cell);
+    const el  = map && document.getElementById(map.id);
+    if (!el) {
+      console.warn(`⚠️ read‑mapping: no element with ID '${map?.id}'`);
+      return;
+    }
+
+    // detect currency fields by CSS class
+    const isCurrency = el.classList.contains('currency-field');
+
+    if (el.tagName === 'INPUT' || el.tagName === 'SELECT') {
+      if (isCurrency) {
+        el.value = formatCurrency(String(value));
       } else {
-        el.textContent = (typeof value === 'number')
-          ? value.toFixed(2)
-          : value;
+        el.value = value;
       }
-    });
+    } else {
+      if (isCurrency) {
+        el.textContent = formatCurrency(String(value));
+      } else if (typeof value === 'number') {
+        el.textContent = value.toFixed(2);
+      } else {
+        el.textContent = value;
+      }
+    }
+});
   } catch (err) {
     console.error('Error fetching sheet data:', err);
   }
