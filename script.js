@@ -6720,3 +6720,46 @@ async function fetchSheetData() {
     console.error('Error fetching sheet data:', err);
   }
 }
+
+//-----------------------//
+// 30. State Adjustments //
+//-----------------------//
+
+/**
+ * Recalculate and display State Taxable Income
+ */
+function updateStateTaxableIncome() {
+  // 1. pull in the three raw numbers
+  const agi        = getFieldValue('totalAdjustedGrossIncome');
+  const additions  = getFieldValue('stateAdditionsToIncome');
+  const deductions = getFieldValue('stateDeductions');
+  
+  // 2. compute the state‑level taxable income
+  const stateTaxable = agi + additions - deductions;
+  
+  // 3. write it back, formatted as currency
+  const out = document.getElementById('stateTaxableIncome');
+  if (out) {
+    if (isNaN(stateTaxable)) {
+      out.value = '';
+    } else {
+      // Math.round to the nearest dollar
+      out.value = formatCurrency(String(Math.round(stateTaxable)));
+    }
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  // wire up live recalculation whenever any of the three inputs change
+  ['totalAdjustedGrossIncome', 'stateAdditionsToIncome', 'stateDeductions']
+    .forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        // use 'input' so it fires on every keystroke
+        el.addEventListener('input', updateStateTaxableIncome);
+      }
+    });
+
+  // do one pass on load
+  updateStateTaxableIncome();
+});
