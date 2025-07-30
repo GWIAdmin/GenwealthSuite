@@ -4173,6 +4173,8 @@ function recalculateTotals() {
         updateNetInvestmentTax();
         updateAggregateResComp();
         calculateEmployerEmployeeTaxes();
+        syncStateAgi();
+        updateStateTaxableIncome();
         updateTotalTax();
 
         isRecalculating = false;
@@ -6726,6 +6728,33 @@ async function fetchSheetData() {
 //-----------------------//
 
 /**
+ * Copy the federal AGI into the state section, then recalc.
+ */
+function syncStateAgi() {
+  // 1) read the federal AGI
+  const fedAgi = getFieldValue('totalAdjustedGrossIncome');
+  // 2) write into the state section AGI
+  const stateAgiEl = document.getElementById('stateAdjustedGrossIncome');
+  if (stateAgiEl) {
+    stateAgiEl.value = formatCurrency(String(Math.round(fedAgi)));
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  // whenever your federal AGI actually changes, call both:
+  document
+    .getElementById('totalAdjustedGrossIncome')
+    .addEventListener('input', () => {
+      syncStateAgi();
+      updateStateTaxableIncome();
+    });
+
+  // and do an initial sync & calc on load:
+  syncStateAgi();
+  updateStateTaxableIncome();
+});
+
+/**
  * Recalculate and display State Taxable Income
  */
 function updateStateTaxableIncome() {
@@ -6763,3 +6792,4 @@ window.addEventListener('DOMContentLoaded', () => {
   // do one pass on load
   updateStateTaxableIncome();
 });
+updateStateTaxableIncome();
