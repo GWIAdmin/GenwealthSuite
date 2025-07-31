@@ -683,14 +683,49 @@
           <input type="text" placeholder="Input State in &quot;Personal Information&quot;" id="selectState" name="selectState" readonly>
         </div>
 
+          <div class="form-group">
+            <label for="stateAdjustedGrossIncome">Taxable Income:</label>
+            <input type="text" id="stateAdjustedGrossIncome" name="stateAdjustedGrossIncome" class="currency-field" readonly >
+          </div>
+
+          <div class="form-group">
+            <label for="stateAdditionsToIncome">Additions to Income:</label>
+            <input type="text" id="stateAdditionsToIncome" name="stateAdditionsToIncome" class="currency-field">
+          </div>
+
+          <div class="form-group">
+            <label for="stateDeductions">Deductions from Income:</label>
+            <input type="text" id="stateDeductions" name="stateDeductions" class="currency-field">
+          </div>
+
+          <div class="form-group">
+            <label for="stateTaxableIncomeInput">State Taxable Income:</label>
+            <input type="text" id="stateTaxableIncomeInput" name="stateTaxableIncomeInput" class="currency-field" readonly>
+          </div>
+
+          <div class="form-group">
+            <label for="stateTaxesDue">State Taxes Due:</label>
+            <input type="text" id="stateTaxesDue" name="stateTaxesDue" class="currency-field" readonly>
+          </div>
+
+          <div class="form-group">
+            <label for="stateCredits">Credits:</label>
+            <input type="text" id="stateCredits" name="stateCredits" class="currency-field">
+          </div>
+          
+          <div class="form-group">
+            <label for="stateafterTaxDeductions">State After Tax Deductions:</label>
+            <input type="text" id="stateafterTaxDeductions" name="stateafterTaxDeductions" class="currency-field">
+          </div>
+
+          <div class="form-group">
+            <label for="totalStateTax">Total State Tax:</label>
+            <input type="text" id="totalStateTax" name="totalStateTax" class="currency-field" readonly>
+          </div>
+
         <div class="form-group">
           <label for="localTaxAfterCredits">Local Tax after Credits:</label>
           <input type="text" id="localTaxAfterCredits" name="localTaxAfterCredits" class="currency-field">
-        </div>
-
-        <div class="form-group">
-          <label for="stateTotalTax">Total Tax:</label>
-          <input type="text" id="stateTotalTax" name="stateTotalTax" class="currency-field" readonly required>
         </div>
 
         <div class="form-group">
@@ -722,55 +757,6 @@
           <label for="stateEstimatedBalanceDue">Estimated Balance Due:</label>
           <input type="text" id="stateEstimatedBalanceDue" name="stateEstimatedBalanceDue" class="currency-field" readonly required>
         </div>
-
-        <section>
-          <h3 data-target="adjustStateCalculationsContent">
-            Adjust State Calculations?
-          </h3>
-
-          <div id="adjustStateCalculationsContent">
-            <div class="form-group">
-              <label for="stateAdjustedGrossIncome">Taxable Income:</label>
-              <input type="text" id="stateAdjustedGrossIncome" name="stateAdjustedGrossIncome" class="currency-field" readonly >
-            </div>
-
-            <div class="form-group">
-              <label for="stateAdditionsToIncome">Additions to Income:</label>
-              <input type="text" id="stateAdditionsToIncome" name="stateAdditionsToIncome" class="currency-field">
-            </div>
-
-            <div class="form-group">
-              <label for="stateDeductions">Deductions from Income:</label>
-              <input type="text" id="stateDeductions" name="stateDeductions" class="currency-field">
-            </div>
-
-            <div class="form-group">
-              <label for="stateTaxableIncome">State Taxable Income:</label>
-              <input type="text" id="stateTaxableIncome" name="stateTaxableIncome" class="currency-field" readonly>
-            </div>
-
-            <div class="form-group">
-              <label for="stateTaxesDue">State Taxes Due:</label>
-              <input type="text" id="stateTaxesDue" name="stateTaxesDue" class="currency-field" readonly>
-            </div>
-
-            <div class="form-group">
-              <label for="stateCredits">Credits:</label>
-              <input type="text" id="stateCredits" name="stateCredits" class="currency-field">
-            </div>
-
-            <div class="form-group">
-              <label for="stateafterTaxDeductions">State After Tax Deductions:</label>
-              <input type="text" id="stateafterTaxDeductions" name="stateafterTaxDeductions" class="currency-field">
-            </div>
-
-            <div class="form-group">
-              <label for="totalStateTax">Total State Tax:</label>
-              <input type="text" id="totalStateTax" name="totalStateTax" class="currency-field" readonly>
-            </div>
-
-          </div>
-        </section>
 
       </div>
       </section>
