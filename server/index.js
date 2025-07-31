@@ -4,7 +4,7 @@ const fetch = require('node-fetch');
 global.fetch = fetch;
 const express = require('express');
 const path    = require('path');
-const { calculateMultiple } = require('./taxGraph');
+const { calculateMultiple, calculateStateSection } = require('./taxGraph');
 
 const app = express();
 app.use(express.json());
@@ -27,6 +27,25 @@ app.post('/api/sheetData', async (req, res) => {
   } catch (err) {
     console.error('SheetData error:', err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ── State‑section handler ──────────────────────────────────────────────────
+app.post('/api/calculateStateSection', async (req, res) => {
+  const { state, agi, additions, deductions, credits, afterTaxDeductions } = req.body;
+  try {
+    const data = await calculateStateSection(
+      state,
+      agi,
+      additions,
+      deductions,
+      credits,
+      afterTaxDeductions
+    );
+    return res.json(data);
+  } catch (err) {
+    console.error('StateSection error:', err);
+    return res.status(500).json({ error: err.message });
   }
 });
 

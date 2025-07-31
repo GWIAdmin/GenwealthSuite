@@ -4173,8 +4173,7 @@ function recalculateTotals() {
         updateNetInvestmentTax();
         updateAggregateResComp();
         calculateEmployerEmployeeTaxes();
-        syncStateAgi();
-        updateStateTaxableIncome();
+        calculateStateSection();
         updateTotalTax();
 
         isRecalculating = false;
@@ -6613,7 +6612,7 @@ const mappings = [
 
     // State Taxable Income
     { id: 'localTaxAfterCredits',                   type: 'write', cell: 'B109' },
-    { id: 'stateTotalTax',                          type: 'read', cell: 'B110' },
+    { id: 'totalStateTax',                          type: 'read', cell: 'B110' },
     { id: 'stateWithholdings',                      type: 'write', cell: 'B111' },
     { id: 'statePaymentsAndCredits',                type: 'write', cell: 'B112' },
     { id: 'stateInterest',                          type: 'write', cell: 'B113' },
@@ -6728,68 +6727,78 @@ async function fetchSheetData() {
 //-----------------------//
 
 /**
- * Copy the federal AGI into the state section, then recalc.
+ * Calls the backend, writes user inputs, then populates all four outputs.
  */
-function syncStateAgi() {
-  // 1) read the federal AGI
-  const fedAgi = getFieldValue('totalAdjustedGrossIncome');
-  // 2) write into the state section AGI
-  const stateAgiEl = document.getElementById('stateAdjustedGrossIncome');
-  if (stateAgiEl) {
-    stateAgiEl.value = formatCurrency(String(Math.round(fedAgi)));
+async function calculateStateSection() {
+  const state = document.getElementById('state').value.trim();
+  // === MOD: do nothing (and clear) if no state chosen ===
+  if (!state) {
+    ['stateAdjustedGrossIncome','stateTaxableIncomeInput','stateTaxesDue','totalStateTax']
+      .forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+    return;
   }
-}
-
-window.addEventListener('DOMContentLoaded', () => {
-  // whenever your federal AGI actually changes, call both:
-  document
-    .getElementById('totalAdjustedGrossIncome')
-    .addEventListener('input', () => {
-      syncStateAgi();
-      updateStateTaxableIncome();
-    });
-
-  // and do an initial sync & calc on load:
-  syncStateAgi();
-  updateStateTaxableIncome();
-});
-
-/**
- * Recalculate and display State Taxable Income
- */
-function updateStateTaxableIncome() {
-  // 1. pull in the three raw numbers
-  const agi        = getFieldValue('totalAdjustedGrossIncome');
-  const additions  = getFieldValue('stateAdditionsToIncome');
+  // === MOD: show the chosen state at top of the section ===
+  const sel = document.getElementById('selectState');
+  if (sel) sel.value = state;
+  const agi       = getFieldValue('totalAdjustedGrossIncome');
+  const additions = getFieldValue('stateAdditionsToIncome');
   const deductions = getFieldValue('stateDeductions');
-  
-  // 2. compute the state‑level taxable income
-  const stateTaxable = agi + additions - deductions;
-  
-  // 3. write it back, formatted as currency
-  const out = document.getElementById('stateTaxableIncome');
-  if (out) {
-    if (isNaN(stateTaxable)) {
-      out.value = '';
-    } else {
-      // Math.round to the nearest dollar
-      out.value = formatCurrency(String(Math.round(stateTaxable)));
-    }
+  const credits = getFieldValue('stateCredits');
+  const afterTaxDeductions = getFieldValue('stateafterTaxDeductions');
+
+  console.log('▶ Calling calculateStateSection with:', { state, agi, additions, deductions, credits, afterTaxDeductions });
+ 
+  try {
+    const resp = await fetch('/api/calculateStateSection', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ state, agi, additions, deductions, credits, afterTaxDeductions })
+    });
+    if (!resp.ok) throw new Error(`Server responded ${resp.status}`);
+    const { adjustedGrossIncome,
+            stateTaxableIncomeInput,
+            stateTaxesDue,
+            totalStateTax } = await resp.json();
+
+    // Update DOM (formatCurrency from your utils)
+    document.getElementById('stateAdjustedGrossIncome').value = formatCurrency(String(adjustedGrossIncome));
+    document.getElementById('stateTaxableIncomeInput').value  = formatCurrency(String(stateTaxableIncomeInput));
+    document.getElementById('stateTaxesDue').value            = formatCurrency(String(stateTaxesDue));
+    document.getElementById('totalStateTax').value            = formatCurrency(String(totalStateTax));
+
+  } catch (err) {
+    console.error('Error in calculateStateSection:', err);
+    // Optionally, surface to the user:
+    showRedDisclaimer('Could not update state tax section.', 'stateTaxableIncomeInput');
   }
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  // wire up live recalculation whenever any of the three inputs change
-  ['totalAdjustedGrossIncome', 'stateAdditionsToIncome', 'stateDeductions']
-    .forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-        // use 'input' so it fires on every keystroke
-        el.addEventListener('input', updateStateTaxableIncome);
-      }
-    });
+const debouncedStateCalc = debounce(calculateStateSection, 300);
 
-  // do one pass on load
-  updateStateTaxableIncome();
+// === MOD: trigger on change, not just input ===
+const stateEl = document.getElementById('state');
+if (stateEl) {
+  stateEl.addEventListener('change', () => debouncedStateCalc());
+}
+
+// Initial call on load, but only if a real state is selected
+document.addEventListener('DOMContentLoaded', () => {
+  const stateEl = document.getElementById('state');
+  if (stateEl && stateEl.value && stateEl.value !== '––Select State––') {
+    calculateStateSection();
+  }
 });
-updateStateTaxableIncome();
+
+// Wire up inputs that should trigger a recalculation:
+['state', 'stateAdditionsToIncome', 'stateDeductions', 'stateCredits', 'stateafterTaxDeductions']
+  .forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', () => {
+      // Only recalc if a state has been chosen
+      const state = document.getElementById('state').value;
+      if (state) debouncedStateCalc();
+    });
+  });
