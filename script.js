@@ -226,12 +226,9 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (el) {
           // for text inputs use `input`, for selects use `change`
           const evt = el.tagName === 'SELECT' ? 'change' : 'input';
-          el.addEventListener(evt, debounce(fetchSheetData));
+        //   el.addEventListener(evt, debounce(fetchSheetData));
         }
       });
-
-    // initial load of the sheet
-    fetchSheetData();
 
     // Initialize Child Tax Credit calculation system
     initializeChildTaxCreditSystem();
@@ -4173,7 +4170,6 @@ function recalculateTotals() {
         updateNetInvestmentTax();
         updateAggregateResComp();
         calculateEmployerEmployeeTaxes();
-        calculateStateSection();
         updateTotalTax();
 
         isRecalculating = false;
@@ -6631,174 +6627,128 @@ function debounce(fn, delay = 300) {
   };
 }
 
-async function fetchSheetData() {
-  const writes = mappings
-    .filter(m => m.type === 'write')
-    .map(({ id, cell }) => {
-      const el = document.getElementById(id);
-      if (!el) return null;
-
-      const raw = el.value.trim();
-      // 1) if it’s blank, skip it entirely
-      if (raw === '') return null;
-
-      // 2) special transforms:
-      let value = raw;
-      if (id === 'state') {
-        value = raw + ' Taxes';
-      }
-      if (id === 'filingStatus') {
-        value = ({
-          'Single': 'Single',
-          'Married Filing Jointly': 'MFJ',
-          'Married Filing Separately': 'MFS',
-          'Head of Household': 'HOH',
-          'Qualifying Widow(er)': 'QW'
-        })[raw] || raw;
-      }
-
-      // 3) parse numbers only if non‑blank
-        if (el.classList.contains('currency-field') || el.type === 'number') {
-          // remove "$", commas, non‑numeric junk
-          const cleaned = raw.replace(/[^0-9.-]/g, '');
-          const n = parseFloat(cleaned);
-          if (isNaN(n)) {
-            console.warn(`Skipping invalid number for ${id}:`, raw);
-            return null;
-          }
-          value = n;
-        }
-
-      return { cell, value };
-    })
-    .filter(x => x !== null);
-
-  console.log('✍️ writes:', writes);
-
-  const readCells = mappings
-    .filter(m => m.type === 'read')
-    .map(m => m.cell);
-
-  try {
-    const res = await fetch('/api/sheetData', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ writes, readCells })
-    });
-    const { results } = await res.json();
-
-    console.log('✍️ Reads:', results);
-
-    // update DOM, skipping missing elements
-    results.forEach(({ cell, value }) => {
-    const map = mappings.find(m => m.cell === cell);
-    const el  = map && document.getElementById(map.id);
-    if (!el) {
-      console.warn(`⚠️ read‑mapping: no element with ID '${map?.id}'`);
-      return;
-    }
-
-    // detect currency fields by CSS class
-    const isCurrency = el.classList.contains('currency-field');
-
-    if (el.tagName === 'INPUT' || el.tagName === 'SELECT') {
-      if (isCurrency) {
-        el.value = formatCurrency(String(value));
-      } else {
-        el.value = value;
-      }
-    } else {
-      if (isCurrency) {
-        el.textContent = formatCurrency(String(value));
-      } else if (typeof value === 'number') {
-        el.textContent = value.toFixed(2);
-      } else {
-        el.textContent = value;
-      }
-    }
-});
-  } catch (err) {
-    console.error('Error fetching sheet data:', err);
-  }
-}
-
 //-----------------------//
 // 30. State Adjustments //
 //-----------------------//
 
+// ─── State-Tax “Calculate” Button Flow ─────────────────────────────────
+let _stateSectionInitialized = false;
+
 /**
- * Calls the backend, writes user inputs, then populates all four outputs.
+ * Fetch all state-section values (including default deduction) in one batch.
  */
-async function calculateStateSection() {
-  const state = document.getElementById('state').value.trim();
-  // === MOD: do nothing (and clear) if no state chosen ===
-  if (!state) {
-    ['stateAdjustedGrossIncome','stateTaxableIncomeInput','stateTaxesDue','totalStateTax']
-      .forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = '';
-      });
-    return;
+async function readStateData() {
+  const state = document.getElementById('selectState').value.trim();
+  if (!state) throw new Error('Please select a state first.');
+
+  const resp = await fetch(`/api/stateSection?state=${encodeURIComponent(state)}`);
+  if (!resp.ok) {
+    const text = await resp.text(); // catch HTML errors too
+    throw new Error(text || resp.statusText);
   }
-  // === MOD: show the chosen state at top of the section ===
-  const sel = document.getElementById('selectState');
-  if (sel) sel.value = state;
-  const agi       = getFieldValue('totalAdjustedGrossIncome');
-  const additions = getFieldValue('stateAdditionsToIncome');
-  const deductions = getFieldValue('stateDeductions');
-  const credits = getFieldValue('stateCredits');
-  const afterTaxDeductions = getFieldValue('stateafterTaxDeductions');
+  return await resp.json();
+}
 
-  console.log('▶ Calling calculateStateSection with:', { state, agi, additions, deductions, credits, afterTaxDeductions });
- 
+/**
+ * POST-only the user’s edited deductions back to the server.
+ */
+async function writeStateDeductions(value) {
+  const state = document.getElementById('selectState').value.trim();
+  const resp  = await fetch('/api/stateDeductions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ state, deductions: value })
+  });
+  if (!resp.ok) {
+    const data = await resp.json().catch(() => ({}));
+    throw new Error(data.error || resp.statusText);
+  }
+}
+
+function renderStateSection(data) {
+  const mapping = {
+    agi:                    'stateAdjustedGrossIncome',
+    additions:              'stateAdditionsToIncome',
+    deductions:             'stateDeductions',
+    credits:                'stateCredits',
+    afterTaxDeductions:     'stateAfterTaxDeductions',
+    stateTaxableIncomeInput:'stateTaxableIncomeInput',
+    stateTaxesDue:          'stateTaxesDue',
+    totalStateTax:          'totalStateTax'
+  };
+
+  Object.entries(mapping).forEach(([key, id]) => {
+    const el = document.getElementById(id);
+    if (!el) {
+      console.warn(`Missing input #${id} for state section.`);
+      return;
+    }
+    const raw = data[key];
+    el.value = (raw != null) ? formatCurrency(String(raw)) : '';
+    // only “deductions” stays editable
+    if (id !== 'stateDeductions') {
+      el.readOnly = true;
+      el.classList.add('readonly');
+    } else {
+      el.readOnly = false;
+      el.classList.remove('readonly');
+    }
+  });
+}
+
+document.getElementById('calculateStateTaxesBTN').addEventListener('click', async e => {
+  const btn = e.currentTarget;
+  btn.disabled = true;
   try {
-    const resp = await fetch('/api/calculateStateSection', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ state, agi, additions, deductions, credits, afterTaxDeductions })
-    });
-    if (!resp.ok) throw new Error(`Server responded ${resp.status}`);
-    const { adjustedGrossIncome,
-            stateTaxableIncomeInput,
-            stateTaxesDue,
-            totalStateTax } = await resp.json();
+    // 1) build writes[] for every "type: 'write'" mapping
+    const writes = mappings
+      .filter(m => m.type === 'write')
+      .map(({id, cell}) => {
+        const el    = document.getElementById(id);
+        let   value;
 
-    // Update DOM (formatCurrency from your utils)
-    document.getElementById('stateAdjustedGrossIncome').value = formatCurrency(String(adjustedGrossIncome));
-    document.getElementById('stateTaxableIncomeInput').value  = formatCurrency(String(stateTaxableIncomeInput));
-    document.getElementById('stateTaxesDue').value            = formatCurrency(String(stateTaxesDue));
-    document.getElementById('totalStateTax').value            = formatCurrency(String(totalStateTax));
+        // checkbox → 1 or 0
+        if (el.type === 'checkbox')        value = el.checked ? 1 : 0;
+        // date or select → raw string
+        else if (el.tagName === 'SELECT' || el.type === 'date')
+                                          value = el.value;
+        // anything else → numbers (strip $ / commas)
+        else {
+          value = unformatCurrency(el.value);
+          // fallback for pure-string fields (e.g. state abbreviations)
+          if (value === null) value = el.value;
+        }
+        return { cell, value };
+      });
+
+    // 2) build readCells[] for every "type: 'read'"
+    const readCells = mappings
+      .filter(m => m.type === 'read')
+      .map(m => m.cell);
+
+    // 3) one single POST to your generic endpoint
+    const resp = await fetch('/api/sheetData', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ writes, readCells })
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+    const { results } = await resp.json();
+
+    // 4) remap Graph’s [{cell,value},…] back into an object by your IDs
+    const data = {};
+    for (let { cell, value } of results) {
+      const m = mappings.find(x => x.cell === cell);
+      if (m) data[m.id] = value;
+    }
+
+    // 5) render everything in one go
+    renderStateSection(data);
 
   } catch (err) {
-    console.error('Error in calculateStateSection:', err);
-    // Optionally, surface to the user:
-    showRedDisclaimer('Could not update state tax section.', 'stateTaxableIncomeInput');
-  }
-}
-
-const debouncedStateCalc = debounce(calculateStateSection, 300);
-
-// === MOD: trigger on change, not just input ===
-const stateEl = document.getElementById('state');
-if (stateEl) {
-  stateEl.addEventListener('change', () => debouncedStateCalc());
-}
-
-// Initial call on load, but only if a real state is selected
-document.addEventListener('DOMContentLoaded', () => {
-  const stateEl = document.getElementById('state');
-  if (stateEl && stateEl.value && stateEl.value !== '––Select State––') {
-    calculateStateSection();
+    console.error('[State]', err);
+    alert(`Unable to calculate state taxes: ${err.message}`);
+  } finally {
+    btn.disabled = false;
   }
 });
-
-// Wire up inputs that should trigger a recalculation:
-['state', 'stateAdditionsToIncome', 'stateDeductions', 'stateCredits', 'stateafterTaxDeductions']
-  .forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('input', () => {
-      // Only recalc if a state has been chosen
-      const state = document.getElementById('state').value;
-      if (state) debouncedStateCalc();
-    });
-  });

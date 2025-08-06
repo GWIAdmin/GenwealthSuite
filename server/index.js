@@ -4,7 +4,7 @@ const fetch = require('node-fetch');
 global.fetch = fetch;
 const express = require('express');
 const path    = require('path');
-const { calculateMultiple, calculateStateSection } = require('./taxGraph');
+const { calculateMultiple, fetchStateSection, writeStateDeductions, writeStateAGI } = require('./taxGraph');
 
 const app = express();
 app.use(express.json());
@@ -30,22 +30,64 @@ app.post('/api/sheetData', async (req, res) => {
   }
 });
 
-// ── State‑section handler ──────────────────────────────────────────────────
-app.post('/api/calculateStateSection', async (req, res) => {
-  const { state, agi, additions, deductions, credits, afterTaxDeductions } = req.body;
+// ── Fetch-only State-Section endpoint ───────────────────────────────────────
+app.get('/api/stateSection', async (req, res) => {
+  const { state } = req.query;
+  if (!state?.trim()) {
+    return res.status(400).json({ error: 'State parameter is required.' });
+  }
   try {
-    const data = await calculateStateSection(
-      state,
-      agi,
-      additions,
-      deductions,
-      credits,
-      afterTaxDeductions
-    );
+    const data = await fetchStateSection(state.trim());
     return res.json(data);
   } catch (err) {
-    console.error('StateSection error:', err);
-    return res.status(500).json({ error: err.message });
+    console.error('FetchStateSection error:', err);
+      if (err.message.includes('temporarily unavailable')) {
+        return res
+          .status(503)
+          .json({ error: err.message });
+      }
+      return res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Write-only endpoint for user-edited state deductions ─────────────
+app.post('/api/stateDeductions', async (req, res) => {
+  const { state, deductions } = req.body;
+  // 1) Validate inputs
+  if (!state?.trim()) {
+    return res.status(400).json({ error: 'State parameter is required.' });
+  }
+  if (typeof deductions !== 'number' || deductions < 0) {
+    return res.status(400).json({ error: 'Deductions must be a non-negative number.' });
+  }
+  try {
+    await writeStateDeductions(state.trim(), deductions);
+    return res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    const message = err.message.includes('Could not find')
+      ? `Could not locate deduction row for state "${state}".`
+      : 'Error writing state deductions.';
+      if (err.message.includes('temporarily unavailable')) {
+        return res
+          .status(503)
+          .json({ error: err.message });
+      }
+      return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/stateAGI', async (req, res) => {
+  const { state, agi } = req.body;
+  if (!state?.trim()) {
+    return res.status(400).json({ error: 'State is required.' });
+  }
+  try {
+    await writeStateAGI(state.trim(), agi);
+    res.sendStatus(204);
+  } catch (err) {
+    console.error('stateAGI error:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 

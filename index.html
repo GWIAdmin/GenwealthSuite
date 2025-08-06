@@ -676,8 +676,12 @@
       <!-- State Taxable Income Section -->
       <section id="stateTaxableIncome">
         <h2 data-target="stateTaxableIncomeContent">State Taxable Income</h2>
-        <div id="stateTaxableIncomeContent"> 
 
+      <button type="button" id="calculateStateTaxesBTN" style="display:block; margin:0 auto 1rem;">
+        Calculate State Taxes
+      </button>
+
+      <div id="stateTaxableIncomeContent"> 
         <div class="form-group">
           <label for="selectState">[ State ]</label>
           <input type="text" placeholder="Input State in &quot;Personal Information&quot;" id="selectState" name="selectState" readonly>
@@ -714,8 +718,8 @@
           </div>
           
           <div class="form-group">
-            <label for="stateafterTaxDeductions">State After Tax Deductions:</label>
-            <input type="text" id="stateafterTaxDeductions" name="stateafterTaxDeductions" class="currency-field">
+            <label for="stateAfterTaxDeductions">State After Tax Deductions:</label>
+            <input type="text" id="stateAfterTaxDeductions" name="stateAfterTaxDeductions" class="currency-field">
           </div>
 
           <div class="form-group">
@@ -723,40 +727,40 @@
             <input type="text" id="totalStateTax" name="totalStateTax" class="currency-field" readonly>
           </div>
 
-        <div class="form-group">
-          <label for="localTaxAfterCredits">Local Tax after Credits:</label>
-          <input type="text" id="localTaxAfterCredits" name="localTaxAfterCredits" class="currency-field">
-        </div>
+          <div class="form-group">
+            <label for="localTaxAfterCredits">Local Tax after Credits:</label>
+            <input type="text" id="localTaxAfterCredits" name="localTaxAfterCredits" class="currency-field">
+          </div>
 
-        <div class="form-group">
-          <label for="stateWithholdings">Withholdings:</label>
-          <input type="text" id="stateWithholdings" name="stateWithholdings" class="currency-field">
-        </div>
+          <div class="form-group">
+            <label for="stateWithholdings">Withholdings:</label>
+            <input type="text" id="stateWithholdings" name="stateWithholdings" class="currency-field">
+          </div>
 
-        <div class="form-group">
-          <label for="statePaymentsAndCredits">Payments and Credits:</label>
-          <input type="text" id="statePaymentsAndCredits" name="statePaymentsAndCredits" class="currency-field">
-        </div>
+          <div class="form-group">
+            <label for="statePaymentsAndCredits">Payments and Credits:</label>
+            <input type="text" id="statePaymentsAndCredits" name="statePaymentsAndCredits" class="currency-field">
+          </div>
 
-        <div class="form-group">
-          <label for="stateInterest">Interest:</label>
-          <input type="text" id="stateInterest" name="stateInterest" class="currency-field">
-        </div>
+          <div class="form-group">
+            <label for="stateInterest">Interest:</label>
+            <input type="text" id="stateInterest" name="stateInterest" class="currency-field">
+          </div>
 
-        <div class="form-group">
-          <label for="statePenalty">Penalty:</label>
-          <input type="text" id="statePenalty" name="statePenalty" class="currency-field">
-        </div>
+          <div class="form-group">
+            <label for="statePenalty">Penalty:</label>
+            <input type="text" id="statePenalty" name="statePenalty" class="currency-field">
+          </div>
 
-        <div class="form-group">
-          <label for="stateEstimatedRefundOverpayment">Estimated Refund (Overpayment):</label>
-          <input type="text" id="stateEstimatedRefundOverpayment" name="stateEstimatedRefundOverpayment" class="currency-field" readonly required>
-        </div>
+          <div class="form-group">
+            <label for="stateEstimatedRefundOverpayment">Estimated Refund (Overpayment):</label>
+            <input type="text" id="stateEstimatedRefundOverpayment" name="stateEstimatedRefundOverpayment" class="currency-field" readonly required>
+          </div>
 
-        <div class="form-group">
-          <label for="stateEstimatedBalanceDue">Estimated Balance Due:</label>
-          <input type="text" id="stateEstimatedBalanceDue" name="stateEstimatedBalanceDue" class="currency-field" readonly required>
-        </div>
+          <div class="form-group">
+            <label for="stateEstimatedBalanceDue">Estimated Balance Due:</label>
+            <input type="text" id="stateEstimatedBalanceDue" name="stateEstimatedBalanceDue" class="currency-field" readonly required>
+          </div>
 
       </div>
       </section>
