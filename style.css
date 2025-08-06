@@ -930,3 +930,69 @@ body.dark-mode .res-comp-btn {
   margin-top: 15px;
   transition: background-color 0.3s ease;
 }
+
+/* ======================================================== */
+/* STATE SECTION ENHANCEMENT STYLES - Production Ready CSS */
+/* ======================================================== */
+
+/* Loading indicator for state section fields */
+.state-field-loading {
+  position: relative;
+  opacity: 0.7;
+}
+
+.state-field-loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  width: 16px;
+  height: 16px;
+  margin-top: -8px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #FDB927;
+  border-radius: 50%;
+  animation: state-loading-spin 1s linear infinite;
+}
+
+@keyframes state-loading-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* State section field focus enhancement */
+#stateTaxableIncomeContent .currency-field:focus {
+  border-color: #FDB927 !important;
+  box-shadow: 0 0 5px rgba(253, 185, 39, 0.3);
+  outline: none;
+}
+
+/* State section success indicator */
+.state-field-success {
+  border-color: #4CAF50 !important;
+  background-color: rgba(76, 175, 80, 0.1);
+}
+
+/* State section error indicator */
+.state-field-error {
+  border-color: #f44336 !important;
+  background-color: rgba(244, 67, 54, 0.1);
+}
+
+/* State section readonly field styling */
+#stateTaxableIncomeContent .currency-field[readonly] {
+  background-color: rgba(253, 185, 39, 0.1);
+  color: #333;
+  font-weight: bold;
+}
+
+/* Dark mode support for state section */
+.dark-mode #stateTaxableIncomeContent .currency-field:focus {
+  border-color: #FDB927 !important;
+  box-shadow: 0 0 5px rgba(253, 185, 39, 0.5);
+}
+
+.dark-mode #stateTaxableIncomeContent .currency-field[readonly] {
+  background-color: rgba(253, 185, 39, 0.2);
+  color: #F8F8F9;
+}

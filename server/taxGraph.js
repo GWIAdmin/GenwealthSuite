@@ -14,15 +14,23 @@ const SHEET_URL  = `${BASE_URL}/worksheets('${SHEET_NAME}')`;
  */
 async function validate(res) {
   if (!res.ok) {
+    // if we got HTML back instead of JSON, the service is probably down
+    const ct = res.headers.get('content-type') || '';
+    if (ct.includes('text/html')) {
+      throw new Error('Excel Online service is temporarily unavailable. Please try again in a few minutes.');
+    }
+    // otherwise bubble up the JSON or plain-text error
     const text = await res.text().catch(()=>'');
     throw new Error(`Graph API error [${res.status}]: ${text}`);
   }
 }
 
 /**
- * Start a workbook session; returns headers w/ session id.
+ * Start a workbook session.
+ * @param {boolean} persistChanges – if true, commits writes to the workbook.
+ * @returns {Promise<object>} headers including workbook-session-id
  */
-async function startSession() {
+async function startSession(persistChanges = false) {
   const token = await getToken();
   const headers = {
     Authorization: `Bearer ${token}`,
@@ -31,7 +39,7 @@ async function startSession() {
   const res = await fetch(`${BASE_URL}/createSession`, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ persistChanges: false })
+    body: JSON.stringify({ persistChanges })
   });
   await validate(res);
   const { id: sessionId } = await res.json();
@@ -56,24 +64,123 @@ async function fetchRange(address, headers) {
 }
 
 /**
- * PATCH a single cell to the given value.
- */
-async function patchCell(address, value, headers) {
-  const res = await fetch(`${SHEET_URL}/range(address='${address}')`, {
-    method: 'PATCH',
-    headers,
-    body: JSON.stringify({ values: [[ value ]] })
-  });
-  await validate(res);
-}
-
-/**
  * Force the workbook to recalc everything.
  */
 async function refreshWorkbook(headers) {
   await fetch(`${BASE_URL}/application/refreshAll`, { method: 'POST', headers });
 }
 
+/**
+ * Locate the rows for a given state’s section in the worksheet.
+ * It finds “[State] Tax Due” in column A, then the very next non-empty cell
+ * (Taxable Income), and computes AGI, additions, deductions, etc. by offset.
+ *
+ * @param {string} state
+ * @param {object} headers  – auth/session headers from startSession()
+ * @returns {{rows: {
+ *   agi: number,
+ *   additions: number,
+ *   deductions: number,
+ *   taxableIncome: number,
+ *   taxesDue: number,
+ *   credits: number,
+ *   afterTaxDed: number,
+ *   totalStateTax: number
+ * }}}
+ */
+async function locateStateSection(state, headers) {
+  // 1) Read only the block that contains your state‐section labels
+  const startRow = 892;
+  const colAValues = await fetchRange(`A${startRow}:A2325`, headers);
+  if (!Array.isArray(colAValues)) {
+    throw new Error(`Could not read any data in A${startRow}:A2325; check your sheet range.`);
+  }
+  // Trim off whitespace
+  const cells = colAValues.map(r => (r[0] || '').toString().trim());
+
+  // 2) Locate “[State] Tax Due” within that block
+  const targetLabel = `${state} Tax Due`;
+  const relTaxDueIdx = cells.findIndex(val => val === targetLabel);
+  if (relTaxDueIdx === -1) {
+    throw new Error(`Could not find “${targetLabel}” between A${startRow} and A2325`);
+  }
+
+  // 3) From there, find the very next non-empty row (your “Taxable Income” label)
+  const relAgiIdx = cells.findIndex((val, idx) => idx > relTaxDueIdx && val !== '');
+  if (relAgiIdx === -1) {
+    throw new Error(`Could not find AGI/Taxable Income after A${startRow + relTaxDueIdx}`);
+  }
+
+  // 4) Build absolute row numbers by adding our startRow offset
+  const rows = {
+    agi:                startRow + relAgiIdx,
+    additions:          startRow + relAgiIdx + 1,
+    deductions:         startRow + relAgiIdx + 2,
+    taxableIncome:      startRow + relAgiIdx + 3,
+    taxesDue:           startRow + relAgiIdx + 4,
+    credits:            startRow + relAgiIdx + 5,
+    afterTaxDed:        startRow + relAgiIdx + 6,
+    totalStateTax:      startRow + relAgiIdx + 7
+  };
+
+  return { rows };
+}
+
+/**
+ * Fetch all of the state-section values in one call—no writes.
+ * @param {string} state – the state name as used in the sheet labels
+ * @returns {Promise<{
+ *   agi: number,
+ *   additions: number,
+ *   deductions: number,
+ *   credits: number,
+ *   afterTaxDeductions: number,
+ *   stateTaxableIncomeInput: number,
+ *   stateTaxesDue: number,
+ *   totalStateTax: number
+ * }>}
+ */
+async function fetchStateSection(state) {
+  // 1) open a non-persisting session
+  const headers = await startSession();
+
+  try {
+    // make sure all formulas (including your state deduction) are recalculated
+    await refreshWorkbook(headers);
+    // 2) locate the rows
+    const { rows } = await locateStateSection(state, headers);
+
+    // 3) read B{agi}:B{totalStateTax} in one call
+    const rangeAddr = `B${rows.agi}:B${rows.totalStateTax}`;
+    const values = await fetchRange(rangeAddr, headers);
+
+    // 4) pull out each value
+    const [
+      [agi],
+      [additions],
+      [deductions],
+      [stateTaxableIncomeInput],
+      [stateTaxesDue],
+      [credits],
+      [afterTaxDeductions],
+      [totalStateTax]
+    ] = values;
+
+    return {
+      agi,
+      additions,
+      deductions,
+      credits,
+      afterTaxDeductions,
+      stateTaxableIncomeInput,
+      stateTaxesDue,
+      totalStateTax
+    };
+  } finally {
+    // 5) always close the session
+    await closeSession(headers);
+  }
+}
 
 async function calculateMultiple(writes, readCells) {
   const token = await getToken();
@@ -123,138 +230,67 @@ async function calculateMultiple(writes, readCells) {
   return results;
 }
 
-async function calculateStateSection(state, agi, additions, deductions, credits, afterTaxDeductions) {
-
-  // 1) Start a session for header scan
-  const headers = await startSession();
-
-  // 2) Fetch labels in A892:A2325 to locate the “<State> Tax Due” section
-  const allA = await fetchRange('A892:A2325', headers);
-
-  // 3) Normalize state and build target label, e.g. "california tax due"
-  const normalizedState = String(state)
-    .trim()
-    // strip any trailing "tax", "taxes", or "tax due"
-    .replace(/\s+(?:tax(?:es)?(?:\s+due)?)$/i, '')
-    .toLowerCase();
-  const targetLabel = `${normalizedState} tax due`;
-
-  // 4) Locate “<State> Tax Due” only when correctly paired with its “Taxable Income” and “AGI”
-  let headerRow, agiRow;
-  for (let i = 0; i < allA.length; i++) {
-    const raw = allA[i][0] || '';
-    const txt = raw.toString().toLowerCase()
-      .replace(/[^a-z0-9\s]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-
-    if (txt === targetLabel) {
-      // (a) Look immediately above (skipping blanks) for "<State> Taxable Income"
-      let k = i - 1;
-      while (k >= 0 && !(allA[k][0]||'').toString().trim()) k--;
-      const prev = (allA[k] && allA[k][0] || '')
-        .toString().toLowerCase()
-        .replace(/[^a-z0-9\s]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-      if (!/taxable income$/i.test(prev)) {
-        console.log(
-          `[STATE SECTION] Skipped candidate at row ${892 + i} (“${raw}”), ` +
-          `prev label is “${allA[k] ? allA[k][0] : ''}” not ending in “Taxable Income”`
-        );
-        continue;
-      }
-
-
-      // (b) Look immediately below (skipping blanks) for "AGI"
-      let j = i + 1;
-      while (j < allA.length && !(allA[j][0]||'').toString().trim()) j++;
-      const next = (allA[j][0]||'').toString().toLowerCase()
-        .replace(/[^a-z0-9\s]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-      if (next !== 'agi') {
-        console.log(
-          `[STATE SECTION] Skipped candidate at row ${892 + i} (“${raw}”), ` +
-          `next label is “${allA[j][0]||''}” not “AGI”`
-        );
-        continue;
-      }
-
-      // (c) We’re confident this is the real state section
-      headerRow = 892 + i;
-      agiRow    = 892 + j;
-      console.log(
-        `[STATE SECTION] Matched header "${raw}" at row ${headerRow}, AGI at row ${agiRow}`
-      );
-      break;
-    }
-  }
-
-  if (!headerRow) {
+/**
+ * Write the user-entered state deduction back into the worksheet.
+ * @param {string} state – the state name as used in the sheet labels
+ * @param {number} deductions – the new deduction amount
+ */
+async function writeStateDeductions(state, deductions) {
+  // 1) Open a **persisting** session so that PATCH actually commits
+  const headers = await startSession(true);                       // :contentReference[oaicite:10]{index=10}
+  try {
+    // 2) Locate the “deductions” row in column A
+    const { rows } = await locateStateSection(state, headers);
+    // 3) Single-cell PATCH
+    const cell = `B${rows.deductions}`;
+    console.log(`[stateDeductions] writing Deduction to ${cell}:`, deductions);
+    const body = { values: [[ deductions ]] };
+    const res  = await fetch(
+      `${SHEET_URL}/range(address='${cell}')`,
+      { method: 'PATCH', headers, body: JSON.stringify(body) }
+    );
+    await validate(res);
+  } finally {
+    // 4) Always close (and commit) the session
     await closeSession(headers);
-    throw new Error(`Could not find a valid “${targetLabel}” section.`);
   }
+}
 
-  // ── 5) Scan the next 20 rows below the header for labels (AGI, Deductions, etc.)
-  const sliceStart = headerRow + 1;
-  const sliceEnd   = headerRow + 20;
-  const belowA     = await fetchRange(`A${sliceStart}:A${sliceEnd}`, headers);
+/**
+ * Write the user’s AGI into the “agi” cell of the named state block.
+ * @param {string} state       – the state name as used in the sheet labels
+ * @param {number} adjustedGrossIncome
+ */
+async function writeStateAGI(state, adjustedGrossIncome) {
+  // open a persisting session so our write actually sticks
+  const headers = await startSession(true);
 
-  const needed = {
-    agi:                'agi',
-    additions:          'additions to income',
-    deductions:         'deductions',
-    taxableIncome:      'state taxable income',
-    taxesDue:           'state taxes due',
-    credits:            'credits',
-    afterTaxDed:        'after tax deductions',
-    totalStateTax:      'total'
-  };
-  const rows = {};
-  belowA.forEach((r, idx) => {
-    const raw = (r[0]||'').toString().toLowerCase()
-      .replace(/[^a-z0-9\s]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    for (let [key, label] of Object.entries(needed)) {
-      if (raw === label) {
-        rows[key] = sliceStart + idx;
-        console.log(`[STATE SECTION] Found "${label}" at row ${rows[key]}`);
+  try {
+    // locate the state block’s rows
+    const { rows } = await locateStateSection(state, headers);    // uses your existing locate logic :contentReference[oaicite:2]{index=2}
+
+    // PATCH B{agiRow} = adjustedGrossIncome
+    const cell = `B${rows.agi}`;
+    console.log(`[stateAGI] writing AGI to ${cell}:`, adjustedGrossIncome);
+    const res  = await fetch(
+      `${SHEET_URL}/range(address='${cell}')`,
+      {
+        method:  'PATCH',
+        headers,
+        body:    JSON.stringify({ values: [[ adjustedGrossIncome ]] })
       }
-    }
-  });
-  // ensure we located all required labels
-  for (let key of Object.keys(needed)) {
-    if (!rows[key]) {
-      await closeSession(headers);
-      throw new Error(`Could not locate "${needed[key]}" in state section.`);
-    }
+    );
+    await validate(res);
+  } finally {
+    await closeSession(headers);
   }
+}
 
-  // ── 6) Close mapping session & do all writes+reads in one go ──────────
-  await closeSession(headers);
-  const writesBatch = [
-    { cell: `B${rows.agi}`,            value: agi },
-    { cell: `B${rows.additions}`,      value: additions },
-    { cell: `B${rows.deductions}`,     value: deductions },
-    { cell: `B${rows.credits}`,        value: credits },
-    { cell: `B${rows.afterTaxDed}`,    value: afterTaxDeductions }
-  ];
-  const readCells = [
-    `B${rows.agi}`,
-    `B${rows.taxableIncome}`,
-    `B${rows.taxesDue}`,
-    `B${rows.totalStateTax}`
-  ];
-  const [
-    { value: adjustedGrossIncome },
-    { value: stateTaxableIncomeInput },
-    { value: stateTaxesDue },
-    { value: totalStateTax }
-  ] = await calculateMultiple(writesBatch, readCells);
-
-  return { adjustedGrossIncome, stateTaxableIncomeInput, stateTaxesDue, totalStateTax };
+module.exports = {
+  refreshWorkbook,
+  calculateMultiple,
+  fetchStateSection,
+  writeStateAGI,
+  locateStateSection,
+  writeStateDeductions
 };
-
-module.exports = { calculateMultiple, calculateStateSection };
