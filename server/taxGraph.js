@@ -32,6 +32,7 @@ async function validate(res) {
  */
 async function startSession(persistChanges = false) {
   const token = await getToken();
+
   const headers = {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json'
@@ -49,9 +50,26 @@ async function startSession(persistChanges = false) {
 
 /**
  * End the workbook session.
+ * @param {object} headers - Auth/session headers including workbook-session-id
+ * @param {boolean} discard - If true, forcibly discard changes even for persist=true sessions
  */
-async function closeSession(headers) {
-  await fetch(`${BASE_URL}/closeSession`, { method: 'POST', headers });
+async function closeSession(headers, discard = false) {
+  try {
+    if (discard) {
+      // Add the discardChanges=true parameter to force-discard changes
+      await fetch(`${BASE_URL}/closeSession`, { 
+        method: 'POST', 
+        headers,
+        body: JSON.stringify({ discardChanges: true }) 
+      });
+    } else {
+      await fetch(`${BASE_URL}/closeSession`, { method: 'POST', headers });
+    }
+    console.log('[Session] Successfully closed session');
+  } catch (err) {
+    console.error('[Session] Error closing session:', err);
+    // Don't rethrow - we want to continue even if close fails
+  }
 }
 
 /**
@@ -101,6 +119,10 @@ async function locateStateSection(state, headers) {
   // 2) Locate “[State] Tax Due” within that block
   const targetLabel = `${state} Tax Due`;
   const relTaxDueIdx = cells.findIndex(val => val === targetLabel);
+  console.log(`[DEBUG] Looking for "${targetLabel}" in column A...`);
+  console.log(`[DEBUG] Found at relative index: ${relTaxDueIdx}`);
+  console.log(`[DEBUG] Preview nearby labels:`, cells.slice(relTaxDueIdx - 3, relTaxDueIdx + 5));
+
   if (relTaxDueIdx === -1) {
     throw new Error(`Could not find “${targetLabel}” between A${startRow} and A2325`);
   }
@@ -122,112 +144,70 @@ async function locateStateSection(state, headers) {
     afterTaxDed:        startRow + relAgiIdx + 6,
     totalStateTax:      startRow + relAgiIdx + 7
   };
+  console.log(`[DEBUG] After finding "${targetLabel}" at A${startRow + relTaxDueIdx}, the first non-empty label is at A${startRow + relAgiIdx}: "${cells[relAgiIdx]}"`);
 
   return { rows };
 }
 
-/**
- * Fetch all of the state-section values in one call—no writes.
- * @param {string} state – the state name as used in the sheet labels
- * @returns {Promise<{
- *   agi: number,
- *   additions: number,
- *   deductions: number,
- *   credits: number,
- *   afterTaxDeductions: number,
- *   stateTaxableIncomeInput: number,
- *   stateTaxesDue: number,
- *   totalStateTax: number
- * }>}
- */
-async function fetchStateSection(state) {
-  // 1) open a non-persisting session
-  const headers = await startSession();
-
+async function fetchStateSection(state, headers = null) {
+  let ownSession = false;
+  if (!headers) {
+    headers = await startSession(false);
+    ownSession = true;
+  }
   try {
-    // make sure all formulas (including your state deduction) are recalculated
     await refreshWorkbook(headers);
-    // 2) locate the rows
     const { rows } = await locateStateSection(state, headers);
-
-    // 3) read B{agi}:B{totalStateTax} in one call
     const rangeAddr = `B${rows.agi}:B${rows.totalStateTax}`;
-    const values = await fetchRange(rangeAddr, headers);
-
-    // 4) pull out each value
-    const [
-      [agi],
-      [additions],
-      [deductions],
-      [stateTaxableIncomeInput],
-      [stateTaxesDue],
-      [credits],
-      [afterTaxDeductions],
-      [totalStateTax]
-    ] = values;
-
-    return {
-      agi,
-      additions,
-      deductions,
-      credits,
-      afterTaxDeductions,
-      stateTaxableIncomeInput,
-      stateTaxesDue,
-      totalStateTax
-    };
+    const [[agi],[additions],[deductions],[stateTaxableIncomeInput],[stateTaxesDue],[credits],[afterTaxDeductions],[totalStateTax]]
+      = await fetchRange(rangeAddr, headers);
+    return { agi, additions, deductions, stateTaxableIncomeInput, stateTaxesDue, credits, afterTaxDeductions, totalStateTax };
   } finally {
-    // 5) always close the session
-    await closeSession(headers);
+    if (ownSession) await closeSession(headers, true);
   }
 }
 
-async function calculateMultiple(writes, readCells) {
-  const token = await getToken();
-  const headers = {
-    Authorization: `Bearer ${token}`,
-    'Content-Type': 'application/json'
-  };
+/**
+ * Batch-write inputs, refresh formulas, then read outputs—
+ * all in one non-persisting session.
+ * @param {{cell:string,value:any}[]} writes 
+ * @param {string[]}             readCells 
+ * @returns {Promise<Array<{cell:string, value:any}>>}
+ */
+async function calculateMultiple(writes, readCells = []) {
+  // 1) Open a session that does NOT commit changes
+  const headers = await startSession(false);
+  try {
+    // 2) Write all inputs
+    for (let { cell, value } of writes) {
+      const body = { values: [[ value ]] };
+      const res  = await fetch(
+        `${SHEET_URL}/range(address='${cell}')`,
+        { method: 'PATCH', headers, body: JSON.stringify(body) }
+      );
+      await validate(res);
+    }
 
-  // 1) start a session to keep changes in memory until close
-  let res = await fetch(`${BASE_URL}/createSession`, {
-    method: 'POST', headers,
-    body: JSON.stringify({ persistChanges: false })
-  });
-  if (!res.ok) throw new Error(await res.text());
-  const { id: sessionId } = await res.json();
-  headers['workbook-session-id'] = sessionId;
+    // 3) Recalculate every formula in the workbook
+    if (readCells.length) {
+      await refreshWorkbook(headers);
+    }
 
-  // 2) write each value to its cell
-  for (let { cell, value } of writes) {
-    const body = { values: [[ value ]] };
-    res = await fetch(
-      `${SHEET_URL}/range(address='${cell}')`,
-      { method: 'PATCH', headers, body: JSON.stringify(body) }
-    );
-    if (!res.ok) throw new Error(await res.text());
+    // 4) Read back requested cells
+    const results = [];
+    for (let address of readCells) {
+      const rjson = await fetch(
+        `${SHEET_URL}/range(address='${address}')`,
+        { method: 'GET', headers }
+      ).then(r => { if (!r.ok) throw new Error(r.statusText); return r.json(); });
+      const [[ value ]] = rjson.values;
+      results.push({ cell: address, value });
+    }
+    return results;
+  } finally {
+    // 5) ALWAYS discard changes when closing the session
+    await closeSession(headers, true);
   }
-
-  // 3) read back each requested cell
-  const results = [];
-  for (let cell of readCells) {
-    res = await fetch(
-      `${SHEET_URL}/range(address='${cell}')`,
-      { method: 'GET', headers }
-    );
-    if (!res.ok) {
-  const errorText = await res.text();
-  console.error(`Error during GET for cell "${cell}":`, errorText);
-  throw new Error(errorText);
-}
-    const { values: [[ result ]] } = await res.json();
-    results.push({ cell, value: result });
-  }
-
-  // 4) close session
-  await fetch(`${BASE_URL}/closeSession`, { method: 'POST', headers });
-
-  return results;
 }
 
 /**
@@ -236,8 +216,7 @@ async function calculateMultiple(writes, readCells) {
  * @param {number} deductions – the new deduction amount
  */
 async function writeStateDeductions(state, deductions) {
-  // 1) Open a **persisting** session so that PATCH actually commits
-  const headers = await startSession(true);                       // :contentReference[oaicite:10]{index=10}
+  const headers = await startSession(false);
   try {
     // 2) Locate the “deductions” row in column A
     const { rows } = await locateStateSection(state, headers);
@@ -251,8 +230,8 @@ async function writeStateDeductions(state, deductions) {
     );
     await validate(res);
   } finally {
-    // 4) Always close (and commit) the session
-    await closeSession(headers);
+    // 4) CRITICAL: Always discard changes from the session
+    await closeSession(headers, true);
   }
 }
 
@@ -262,8 +241,7 @@ async function writeStateDeductions(state, deductions) {
  * @param {number} adjustedGrossIncome
  */
 async function writeStateAGI(state, adjustedGrossIncome) {
-  // open a persisting session so our write actually sticks
-  const headers = await startSession(true);
+  const headers = await startSession(false);
 
   try {
     // locate the state block’s rows
@@ -282,7 +260,8 @@ async function writeStateAGI(state, adjustedGrossIncome) {
     );
     await validate(res);
   } finally {
-    await closeSession(headers);
+    // Always discard changes when closing the session
+    await closeSession(headers, true);
   }
 }
 
@@ -292,5 +271,9 @@ module.exports = {
   fetchStateSection,
   writeStateAGI,
   locateStateSection,
-  writeStateDeductions
+  writeStateDeductions,
+  startSession,
+  closeSession,
+  SHEET_URL,
+  refreshWorkbook
 };
