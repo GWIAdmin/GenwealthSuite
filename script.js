@@ -6695,60 +6695,125 @@ function renderStateSection(data) {
     }
   });
 }
+    
+// 1) Wire up the “Calculate State Taxes” button
+document.getElementById('calculateStateTaxesBTN').addEventListener('click', handleCalculateStateTaxes);
 
-document.getElementById('calculateStateTaxesBTN').addEventListener('click', async e => {
-  const btn = e.currentTarget;
+async function handleCalculateStateTaxes() {
+  const btn = document.getElementById('calculateStateTaxesBTN');
   btn.disabled = true;
+
   try {
-    // 1) build writes[] for every "type: 'write'" mapping
+    // Extract AGI from the form to make sure we use the correct input
+    const agi = parseFloat(document.getElementById('totalAdjustedGrossIncome').value.replace(/[\$,]/g, '')) || 0;
+    
+    // Include explicit w2 income and AGI in our writes to ensure Excel uses our current values
+    const w2Income = parseFloat(document.getElementById('wages').value.replace(/[\$,]/g, '')) || 0;
+    
     const writes = mappings
       .filter(m => m.type === 'write')
-      .map(({id, cell}) => {
-        const el    = document.getElementById(id);
+      .map(m => {
+        const el  = document.getElementById(m.id);
+        const raw = el.value.trim();
         let   value;
 
-        // checkbox → 1 or 0
-        if (el.type === 'checkbox')        value = el.checked ? 1 : 0;
-        // date or select → raw string
-        else if (el.tagName === 'SELECT' || el.type === 'date')
-                                          value = el.value;
-        // anything else → numbers (strip $ / commas)
-        else {
-          value = unformatCurrency(el.value);
-          // fallback for pure-string fields (e.g. state abbreviations)
-          if (value === null) value = el.value;
+        // ── Special case: State name must be "[State] Taxes" ───────────────
+        if (m.id === 'state') {
+          // e.g. "California" → "California Taxes"
+          value = `${raw} Taxes`;
+
+        // ── Special case: Blind must be 0,1 or 2 ────────────────────────────
+        } else if (m.id === 'blind') {
+          const code = raw.toLowerCase();
+          if (code === 'zero')             value = 0;
+          else if (code === 'one'  || code === '1') value = 1;
+          else if (code === 'two'  || code === '2') value = 2;
+          else                                 value = parseInt(raw, 10) || 0;
+
+        // ── All other fields: numeric or free text ─────────────────────────
+        } else {
+          const cleaned = raw.replace(/[\$,]/g, '');
+          const num     = parseFloat(cleaned);
+
+          if (cleaned === '') {
+            value = 0;                     // empty → zero
+          } else if (!isNaN(num)) {
+            value = num;                   // pure number or currency
+          } else {
+            value = raw;                   // text (e.g. filingStatus, residentInState, olderthan65)
+          }
         }
-        return { cell, value };
+
+        return { cell: m.cell, value };
       });
+      
+    // Explicitly add the W2 income and AGI to ensure they're properly set
+    writes.push({ cell: 'B20', value: w2Income }); // Assume this is the W2 income cell
+    writes.push({ cell: 'B60', value: agi });      // Assume this is the AGI cell
+      
+    console.log("[DEBUG] State Tax Writes:", writes);
+    console.log("[DEBUG] Using W2 Income:", w2Income, "and AGI:", agi);
 
-    // 2) build readCells[] for every "type: 'read'"
-    const readCells = mappings
-      .filter(m => m.type === 'read')
-      .map(m => m.cell);
-
-    // 3) one single POST to your generic endpoint
-    const resp = await fetch('/api/sheetData', {
+    // 1) SEND ALL INPUTS → server writes, recalcs, and reads back the State block
+    const resp = await fetch('/api/calculateStateTaxes2', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ writes, readCells })
+      body:    JSON.stringify({ 
+        writes, 
+        state: document.getElementById('state').value,
+        w2Income, 
+        agi 
+      })
     });
-    if (!resp.ok) throw new Error(await resp.text());
-    const { results } = await resp.json();
 
-    // 4) remap Graph’s [{cell,value},…] back into an object by your IDs
-    const data = {};
-    for (let { cell, value } of results) {
-      const m = mappings.find(x => x.cell === cell);
-      if (m) data[m.id] = value;
+    if (!resp.ok) {
+      throw new Error(await resp.text());
     }
 
-    // 5) render everything in one go
+    // 2) Server returns exactly the fields your renderStateSection expects
+    const data = await resp.json();
+
+    console.log("[DEBUG] Returned State Section Data:", data);
+
+    // 3) Render in one shot
     renderStateSection(data);
 
   } catch (err) {
-    console.error('[State]', err);
-    alert(`Unable to calculate state taxes: ${err.message}`);
+    console.error('[State] Calculation failed:', err);
+    alert(`State tax error: ${err.message}`);
   } finally {
     btn.disabled = false;
   }
-});
+}
+
+// 2) Persist edits to the “Deductions from Income” field
+const dedInput = document.getElementById('stateDeductions');
+if (dedInput) {
+  dedInput.addEventListener('blur', debounce(async (e) => {
+    const newDed = parseFloat(e.target.value.replace(/[\$,]/g, '')) || 0;
+    try {
+      const r = await fetch('/api/stateDeductions', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          state:      document.getElementById('state').value.trim(),
+          deductions: newDed
+        })
+      });
+      if (!r.ok) throw new Error(await r.text());
+
+      // Re-fetch only the State section
+      const updated = await fetch(
+        `/api/stateSection?state=${encodeURIComponent(
+          document.getElementById('state').value.trim()
+        )}`
+      ).then(r => r.json());
+
+      renderStateSection(updated);
+
+    } catch (writeErr) {
+      console.error('[State] Deduction write failed:', writeErr);
+      alert(`Could not save deduction: ${writeErr.message}`);
+    }
+  }, 300));
+}
