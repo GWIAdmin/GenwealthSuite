@@ -84,6 +84,15 @@ body.dark-mode textarea {
   color: var(--h3-dark) !important;
 }
 
+body.dark-mode input:focus,
+body.dark-mode select:focus,
+body.dark-mode textarea:focus {
+  border-color: #FDB927 !important;
+  background-color: rgba(253, 185, 39, 0.2) !important;
+  box-shadow: 0 0 5px rgba(253, 185, 39, 0.5);
+  outline: none;
+}
+
 body.dark-mode input:-webkit-autofill {
   -webkit-text-fill-color: var(--h3-dark) !important;
 }
@@ -103,6 +112,28 @@ body.dark-mode input:-webkit-autofill {
   background-color: var(--select-dark) !important;
   color: var(--text-dark) !important;
 }
+
+/* Dark-mode dropdown (the opened list) */
+body.dark-mode select option,
+body.dark-mode select optgroup {
+  background-color: var(--card-dark);
+  color: var(--h3-dark);
+}
+
+/* Hovered/selected row in the list */
+body.dark-mode select option:hover,
+body.dark-mode select option:checked {
+  background-color: #2f3a4a;
+  color: var(--h1-dark);
+}
+
+/* Muted style for disabled items like "Please Select" */
+body.dark-mode select option[disabled],
+body.dark-mode select optgroup[disabled] {
+  color: #6f7a88;
+  opacity: 1; /* keep readable in Firefox */
+}
+
 
 .dark-mode .navbar {
   background-color: #101828 !important;
@@ -583,9 +614,10 @@ body.dark-mode .calculation-details {
   color: #9199A7;
 }
 
-input:focus, select:focus {
-  border-color: #8979b3;
-  box-shadow: 0 0 5px rgba(26, 188, 156, 0.5);
+input:focus, select:focus, textarea:focus {
+  border-color: #FDB927 !important;
+  background-color: #FFFACD !important;
+  box-shadow: 0 0 5px rgba(253, 185, 39, 0.6);
   outline: none;
 }
 
@@ -786,12 +818,6 @@ body.dark-mode .w2-block {
   color: var(--h3-dark);
 }
 
-/* Dark mode for W-2 code boxes */
-body.dark-mode .w2-code-box {
-  background-color: var(--business-entry);
-  border-color: var(--border-dark);
-}
-
 .logo {
   padding: 0px;
   margin-right: 535px;
@@ -960,13 +986,6 @@ body.dark-mode .res-comp-btn {
   100% { transform: rotate(360deg); }
 }
 
-/* State section field focus enhancement */
-#stateTaxableIncomeContent .currency-field:focus {
-  border-color: #FDB927 !important;
-  box-shadow: 0 0 5px rgba(253, 185, 39, 0.3);
-  outline: none;
-}
-
 /* State section success indicator */
 .state-field-success {
   border-color: #4CAF50 !important;
@@ -984,12 +1003,6 @@ body.dark-mode .res-comp-btn {
   background-color: rgba(253, 185, 39, 0.1);
   color: #333;
   font-weight: bold;
-}
-
-/* Dark mode support for state section */
-.dark-mode #stateTaxableIncomeContent .currency-field:focus {
-  border-color: #FDB927 !important;
-  box-shadow: 0 0 5px rgba(253, 185, 39, 0.5);
 }
 
 .dark-mode #stateTaxableIncomeContent .currency-field[readonly] {
