@@ -266,25 +266,24 @@ async function writeStateAGI(state, adjustedGrossIncome) {
 }
 
 /**
- * Write (optional) AGI and/or deductions to the state's block
- * and read back the 8 output cells — all inside one non‑persisting session.
+ * Write (optional) AGI and any user-edited state inputs back to the state's block,
+ * then read the 8 output cells — all inside one non-persisting session.
  *
- * @param {string} state
- * @param {{ agi?: number, deductions?: number }} inputs
- * @returns {Promise<{
- *   agi:number, additions:number, deductions:number,
- *   stateTaxableIncomeInput:number, stateTaxesDue:number,
- *   credits:number, afterTaxDeductions:number, totalStateTax:number
- * }>}
+ * Accepts any subset of:
+ *   { agi, additions, deductions, credits, afterTaxDeductions, year, filingStatus }
+ *
+ * Returns:
+ *   { agi, additions, deductions, stateTaxableIncomeInput, stateTaxesDue,
+ *     credits, afterTaxDeductions, totalStateTax }
  */
 async function upsertStateInputsAndRead(state, inputs = {}) {
   const headers = await startSession(false);
   try {
     const { rows } = await locateStateSection(state, headers);
 
-    // Ensure the transient session has the selectors used by state formulas
+    // Ensure selectors for transient session (keep your approach)
     const prePatches = [
-      { address: 'B3', value: `${state} Taxes` } // critical for state logic
+      { address: 'B3', value: `${state} Taxes` }
     ];
     if (typeof inputs.year === 'number') {
       prePatches.push({ address: 'B1', value: inputs.year });
@@ -292,7 +291,6 @@ async function upsertStateInputsAndRead(state, inputs = {}) {
     if (typeof inputs.filingStatus === 'string' && inputs.filingStatus.trim() !== '') {
       prePatches.push({ address: 'B2', value: inputs.filingStatus.trim() });
     }
-
     for (const { address, value } of prePatches) {
       const res = await fetch(`${SHEET_URL}/range(address='${address}')`, {
         method: 'PATCH',
@@ -302,14 +300,13 @@ async function upsertStateInputsAndRead(state, inputs = {}) {
       await validate(res);
     }
 
-    // Batch the two patches we care about for this flow
+    // Patch only the provided inputs
     const patches = [];
-    if (typeof inputs.agi === 'number') {
-      patches.push({ address: `B${rows.agi}`, value: inputs.agi });
-    }
-    if (typeof inputs.deductions === 'number') {
-      patches.push({ address: `B${rows.deductions}`, value: inputs.deductions });
-    }
+    if (typeof inputs.agi === 'number')                patches.push({ address: `B${rows.agi}`,            value: inputs.agi });
+    if (typeof inputs.additions === 'number')          patches.push({ address: `B${rows.additions}`,      value: inputs.additions });
+    if (typeof inputs.deductions === 'number')         patches.push({ address: `B${rows.deductions}`,     value: inputs.deductions });
+    if (typeof inputs.credits === 'number')            patches.push({ address: `B${rows.credits}`,        value: inputs.credits });
+    if (typeof inputs.afterTaxDeductions === 'number') patches.push({ address: `B${rows.afterTaxDed}`,    value: inputs.afterTaxDeductions });
 
     for (const { address, value } of patches) {
       const res = await fetch(`${SHEET_URL}/range(address='${address}')`, {
@@ -320,7 +317,7 @@ async function upsertStateInputsAndRead(state, inputs = {}) {
       await validate(res);
     }
 
-    // Recalc and read back the 8 values in one range fetch
+    // Recalc once, then read the contiguous 8-row result block in one call
     await refreshWorkbook(headers);
     const range = `B${rows.agi}:B${rows.totalStateTax}`;
     const [
@@ -336,7 +333,6 @@ async function upsertStateInputsAndRead(state, inputs = {}) {
 
     return { agi, additions, deductions, stateTaxableIncomeInput, stateTaxesDue, credits, afterTaxDeductions, totalStateTax };
   } finally {
-    // Discard to keep the workbook clean for everyone
     await closeSession(headers, true);
   }
 }

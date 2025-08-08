@@ -148,6 +148,43 @@ app.post('/api/stateDeductions', async (req, res) => {
   }
 });
 
+// New generalized write+read endpoint for all state inputs in one round-trip
+app.post('/api/stateInputs', async (req, res) => {
+  const {
+    state,
+    agi,
+    year,
+    filingStatus,
+    additions,
+    deductions,
+    credits,
+    afterTaxDeductions
+  } = req.body;
+
+  if (!state?.trim()) {
+    return res.status(400).json({ error: 'State parameter is required.' });
+  }
+
+  try {
+    const data = await upsertStateInputsAndRead(state.trim(), {
+      agi: (typeof agi === 'number') ? agi : undefined,
+      year: (typeof year === 'number') ? year : undefined,
+      filingStatus: (typeof filingStatus === 'string') ? filingStatus : undefined,
+      additions: (typeof additions === 'number') ? additions : undefined,
+      deductions: (typeof deductions === 'number') ? deductions : undefined,
+      credits: (typeof credits === 'number') ? credits : undefined,
+      afterTaxDeductions: (typeof afterTaxDeductions === 'number') ? afterTaxDeductions : undefined
+    });
+    return res.json(data);
+  } catch (err) {
+    console.error('stateInputs error:', err);
+    if (err.message.includes('temporarily unavailable')) {
+      return res.status(503).json({ error: err.message });
+    }
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/stateAGI', async (req, res) => {
   const { state, agi } = req.body;
   if (!state?.trim()) {
