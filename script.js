@@ -6639,8 +6639,14 @@ function renderStateSection(data) {
     }
     const raw = data[key];
     el.value = (raw != null) ? formatCurrency(String(raw)) : '';
-    // only “deductions” stays editable
-    if (id !== 'stateDeductions') {
+    // Allow manual edits for four inputs; everything else is read-only
+    const editableIds = new Set([
+      'stateDeductions',
+      'stateAdditionsToIncome',
+      'stateCredits',
+      'stateAfterTaxDeductions'
+    ]);
+    if (!editableIds.has(id)) {
       el.readOnly = true;
       el.classList.add('readonly');
     } else {
@@ -6653,82 +6659,78 @@ function renderStateSection(data) {
 // Wire up the “Calculate State Taxes” button
 document.getElementById('calculateStateTaxesBTN').addEventListener('click', handleCalculateStateTaxes);
 
+async function readStateData() {
+  const agi = parseFloat(document.getElementById('totalAdjustedGrossIncome').value.replace(/[\$,]/g, '')) || 0;
+  const w2Income = parseFloat(document.getElementById('wages').value.replace(/[\$,]/g, '')) || 0;
+
+  const writes = mappings
+    .filter(m => m.type === 'write')
+    .map(m => {
+      const el  = document.getElementById(m.id);
+      const raw = el.value.trim();
+      let value;
+
+      if (m.id === 'state') {
+        value = `${raw} Taxes`;
+      } else if (m.id === 'blind') {
+        const code = raw.toLowerCase();
+        if (code === 'zero') value = 0;
+        else if (code === 'one' || code === '1') value = 1;
+        else if (code === 'two' || code === '2') value = 2;
+        else value = parseInt(raw, 10) || 0;
+      } else {
+        value = (raw === '') ? 0 : (isNaN(+raw.replace(/[\$,]/g,'')) ? raw : parseFloat(raw.replace(/[\$,]/g,'')));
+      }
+      return { cell: m.cell, value };
+    });
+
+  const payload = {
+    writes,
+    state: document.getElementById('state').value.trim(),
+    w2Income,
+    agi
+  };
+
+  const resp = await fetch('/api/calculateStateTaxes2', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!resp.ok) throw new Error(await resp.text());
+  return await resp.json();
+}
+
 async function handleCalculateStateTaxes() {
   const btn = document.getElementById('calculateStateTaxesBTN');
   btn.disabled = true;
 
   try {
     if (!_stateSectionInitialized) {
-      // FIRST RUN: seed workbook with all inputs, recalc, then render.
-      const agi = parseFloat(document.getElementById('totalAdjustedGrossIncome').value.replace(/[\$,]/g, '')) || 0;
-      const w2Income = parseFloat(document.getElementById('wages').value.replace(/[\$,]/g, '')) || 0;
-
-      const writes = mappings
-        .filter(m => m.type === 'write')
-        .map(m => {
-          const el  = document.getElementById(m.id);
-          const raw = el.value.trim();
-          let value;
-
-          if (m.id === 'state') {
-            value = `${raw} Taxes`;
-          } else if (m.id === 'blind') {
-            const code = raw.toLowerCase();
-            if (code === 'zero') value = 0;
-            else if (code === 'one' || code === '1') value = 1;
-            else if (code === 'two' || code === '2') value = 2;
-            else value = parseInt(raw, 10) || 0;
-          } else {
-            const cleaned = raw.replace(/[\$,]/g, '');
-            const num = parseFloat(cleaned);
-            if (cleaned === '') value = 0;
-            else if (!isNaN(num)) value = num;
-            else value = raw;
-          }
-          return { cell: m.cell, value };
-        });
-
-      // Ensure these two are set
-      writes.push({ cell: 'B20', value: w2Income });
-      writes.push({ cell: 'B60', value: agi });
-
-      const resp = await fetch('/api/calculateStateTaxes2', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          writes,
-          state: document.getElementById('state').value,
-          w2Income,
-          agi
-        })
-      });
-      if (!resp.ok) throw new Error(await resp.text());
-      const data = await resp.json();
+      // FIRST RUN: write all inputs, recalc via Graph, read state block, render
+      const data = await readStateData();
       renderStateSection(data);
-
-      // Flip the button to "Update"
       _stateSectionInitialized = true;
-      btn.textContent = 'Update State Taxes';
-      btn.classList.add('state-update');
 
     } else {
-      // SUBSEQUENT RUNS: send only edited deduction (and the selectors)
-      const newDed = parseFloat(
-        (document.getElementById('stateDeductions').value || '').replace(/[\$,]/g, '')
-      ) || 0;
+      // SUBSEQUENT RUNS: write back only the user-edited state inputs in one call
+      const parseMoney = (id) => parseFloat((document.getElementById(id).value || '0').replace(/[\$,]/g,'')) || 0;
 
-      const agi = parseFloat(
-        document.getElementById('totalAdjustedGrossIncome').value.replace(/[\$,]/g, '')
-      ) || 0;
+      const payload = {
+        state: document.getElementById('state').value.trim(),
+        year:  parseInt(document.getElementById('year').value, 10) || undefined,
+        filingStatus: document.getElementById('filingStatus').value || undefined,
+        agi:  parseFloat((document.getElementById('totalAdjustedGrossIncome').value || '0').replace(/[\$,]/g,'')) || undefined,
 
-      const year = parseInt(document.getElementById('year').value, 10) || null;
-      const filingStatus = document.getElementById('filingStatus').value;
-      const state = document.getElementById('state').value.trim();
+        // four editable inputs
+        additions:          parseMoney('stateAdditionsToIncome'),
+        deductions:         parseMoney('stateDeductions'),
+        credits:            parseMoney('stateCredits'),
+        afterTaxDeductions: parseMoney('stateAfterTaxDeductions')
+      };
 
-      const resp = await fetch('/api/stateDeductions', {
+      const resp = await fetch('/api/stateInputs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state, deductions: newDed, agi, year, filingStatus })
+        body: JSON.stringify(payload)
       });
       if (!resp.ok) throw new Error(await resp.text());
 
