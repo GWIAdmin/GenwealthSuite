@@ -265,6 +265,62 @@ async function writeStateAGI(state, adjustedGrossIncome) {
   }
 }
 
+/**
+ * Write (optional) AGI and/or deductions to the state's block
+ * and read back the 8 output cells — all inside one non‑persisting session.
+ *
+ * @param {string} state
+ * @param {{ agi?: number, deductions?: number }} inputs
+ * @returns {Promise<{
+ *   agi:number, additions:number, deductions:number,
+ *   stateTaxableIncomeInput:number, stateTaxesDue:number,
+ *   credits:number, afterTaxDeductions:number, totalStateTax:number
+ * }>}
+ */
+async function upsertStateInputsAndRead(state, inputs = {}) {
+  const headers = await startSession(false);
+  try {
+    const { rows } = await locateStateSection(state, headers);
+
+    // Batch the two patches we care about for this flow
+    const patches = [];
+    if (typeof inputs.agi === 'number') {
+      patches.push({ address: `B${rows.agi}`, value: inputs.agi });
+    }
+    if (typeof inputs.deductions === 'number') {
+      patches.push({ address: `B${rows.deductions}`, value: inputs.deductions });
+    }
+
+    for (const { address, value } of patches) {
+      const res = await fetch(`${SHEET_URL}/range(address='${address}')`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ values: [[ value ]] })
+      });
+      await validate(res);
+    }
+
+    // Recalc and read back the 8 values in one range fetch
+    await refreshWorkbook(headers);
+    const range = `B${rows.agi}:B${rows.totalStateTax}`;
+    const [
+      [agi],
+      [additions],
+      [deductions],
+      [stateTaxableIncomeInput],
+      [stateTaxesDue],
+      [credits],
+      [afterTaxDeductions],
+      [totalStateTax]
+    ] = await fetchRange(range, headers);
+
+    return { agi, additions, deductions, stateTaxableIncomeInput, stateTaxesDue, credits, afterTaxDeductions, totalStateTax };
+  } finally {
+    // Discard to keep the workbook clean for everyone
+    await closeSession(headers, true);
+  }
+}
+
 module.exports = {
   refreshWorkbook,
   calculateMultiple,
@@ -275,5 +331,6 @@ module.exports = {
   startSession,
   closeSession,
   SHEET_URL,
-  refreshWorkbook
+  refreshWorkbook,
+  upsertStateInputsAndRead
 };
