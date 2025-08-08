@@ -6536,11 +6536,9 @@ function followCursor(event) {
   pet.style.top = `${event.clientY + offsetY}px`;
 }
 
-//-------------------------------------//
-// 29. SHEET DATA FETCHING AND MAPPING //
-//-------------------------------------//
-
-// 1) declare all your mappings here
+//-----------------------//
+// 29. State Adjustments //
+//-----------------------//
 
 const mappings = [
     // Personal Information
@@ -6618,52 +6616,8 @@ const mappings = [
     { id: 'totalTax',                               type: 'read', cell: 'B117' },
 ];
 
-// 2) debounce helper to limit calls
-function debounce(fn, delay = 300) {
-  let timer;
-  return (...args) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn(...args), delay);
-  };
-}
-
-//-----------------------//
-// 30. State Adjustments //
-//-----------------------//
-
 // ─── State-Tax “Calculate” Button Flow ─────────────────────────────────
 let _stateSectionInitialized = false;
-
-/**
- * Fetch all state-section values (including default deduction) in one batch.
- */
-async function readStateData() {
-  const state = document.getElementById('selectState').value.trim();
-  if (!state) throw new Error('Please select a state first.');
-
-  const resp = await fetch(`/api/stateSection?state=${encodeURIComponent(state)}`);
-  if (!resp.ok) {
-    const text = await resp.text(); // catch HTML errors too
-    throw new Error(text || resp.statusText);
-  }
-  return await resp.json();
-}
-
-/**
- * POST-only the user’s edited deductions back to the server.
- */
-async function writeStateDeductions(value) {
-  const state = document.getElementById('selectState').value.trim();
-  const resp  = await fetch('/api/stateDeductions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ state, deductions: value })
-  });
-  if (!resp.ok) {
-    const data = await resp.json().catch(() => ({}));
-    throw new Error(data.error || resp.statusText);
-  }
-}
 
 function renderStateSection(data) {
   const mapping = {
@@ -6696,7 +6650,7 @@ function renderStateSection(data) {
   });
 }
     
-// 1) Wire up the “Calculate State Taxes” button
+// Wire up the “Calculate State Taxes” button
 document.getElementById('calculateStateTaxesBTN').addEventListener('click', handleCalculateStateTaxes);
 
 async function handleCalculateStateTaxes() {
@@ -6704,117 +6658,87 @@ async function handleCalculateStateTaxes() {
   btn.disabled = true;
 
   try {
-    // Extract AGI from the form to make sure we use the correct input
-    const agi = parseFloat(document.getElementById('totalAdjustedGrossIncome').value.replace(/[\$,]/g, '')) || 0;
-    
-    // Include explicit w2 income and AGI in our writes to ensure Excel uses our current values
-    const w2Income = parseFloat(document.getElementById('wages').value.replace(/[\$,]/g, '')) || 0;
-    
-    const writes = mappings
-      .filter(m => m.type === 'write')
-      .map(m => {
-        const el  = document.getElementById(m.id);
-        const raw = el.value.trim();
-        let   value;
+    if (!_stateSectionInitialized) {
+      // FIRST RUN: seed workbook with all inputs, recalc, then render.
+      const agi = parseFloat(document.getElementById('totalAdjustedGrossIncome').value.replace(/[\$,]/g, '')) || 0;
+      const w2Income = parseFloat(document.getElementById('wages').value.replace(/[\$,]/g, '')) || 0;
 
-        // ── Special case: State name must be "[State] Taxes" ───────────────
-        if (m.id === 'state') {
-          // e.g. "California" → "California Taxes"
-          value = `${raw} Taxes`;
+      const writes = mappings
+        .filter(m => m.type === 'write')
+        .map(m => {
+          const el  = document.getElementById(m.id);
+          const raw = el.value.trim();
+          let value;
 
-        // ── Special case: Blind must be 0,1 or 2 ────────────────────────────
-        } else if (m.id === 'blind') {
-          const code = raw.toLowerCase();
-          if (code === 'zero')             value = 0;
-          else if (code === 'one'  || code === '1') value = 1;
-          else if (code === 'two'  || code === '2') value = 2;
-          else                                 value = parseInt(raw, 10) || 0;
-
-        // ── All other fields: numeric or free text ─────────────────────────
-        } else {
-          const cleaned = raw.replace(/[\$,]/g, '');
-          const num     = parseFloat(cleaned);
-
-          if (cleaned === '') {
-            value = 0;                     // empty → zero
-          } else if (!isNaN(num)) {
-            value = num;                   // pure number or currency
+          if (m.id === 'state') {
+            value = `${raw} Taxes`;
+          } else if (m.id === 'blind') {
+            const code = raw.toLowerCase();
+            if (code === 'zero') value = 0;
+            else if (code === 'one' || code === '1') value = 1;
+            else if (code === 'two' || code === '2') value = 2;
+            else value = parseInt(raw, 10) || 0;
           } else {
-            value = raw;                   // text (e.g. filingStatus, residentInState, olderthan65)
+            const cleaned = raw.replace(/[\$,]/g, '');
+            const num = parseFloat(cleaned);
+            if (cleaned === '') value = 0;
+            else if (!isNaN(num)) value = num;
+            else value = raw;
           }
-        }
+          return { cell: m.cell, value };
+        });
 
-        return { cell: m.cell, value };
+      // Ensure these two are set
+      writes.push({ cell: 'B20', value: w2Income });
+      writes.push({ cell: 'B60', value: agi });
+
+      const resp = await fetch('/api/calculateStateTaxes2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          writes,
+          state: document.getElementById('state').value,
+          w2Income,
+          agi
+        })
       });
-      
-    // Explicitly add the W2 income and AGI to ensure they're properly set
-    writes.push({ cell: 'B20', value: w2Income }); // Assume this is the W2 income cell
-    writes.push({ cell: 'B60', value: agi });      // Assume this is the AGI cell
-      
-    console.log("[DEBUG] State Tax Writes:", writes);
-    console.log("[DEBUG] Using W2 Income:", w2Income, "and AGI:", agi);
+      if (!resp.ok) throw new Error(await resp.text());
+      const data = await resp.json();
+      renderStateSection(data);
 
-    // 1) SEND ALL INPUTS → server writes, recalcs, and reads back the State block
-    const resp = await fetch('/api/calculateStateTaxes2', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ 
-        writes, 
-        state: document.getElementById('state').value,
-        w2Income, 
-        agi 
-      })
-    });
+      // Flip the button to "Update"
+      _stateSectionInitialized = true;
+      btn.textContent = 'Update State Taxes';
+      btn.classList.add('state-update');
 
-    if (!resp.ok) {
-      throw new Error(await resp.text());
+    } else {
+      // SUBSEQUENT RUNS: send only edited deduction (and the selectors)
+      const newDed = parseFloat(
+        (document.getElementById('stateDeductions').value || '').replace(/[\$,]/g, '')
+      ) || 0;
+
+      const agi = parseFloat(
+        document.getElementById('totalAdjustedGrossIncome').value.replace(/[\$,]/g, '')
+      ) || 0;
+
+      const year = parseInt(document.getElementById('year').value, 10) || null;
+      const filingStatus = document.getElementById('filingStatus').value;
+      const state = document.getElementById('state').value.trim();
+
+      const resp = await fetch('/api/stateDeductions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ state, deductions: newDed, agi, year, filingStatus })
+      });
+      if (!resp.ok) throw new Error(await resp.text());
+
+      const data = await resp.json();
+      renderStateSection(data);
     }
-
-    // 2) Server returns exactly the fields your renderStateSection expects
-    const data = await resp.json();
-
-    console.log("[DEBUG] Returned State Section Data:", data);
-
-    // 3) Render in one shot
-    renderStateSection(data);
-
   } catch (err) {
     console.error('[State] Calculation failed:', err);
     alert(`State tax error: ${err.message}`);
   } finally {
     btn.disabled = false;
   }
-}
-
-// 2) Persist edits to the “Deductions from Income” field
-const dedInput = document.getElementById('stateDeductions');
-if (dedInput) {
-  dedInput.addEventListener('blur', debounce(async (e) => {
-    const newDed = parseFloat(e.target.value.replace(/[\$,]/g, '')) || 0;
-
-    // Always send the current AGI so the server can compute outputs in one shot
-    const agi = parseFloat(
-      document.getElementById('totalAdjustedGrossIncome').value.replace(/[\$,]/g, '')
-    ) || 0;
-
-    // Use whichever element holds the plain state name in your UI.
-    // (If your app uses #selectState, swap the line below accordingly.)
-    const state = document.getElementById('state').value.trim();
-
-    try {
-      const resp = await fetch('/api/stateDeductions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state, deductions: newDed, agi })
-      });
-      if (!resp.ok) throw new Error(await resp.text());
-
-      // Server already returns the 8 state outputs — render directly
-      const data = await resp.json();
-      renderStateSection(data);
-    } catch (err) {
-      console.error('[State] Deduction write failed:', err);
-      alert(`Could not save deduction: ${err.message}`);
-    }
-  }, 300));
 }

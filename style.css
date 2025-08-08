@@ -996,3 +996,9 @@ body.dark-mode .res-comp-btn {
   background-color: rgba(253, 185, 39, 0.2);
   color: #F8F8F9;
 }
+
+/* After first state tax run, swap button color */
+#calculateStateTaxesBTN.state-update {
+  background-color: #FDB927;
+  color: #552583;
+}
