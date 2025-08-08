@@ -282,6 +282,26 @@ async function upsertStateInputsAndRead(state, inputs = {}) {
   try {
     const { rows } = await locateStateSection(state, headers);
 
+    // Ensure the transient session has the selectors used by state formulas
+    const prePatches = [
+      { address: 'B3', value: `${state} Taxes` } // critical for state logic
+    ];
+    if (typeof inputs.year === 'number') {
+      prePatches.push({ address: 'B1', value: inputs.year });
+    }
+    if (typeof inputs.filingStatus === 'string' && inputs.filingStatus.trim() !== '') {
+      prePatches.push({ address: 'B2', value: inputs.filingStatus.trim() });
+    }
+
+    for (const { address, value } of prePatches) {
+      const res = await fetch(`${SHEET_URL}/range(address='${address}')`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ values: [[ value ]] })
+      });
+      await validate(res);
+    }
+
     // Batch the two patches we care about for this flow
     const patches = [];
     if (typeof inputs.agi === 'number') {

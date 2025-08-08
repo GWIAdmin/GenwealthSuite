@@ -121,7 +121,7 @@ app.get('/api/stateSection', async (req, res) => {
 
 // ─── Write-only endpoint for user-edited state deductions ─────────────
 app.post('/api/stateDeductions', async (req, res) => {
-  const { state, deductions, agi } = req.body;
+  const { state, deductions, agi, year, filingStatus } = req.body;
 
   if (!state?.trim()) {
     return res.status(400).json({ error: 'State parameter is required.' });
@@ -134,7 +134,9 @@ app.post('/api/stateDeductions', async (req, res) => {
     // Write deduction (and AGI if provided), then read the whole block in one go
     const data = await upsertStateInputsAndRead(state.trim(), {
       deductions,
-      agi: (typeof agi === 'number') ? agi : undefined
+      agi: (typeof agi === 'number') ? agi : undefined,
+      year: (typeof year === 'number') ? year : undefined,
+      filingStatus
     });
     return res.json(data);
   } catch (err) {
