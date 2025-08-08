@@ -2,7 +2,7 @@ const fetch = require('node-fetch');
 global.fetch = fetch;
 const express = require('express');
 const path    = require('path');
-const { calculateMultiple, startSession, closeSession, writeStateDeductions, writeStateAGI, locateStateSection, SHEET_URL, refreshWorkbook } = require('./taxGraph');
+const { calculateMultiple, startSession, closeSession, writeStateDeductions, writeStateAGI, locateStateSection, SHEET_URL, refreshWorkbook, fetchStateSection, upsertStateInputsAndRead } = require('./taxGraph');
 
 const app = express();
 app.use(express.json());
@@ -121,28 +121,28 @@ app.get('/api/stateSection', async (req, res) => {
 
 // ─── Write-only endpoint for user-edited state deductions ─────────────
 app.post('/api/stateDeductions', async (req, res) => {
-  const { state, deductions } = req.body;
-  // 1) Validate inputs
+  const { state, deductions, agi } = req.body;
+
   if (!state?.trim()) {
     return res.status(400).json({ error: 'State parameter is required.' });
   }
   if (typeof deductions !== 'number' || deductions < 0) {
     return res.status(400).json({ error: 'Deductions must be a non-negative number.' });
   }
+
   try {
-    await writeStateDeductions(state.trim(), deductions);
-    return res.json({ success: true });
+    // Write deduction (and AGI if provided), then read the whole block in one go
+    const data = await upsertStateInputsAndRead(state.trim(), {
+      deductions,
+      agi: (typeof agi === 'number') ? agi : undefined
+    });
+    return res.json(data);
   } catch (err) {
     console.error(err);
-    const message = err.message.includes('Could not find')
-      ? `Could not locate deduction row for state "${state}".`
-      : 'Error writing state deductions.';
-      if (err.message.includes('temporarily unavailable')) {
-        return res
-          .status(503)
-          .json({ error: err.message });
-      }
-      return res.status(500).json({ error: err.message });
+    if (err.message.includes('temporarily unavailable')) {
+      return res.status(503).json({ error: err.message });
+    }
+    return res.status(500).json({ error: err.message });
   }
 });
 

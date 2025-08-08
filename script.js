@@ -6791,29 +6791,30 @@ const dedInput = document.getElementById('stateDeductions');
 if (dedInput) {
   dedInput.addEventListener('blur', debounce(async (e) => {
     const newDed = parseFloat(e.target.value.replace(/[\$,]/g, '')) || 0;
+
+    // Always send the current AGI so the server can compute outputs in one shot
+    const agi = parseFloat(
+      document.getElementById('totalAdjustedGrossIncome').value.replace(/[\$,]/g, '')
+    ) || 0;
+
+    // Use whichever element holds the plain state name in your UI.
+    // (If your app uses #selectState, swap the line below accordingly.)
+    const state = document.getElementById('state').value.trim();
+
     try {
-      const r = await fetch('/api/stateDeductions', {
-        method:  'POST',
+      const resp = await fetch('/api/stateDeductions', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({
-          state:      document.getElementById('state').value.trim(),
-          deductions: newDed
-        })
+        body: JSON.stringify({ state, deductions: newDed, agi })
       });
-      if (!r.ok) throw new Error(await r.text());
+      if (!resp.ok) throw new Error(await resp.text());
 
-      // Re-fetch only the State section
-      const updated = await fetch(
-        `/api/stateSection?state=${encodeURIComponent(
-          document.getElementById('state').value.trim()
-        )}`
-      ).then(r => r.json());
-
-      renderStateSection(updated);
-
-    } catch (writeErr) {
-      console.error('[State] Deduction write failed:', writeErr);
-      alert(`Could not save deduction: ${writeErr.message}`);
+      // Server already returns the 8 state outputs — render directly
+      const data = await resp.json();
+      renderStateSection(data);
+    } catch (err) {
+      console.error('[State] Deduction write failed:', err);
+      alert(`Could not save deduction: ${err.message}`);
     }
   }, 300));
 }
