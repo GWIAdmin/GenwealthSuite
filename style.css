@@ -225,7 +225,7 @@ input:focus, select:focus, textarea:focus {
 .state-field-success { border-color: #4CAF50 !important; background-color: rgba(76,175,80,.1); }
 .state-field-error   { border-color: #f44336 !important; background-color: rgba(244,67,54,.1); }
 
-#stateTaxableIncomeContent .currency-field[readonly] { background-color: rgba(253,185,39,.1); color: #333; font-weight: bold; }
+#stateTaxableIncomeContent .currency-field[readonly] { background-color: rgba(253,185,39,.1); color: #333; font-weight: normal; }
 
 /* =============================
    7) BUTTONS
