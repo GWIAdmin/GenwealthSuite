@@ -384,5 +384,38 @@ body.dark-mode .res-comp-btn:hover { background-color: var(--accent); color: #55
 
 .dark-mode #stateTaxableIncomeContent .currency-field[readonly] { background-color: rgba(253,185,39,.2); color: var(--h3-dark); }
 
-/* After first state tax run, swap button color */
-#calculateStateTaxesBTN.state-update { background-color: var(--accent); color: #552583; }
+#calculateStateTaxesBTN.state-update {
+  background: linear-gradient(135deg, #ff7a59, #ff9f1a);
+  color: #1b1b1b;
+}
+
+/* --- Thin indeterminate progress bar used during both calls --- */
+.state-progress {
+  width: 240px;
+  height: 6px;
+  margin: -6px auto 16px;      /* tucks right under the button */
+  border-radius: 999px;
+  background: rgba(255,255,255,.15);
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity .2s ease;
+  position: relative;
+}
+.state-progress.active { opacity: 1; }
+
+.state-progress::before {
+  content: "";
+  position: absolute;
+  left: -40%;
+  top: 0;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  animation: stateProgressSlide 1s linear infinite;
+}
+
+@keyframes stateProgressSlide {
+  from { left: -40%; }
+  to   { left: 100%; }
+}
