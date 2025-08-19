@@ -855,6 +855,15 @@ const STATES_ARRAY = [
     { value: "WY", text: "Wyoming" }
 ];  
   
+// Turn "$65,000" or "65000" into 65000 (number)
+function getNumericFromInput(id) {
+  const el = document.getElementById(id);
+  if (!el) return undefined;
+  const cleaned = String(el.value || '').replace(/[^0-9.-]/g, '');
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 //-------------------------------------//
 // CHILD TAX CREDIT CONSTANTS & RULES //
 //-------------------------------------//
@@ -6545,64 +6554,10 @@ const mappings = [
     { id: 'year',                                   type: 'write', cell: 'B1' },
     { id: 'filingStatus',                           type: 'write', cell: 'B2' },
     { id: 'state',                                  type: 'write', cell: 'B3' },
-    { id: 'residentInState',                        type: 'write', cell: 'B4' },
-    { id: 'olderthan65',                            type: 'write', cell: 'B11' },
-    { id: 'blind',                                  type: 'write', cell: 'B12' },
-
-    // Income       
-    { id: 'wages',                                  type: 'write', cell: 'B26' },
-    { id: 'taxExemptInterest',                      type: 'write', cell: 'B30' },
-    { id: 'taxableInterest',                        type: 'write', cell: 'B31' },
-    { id: 'taxableIRA',                             type: 'write', cell: 'B32' },
-    { id: 'taxableDividends',                       type: 'write', cell: 'B33' },
-    { id: 'qualifiedDividends',                     type: 'write', cell: 'B34' },
-    { id: 'iraDistributions',                       type: 'write', cell: 'B35' },
-    { id: 'pensions',                               type: 'write', cell: 'B36' },
-    { id: 'longTermCapitalGains',                   type: 'write', cell: 'B37' },
-    { id: 'shortTermCapitalGains',                  type: 'write', cell: 'B38' },
-    { id: 'otherIncome',                            type: 'write', cell: 'B51' },
-    { id: 'interestPrivateBonds',                   type: 'write', cell: 'B52' },
-    { id: 'passiveActivityLossAdjustments',         type: 'write', cell: 'B54' },
-    { id: 'qualifiedBusinessDeduction',             type: 'write', cell: 'B55' },
-
-    // Adjusted Gross Income        
-    { id: 'retirementDeduction',                    type: 'write', cell: 'B60' },
-    { id: 'medicalReimbursementPlan',               type: 'write', cell: 'B61' },
-    { id: 'SEHealthInsurance',                      type: 'write', cell: 'B62' },
-    { id: 'alimonyPaid',                            type: 'write', cell: 'B63' },
-    { id: 'otherAdjustments',                       type: 'write', cell: 'B64' },
-
-    // Deductions           
-    { id: 'medical',                                type: 'write', cell: 'B68' },
-    { id: 'stateAndLocalTaxes',                     type: 'write', cell: 'B69' },
-    { id: 'otherTaxesFromSchK-1',                   type: 'write', cell: 'B70' },
-    { id: 'interest',                               type: 'write', cell: 'B71' },
-    { id: 'contributions',                          type: 'write', cell: 'B72' },
-    { id: 'otherDeductions',                        type: 'write', cell: 'B73' },
-    { id: 'carryoverLoss',                          type: 'write', cell: 'B74' },
-    { id: 'casualtyAndTheftLosses',                 type: 'write', cell: 'B75' },
-    { id: 'miscellaneousDeductions',                type: 'write', cell: 'B76' },
-
-    // Taxes and Credits        
-    { id: 'otherTaxes',                             type: 'write', cell: 'B85' },
-    { id: 'foreignTaxCredit',                       type: 'write', cell: 'B86' },
-    { id: 'priorYearMinimumTaxCredit',              type: 'write', cell: 'B87' },
-    { id: 'nonrefundablePersonalCredits',           type: 'write', cell: 'B88' },
-    { id: 'generalBusinessCredit',                  type: 'write', cell: 'B89' },
-    { id: 'childTaxCredit',                         type: 'write', cell: 'B90' },
-    { id: 'otherCredits',                           type: 'write', cell: 'B91' },
 
     // Payments
-    { id: 'withholdings',                           type: 'write', cell: 'B96' },
-    { id: 'withholdingsOnAdditionalMedicareWages',  type: 'write', cell: 'B97' },
-    { id: 'otherPaymentsAndCredits',                type: 'write', cell: 'B99' },
-    { id: 'penalty',                                type: 'write', cell: 'B100' },
     { id: 'estimatedRefundOverpayment',             type: 'write', cell: 'B101' },
     { id: 'estimatedBalanceDue',                    type: 'write', cell: 'B102' },
-
-    // Employer and Employee Taxes
-    { id: 'employeeTaxes',                          type: 'write', cell: 'B104' },
-    { id: 'employerTaxes',                          type: 'write', cell: 'B105' },
 
     // State Taxable Income
     { id: 'localTaxAfterCredits',                   type: 'write', cell: 'B109' },
@@ -6662,6 +6617,7 @@ document.getElementById('calculateStateTaxesBTN').addEventListener('click', hand
 async function readStateData() {
   const agi = parseFloat(document.getElementById('totalAdjustedGrossIncome').value.replace(/[\$,]/g, '')) || 0;
   const w2Income = parseFloat(document.getElementById('wages').value.replace(/[\$,]/g, '')) || 0;
+  const taxableIncome = parseFloat(document.getElementById('taxableIncome').value.replace(/[\$,]/g, '')) || 0;
 
   const writes = mappings
     .filter(m => m.type === 'write')
@@ -6688,7 +6644,8 @@ async function readStateData() {
     writes,
     state: document.getElementById('state').value.trim(),
     w2Income,
-    agi
+    agi,
+    taxableIncome
   };
 
   const resp = await fetch('/api/calculateStateTaxes2', {
@@ -6719,6 +6676,7 @@ async function handleCalculateStateTaxes() {
         year:  parseInt(document.getElementById('year').value, 10) || undefined,
         filingStatus: document.getElementById('filingStatus').value || undefined,
         agi:  parseFloat((document.getElementById('totalAdjustedGrossIncome').value || '0').replace(/[\$,]/g,'')) || undefined,
+        taxableIncome: parseFloat((document.getElementById('taxableIncome').value || '0').replace(/[\$,]/g,'')) || undefined,
 
         // four editable inputs
         additions:          parseMoney('stateAdditionsToIncome'),
