@@ -89,64 +89,63 @@ async function refreshWorkbook(headers) {
 }
 
 /**
+ * Decide whether the sheet expects AGI or Taxable Income for the first row
+ * of the state section. We treat anything containing "taxable" as taxable
+ * income; otherwise we accept "AGI" or "Adjusted Gross" as AGI.
+ * @param {string} label
+ * @returns {'agi'|'taxableIncome'|'unknown'}
+ */
+function classifyLeadLabel(label) {
+  const s = (label || '').toLowerCase();
+  if (s.includes('taxable')) return 'taxableIncome';
+  if (s.includes('agi') || s.includes('adjusted gross')) return 'agi';
+  return 'unknown';
+}
+
+/**
  * Locate the rows for a given state’s section in the worksheet.
- * It finds “[State] Tax Due” in column A, then the very next non-empty cell
- * (Taxable Income), and computes AGI, additions, deductions, etc. by offset.
- *
- * @param {string} state
- * @param {object} headers  – auth/session headers from startSession()
+ * Finds “[State] Tax Due”, then the very next non-empty label (AGI/Taxable Income),
+ * and returns row numbers plus that label and a classification.
  * @returns {{rows: {
- *   agi: number,
- *   additions: number,
- *   deductions: number,
- *   taxableIncome: number,
- *   taxesDue: number,
- *   credits: number,
- *   afterTaxDed: number,
- *   totalStateTax: number
- * }}}
+ *   agi:number, additions:number, deductions:number, taxableIncome:number,
+ *   taxesDue:number, credits:number, afterTaxDed:number, totalStateTax:number
+ * }, leadLabel:string, leadKind:'agi'|'taxableIncome'|'unknown'}}
  */
 async function locateStateSection(state, headers) {
-  // 1) Read only the block that contains your state‐section labels
   const startRow = 892;
   const colAValues = await fetchRange(`A${startRow}:A2325`, headers);
   if (!Array.isArray(colAValues)) {
     throw new Error(`Could not read any data in A${startRow}:A2325; check your sheet range.`);
   }
-  // Trim off whitespace
   const cells = colAValues.map(r => (r[0] || '').toString().trim());
 
-  // 2) Locate “[State] Tax Due” within that block
   const targetLabel = `${state} Tax Due`;
   const relTaxDueIdx = cells.findIndex(val => val === targetLabel);
-  console.log(`[DEBUG] Looking for "${targetLabel}" in column A...`);
-  console.log(`[DEBUG] Found at relative index: ${relTaxDueIdx}`);
-  console.log(`[DEBUG] Preview nearby labels:`, cells.slice(relTaxDueIdx - 3, relTaxDueIdx + 5));
-
   if (relTaxDueIdx === -1) {
     throw new Error(`Could not find “${targetLabel}” between A${startRow} and A2325`);
   }
 
-  // 3) From there, find the very next non-empty row (your “Taxable Income” label)
   const relAgiIdx = cells.findIndex((val, idx) => idx > relTaxDueIdx && val !== '');
   if (relAgiIdx === -1) {
     throw new Error(`Could not find AGI/Taxable Income after A${startRow + relTaxDueIdx}`);
   }
 
-  // 4) Build absolute row numbers by adding our startRow offset
   const rows = {
-    agi:                startRow + relAgiIdx,
-    additions:          startRow + relAgiIdx + 1,
-    deductions:         startRow + relAgiIdx + 2,
-    taxableIncome:      startRow + relAgiIdx + 3,
-    taxesDue:           startRow + relAgiIdx + 4,
-    credits:            startRow + relAgiIdx + 5,
-    afterTaxDed:        startRow + relAgiIdx + 6,
-    totalStateTax:      startRow + relAgiIdx + 7
+    agi:           startRow + relAgiIdx,
+    additions:     startRow + relAgiIdx + 1,
+    deductions:    startRow + relAgiIdx + 2,
+    taxableIncome: startRow + relAgiIdx + 3,
+    taxesDue:      startRow + relAgiIdx + 4,
+    credits:       startRow + relAgiIdx + 5,
+    afterTaxDed:   startRow + relAgiIdx + 6,
+    totalStateTax: startRow + relAgiIdx + 7
   };
-  console.log(`[DEBUG] After finding "${targetLabel}" at A${startRow + relTaxDueIdx}, the first non-empty label is at A${startRow + relAgiIdx}: "${cells[relAgiIdx]}"`);
 
-  return { rows };
+  const leadLabel = cells[relAgiIdx];
+  const leadKind  = classifyLeadLabel(leadLabel);
+  console.log(`[DEBUG] State block lead label "${leadLabel}" at A${startRow + relAgiIdx} → kind=${leadKind}`);
+
+  return { rows, leadLabel, leadKind };
 }
 
 async function fetchStateSection(state, headers = null) {
@@ -266,25 +265,22 @@ async function writeStateAGI(state, adjustedGrossIncome) {
 }
 
 /**
- * Write (optional) AGI and any user-edited state inputs back to the state's block,
- * then read the 8 output cells — all inside one non-persisting session.
+ * Write (optional) AGI/Taxable Income + any user-edited state inputs, then
+ * read the 8 outputs — all in one non-persisting session.
  *
  * Accepts any subset of:
- *   { agi, additions, deductions, credits, afterTaxDeductions, year, filingStatus }
+ *   { agi, taxableIncome, additions, deductions, credits, afterTaxDeductions, year, filingStatus }
  *
- * Returns:
- *   { agi, additions, deductions, stateTaxableIncomeInput, stateTaxesDue,
- *     credits, afterTaxDeductions, totalStateTax }
+ * Returns: { agi, additions, deductions, stateTaxableIncomeInput, stateTaxesDue,
+ *            credits, afterTaxDeductions, totalStateTax }
  */
 async function upsertStateInputsAndRead(state, inputs = {}) {
   const headers = await startSession(false);
   try {
-    const { rows } = await locateStateSection(state, headers);
+    const { rows, leadKind, leadLabel } = await locateStateSection(state, headers);
 
-    // Ensure selectors for transient session (keep your approach)
-    const prePatches = [
-      { address: 'B3', value: `${state} Taxes` }
-    ];
+    // Ensure state/year/status context is set for this session
+    const prePatches = [{ address: 'B3', value: `${state} Taxes` }];
     if (typeof inputs.year === 'number') {
       prePatches.push({ address: 'B1', value: inputs.year });
     }
@@ -300,24 +296,41 @@ async function upsertStateInputsAndRead(state, inputs = {}) {
       await validate(res);
     }
 
-    // Patch only the provided inputs
-    const patches = [];
-    if (typeof inputs.agi === 'number')                patches.push({ address: `B${rows.agi}`,            value: inputs.agi });
-    if (typeof inputs.additions === 'number')          patches.push({ address: `B${rows.additions}`,      value: inputs.additions });
-    if (typeof inputs.deductions === 'number')         patches.push({ address: `B${rows.deductions}`,     value: inputs.deductions });
-    if (typeof inputs.credits === 'number')            patches.push({ address: `B${rows.credits}`,        value: inputs.credits });
-    if (typeof inputs.afterTaxDeductions === 'number') patches.push({ address: `B${rows.afterTaxDed}`,    value: inputs.afterTaxDeductions });
-
-    for (const { address, value } of patches) {
-      const res = await fetch(`${SHEET_URL}/range(address='${address}')`, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify({ values: [[ value ]] })
-      });
-      await validate(res);
+    let leadValue;
+    if (leadKind === 'taxableIncome') {
+      if (typeof inputs.taxableIncome !== 'number' || Number.isNaN(inputs.taxableIncome)) {
+        throw new Error(`Sheet expects "Taxable Income" but no taxableIncome was provided.`);
+      }
+      leadValue = inputs.taxableIncome;
+    } else if (leadKind === 'agi') {
+      if (typeof inputs.agi !== 'number' || Number.isNaN(inputs.agi)) {
+        throw new Error(`Sheet expects "AGI" but no agi was provided.`);
+      }
+      leadValue = inputs.agi;
+    } else {
+      throw new Error(`Unrecognized lead label "${leadLabel}" — expected AGI or Taxable Income.`);
     }
 
-    // Recalc once, then read the contiguous 8-row result block in one call
+    const patches = [];
+    if (typeof leadValue === 'number')            patches.push({ address: `B${rows.agi}`,        value: leadValue });
+    if (typeof inputs.additions === 'number')     patches.push({ address: `B${rows.additions}`,  value: inputs.additions });
+    if (typeof inputs.deductions === 'number')    patches.push({ address: `B${rows.deductions}`, value: inputs.deductions });
+    if (typeof inputs.credits === 'number')       patches.push({ address: `B${rows.credits}`,    value: inputs.credits });
+    if (typeof inputs.afterTaxDeductions === 'number')
+                                                  patches.push({ address: `B${rows.afterTaxDed}`,value: inputs.afterTaxDeductions });
+
+    if (patches.length) {
+      for (const { address, value } of patches) {
+        const res = await fetch(`${SHEET_URL}/range(address='${address}')`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ values: [[ value ]] })
+        });
+        await validate(res);
+      }
+    }
+
+    // Recalc once, then read the contiguous 8-row block
     await refreshWorkbook(headers);
     const range = `B${rows.agi}:B${rows.totalStateTax}`;
     const [

@@ -17,6 +17,17 @@ app.get('/', (req, res) =>
 );
 // ───────────────────────────────────────────────────────────────────────────────
 
+// === helper: coerce possibly-formatted strings to number ===
+function asNumber(x) {
+  if (typeof x === 'number') return x;
+  if (typeof x === 'string') {
+    const cleaned = x.replace(/[^0-9.-]/g, '');
+    const n = Number(cleaned);
+    return Number.isFinite(n) ? n : undefined;
+  }
+  return undefined;
+}
+
 app.post('/api/sheetData', async (req, res) => {
   const { writes, readCells } = req.body;
   try {
@@ -29,70 +40,60 @@ app.post('/api/sheetData', async (req, res) => {
 });
 
 app.post('/api/calculateStateTaxes', async (req, res) => {
-  const { writes, state, w2Income, agi } = req.body;
+  const { writes, state } = req.body;
+  const agi      = asNumber(req.body.agi);
+  const taxableIncome    = asNumber(req.body.taxableIncome);
+  const w2Income         = asNumber(req.body.w2Income);
   let headers;
-  
+
   if (!state || !writes) {
     return res.status(400).json({ error: 'State and writes payload are required.' });
   }
-  
-  try {
-    console.log(`[calculateStateTaxes] Processing request for state: ${state}, AGI: ${agi}, W2: ${w2Income}`);
-    
-    // Extract AGI if provided in the request
-    const userAGI = typeof agi === 'number' ? agi : 
-                   (writes.find(w => w.cell === 'B60')?.value || null);
-    
-    // 1) open a session and get back the headers object
-    headers = await startSession(false);
 
-    // 2) pass those *exactly* into locateStateSection so it uses your token
-    const { rows } = await locateStateSection(state, headers);
-    
-    // 3) If AGI was provided, explicitly write it to the state section first
-    if (userAGI !== null) {
-      const agiCell = `B${rows.agi}`;
-      console.log(`[calculateStateTaxes] Explicitly setting state AGI to ${agiCell}:`, userAGI);
-      
-      await fetch(
-        `${SHEET_URL}/range(address='${agiCell}')`,
-        {
-          method: 'PATCH',
-          headers,
-          body: JSON.stringify({ values: [[ userAGI ]] })
-        }
-      );
-      
-      // Force a recalculation after writing AGI
+  try {
+    console.log(`[calculateStateTaxes] ${state}: AGI=${agi}, Taxable=${taxableIncome}, W2=${w2Income}`);
+
+    headers = await startSession(false);
+    const { rows, leadKind, leadLabel } = await locateStateSection(state, headers);
+
+    const leadValue =
+      leadKind === 'taxableIncome'
+        ? (typeof taxableIncome === 'number' ? taxableIncome : agi)
+        : (typeof agi === 'number' ? agi : taxableIncome);
+
+    if (typeof leadValue === 'number') {
+      const leadCell = `B${rows.agi}`;
+      console.log(`[calculateStateTaxes] lead label "${leadLabel}" => writing ${leadValue} to ${leadCell}`);
+      await fetch(`${SHEET_URL}/range(address='${leadCell}')`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ values: [[ leadValue ]] })
+      });
       await refreshWorkbook(headers);
     }
 
-    // 4) Define what cells we want to read back
     const readRange = [
-      `B${rows.agi}`, 
-      `B${rows.additions}`, 
-      `B${rows.deductions}`, 
-      `B${rows.taxableIncome}`, 
-      `B${rows.taxesDue}`, 
-      `B${rows.credits}`, 
-      `B${rows.afterTaxDed}`, 
+      `B${rows.agi}`,
+      `B${rows.additions}`,
+      `B${rows.deductions}`,
+      `B${rows.taxableIncome}`,
+      `B${rows.taxesDue}`,
+      `B${rows.credits}`,
+      `B${rows.afterTaxDed}`,
       `B${rows.totalStateTax}`
     ];
 
     const results = await calculateMultiple(writes, readRange);
-
-    // 2) Map back into structured JSON
     const keys = ['agi','additions','deductions','stateTaxableIncomeInput','stateTaxesDue','credits','afterTaxDeductions','totalStateTax'];
-    const data = results.reduce((acc, {cell,value}, i) => {
+    const data = results.reduce((acc, { cell, value }, i) => {
       acc[keys[i]] = value;
       return acc;
     }, {});
-
     return res.json(data);
   } catch (err) {
+    console.error(err);
     return res.status(500).json({ error: err.message });
-   } finally {
-    // 3) always close the session when you’re done
+  } finally {
     if (typeof headers !== 'undefined') {
       await closeSession(headers);
     }
@@ -148,11 +149,11 @@ app.post('/api/stateDeductions', async (req, res) => {
   }
 });
 
-// New generalized write+read endpoint for all state inputs in one round-trip
 app.post('/api/stateInputs', async (req, res) => {
   const {
     state,
     agi,
+    taxableIncome,
     year,
     filingStatus,
     additions,
@@ -168,6 +169,7 @@ app.post('/api/stateInputs', async (req, res) => {
   try {
     const data = await upsertStateInputsAndRead(state.trim(), {
       agi: (typeof agi === 'number') ? agi : undefined,
+      taxableIncome: (typeof taxableIncome === 'number') ? taxableIncome : undefined,  // <— NEW
       year: (typeof year === 'number') ? year : undefined,
       filingStatus: (typeof filingStatus === 'string') ? filingStatus : undefined,
       additions: (typeof additions === 'number') ? additions : undefined,
@@ -199,97 +201,91 @@ app.post('/api/stateAGI', async (req, res) => {
   }
 });
 
-// New improved endpoint for state tax calculation with better session handling
 app.post('/api/calculateStateTaxes2', async (req, res) => {
-  const { writes, state, w2Income, agi } = req.body;
+  const { writes, state } = req.body;
+  const agi      = asNumber(req.body.agi);
+  const taxableIncome  = asNumber(req.body.taxableIncome);
+  const w2Income = asNumber(req.body.w2Income);
   let headers;
-  
+
   if (!state || !writes) {
     return res.status(400).json({ error: 'State and writes payload are required.' });
   }
-  
+
   try {
-    console.log(`[calculateStateTaxes2] Processing request for state: ${state}, AGI: ${agi}, W2: ${w2Income}`);
-    
-    // 1) Open a session that does NOT persist changes
+    console.log(`[calculateStateTaxes2] ${state}: AGI=${agi}, Taxable=${taxableIncome}, W2=${w2Income}`);
     headers = await startSession(false);
-    
-    // 2) Locate the state section
-    const { rows } = await locateStateSection(state, headers);
-    
-    // 3) If AGI was provided, explicitly write it to the state section first
-    if (typeof agi === 'number') {
-      const agiCell = `B${rows.agi}`;
-      console.log(`[calculateStateTaxes2] Setting state AGI to ${agiCell}:`, agi);
+
+    const { rows, leadKind, leadLabel } = await locateStateSection(state, headers);
       
-      await fetch(
-        `${SHEET_URL}/range(address='${agiCell}')`,
-        {
-          method: 'PATCH',
-          headers,
-          body: JSON.stringify({ values: [[ agi ]] })
-        }
-      );
+    // STRICT: if the sheet expects "Taxable Income", require taxableIncome;
+    // if it expec
+    // ts "AGI", require agi. No implicit fallback.
+    let leadValue;
+    if (leadKind === 'taxableIncome') {
+      if (typeof taxableIncome !== 'number' || Number.isNaN(taxableIncome)) {
+        throw new Error(`Sheet expects "Taxable Income" but request did not include a valid taxableIncome number.`);
+      }
+      leadValue = taxableIncome;
+    } else if (leadKind === 'agi') {
+      if (typeof agi !== 'number' || Number.isNaN(agi)) {
+        throw new Error(`Sheet expects "AGI" but request did not include a valid agi number.`);
+      }
+      leadValue = agi;
+    } else {
+      throw new Error(`Unrecognized lead label "${leadLabel}" — expected AGI or Taxable Income.`);
     }
     
-    // 4) Write all inputs from the form
+    const leadCell = `B${rows.agi}`;
+    console.log(`[calculateStateTaxes2] lead label "${leadLabel}" => writing ${leadValue} to ${leadCell}`);
+    await fetch(`${SHEET_URL}/range(address='${leadCell}')`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ values: [[ leadValue ]] })
+    });
+
+    // Write all other inputs in one pass
     for (let { cell, value } of writes) {
-      await fetch(
-        `${SHEET_URL}/range(address='${cell}')`,
-        {
-          method: 'PATCH',
-          headers,
-          body: JSON.stringify({ values: [[ value ]] })
-        }
-      );
+      await fetch(`${SHEET_URL}/range(address='${cell}')`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ values: [[ value ]] })
+      });
     }
-    
-    // 5) Force a recalculation after writing all inputs
+
+    // Recalc then read back the block
     await refreshWorkbook(headers);
-    
-    // 6) Read back the state section values
     const readRange = [
-      `B${rows.agi}`, 
-      `B${rows.additions}`, 
-      `B${rows.deductions}`, 
-      `B${rows.taxableIncome}`, 
-      `B${rows.taxesDue}`, 
-      `B${rows.credits}`, 
-      `B${rows.afterTaxDed}`, 
+      `B${rows.agi}`,
+      `B${rows.additions}`,
+      `B${rows.deductions}`,
+      `B${rows.taxableIncome}`,
+      `B${rows.taxesDue}`,
+      `B${rows.credits}`,
+      `B${rows.afterTaxDed}`,
       `B${rows.totalStateTax}`
     ];
-    
+
     const results = [];
     for (let address of readRange) {
-      const rjson = await fetch(
-        `${SHEET_URL}/range(address='${address}')`,
-        { method: 'GET', headers }
-      ).then(r => r.json());
+      const rjson = await fetch(`${SHEET_URL}/range(address='${address}')`, { method: 'GET', headers })
+        .then(r => r.json());
       const [[ value ]] = rjson.values;
       results.push({ cell: address, value });
     }
-    
-    // 7) Map back into structured JSON
+
     const keys = ['agi','additions','deductions','stateTaxableIncomeInput','stateTaxesDue','credits','afterTaxDeductions','totalStateTax'];
-    const data = results.reduce((acc, {cell,value}, i) => {
+    const data = results.reduce((acc, { cell, value }, i) => {
       acc[keys[i]] = value;
       return acc;
     }, {});
-    
-    console.log(`[calculateStateTaxes2] Returning data with AGI: ${data.agi}, deductions: ${data.deductions}`);
     return res.json(data);
   } catch (err) {
-    console.error('[calculateStateTaxes2] Error:', err);
+    console.error(err);
     return res.status(500).json({ error: err.message });
   } finally {
-    // 8) ALWAYS close and discard changes to prevent persistence between users
-    if (headers) {
-      try {
-        await closeSession(headers, true);
-        console.log('[calculateStateTaxes2] Session closed with changes discarded');
-      } catch (closeErr) {
-        console.error('[calculateStateTaxes2] Error closing session:', closeErr);
-      }
+    if (typeof headers !== 'undefined') {
+      await closeSession(headers);
     }
   }
 });
