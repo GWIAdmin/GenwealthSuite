@@ -279,6 +279,11 @@ app.post('/api/calculateStateTaxes2', async (req, res) => {
       acc[keys[i]] = value;
       return acc;
     }, {});
+
+    // Update the totalTax field with totalStateTax included
+    const totalTax = parseFloat(req.body.totalTax || 0) + parseFloat(data.totalStateTax || 0);
+    data.totalTax = totalTax;
+
     return res.json(data);
   } catch (err) {
     console.error(err);

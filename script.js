@@ -6509,12 +6509,13 @@ function updateTotalTax() {
     balanceDueEl.textContent = formatCurrency(totalFed);
   }
   const totalField = document.getElementById('totalTax');
-
+  const stateTax = getFieldValue('totalStateTax');
+  
   if (taxField)   taxField.value   = fmt(computedTax);
   if (fedField)   fedField.value   = fmt(totalFed);
 
   if (totalField) {
-    const grandTotal = totalFed + stateTotalTax + employeeFICA + employerFICA;
+    const grandTotal = totalFed + stateTax + employeeFICA + employerFICA;
     totalField.value = fmt(grandTotal);
   }
 }
@@ -6573,6 +6574,49 @@ const mappings = [
 
 // ─── State-Tax “Calculate” Button Flow ─────────────────────────────────
 let _stateSectionInitialized = false;
+
+// --- Dynamic State Taxes button + loader helpers ---
+const STATE_EDITABLE_IDS = [
+  'stateAdditionsToIncome',
+  'stateDeductions',
+  'stateCredits',
+  'stateAfterTaxDeductions'
+];
+let _stateDirty = false;
+
+function setStateButtonDirty(dirty) {
+  const btn = document.getElementById('calculateStateTaxesBTN');
+  _stateDirty = !!dirty;
+  if (dirty) {
+    btn.textContent = 'Update State Taxes';
+    btn.classList.add('state-update');
+  } else {
+    btn.textContent = 'Calculate State Taxes';
+    btn.classList.remove('state-update');
+  }
+}
+
+function attachStateDirtyListeners() {
+  STATE_EDITABLE_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', () => setStateButtonDirty(true));
+  });
+}
+
+function toggleStateLoader(on) {
+  const bar = document.getElementById('stateProgress');
+  if (bar) bar.classList.toggle('active', !!on);
+
+  // Subtle per-field spinner using your existing .state-field-loading CSS
+  const container = document.getElementById('stateTaxableIncomeContent');
+  if (container) {
+    container.querySelectorAll('input').forEach(inp => {
+      inp.classList.toggle('state-field-loading', !!on);
+      inp.readOnly = on ? true : inp.hasAttribute('readonly'); // don't unlock read-only fields afterwards
+    });
+  }
+}
 
 function renderStateSection(data) {
   const mapping = {
@@ -6652,6 +6696,7 @@ async function readStateData() {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
+
   if (!resp.ok) throw new Error(await resp.text());
   return await resp.json();
 }
@@ -6659,46 +6704,61 @@ async function readStateData() {
 async function handleCalculateStateTaxes() {
   const btn = document.getElementById('calculateStateTaxesBTN');
   btn.disabled = true;
+  toggleStateLoader(true);
 
   try {
     if (!_stateSectionInitialized) {
-      // FIRST RUN: write all inputs, recalc via Graph, read state block, render
+      // FIRST RUN
       const data = await readStateData();
       renderStateSection(data);
       _stateSectionInitialized = true;
 
+      // Start watching for edits after first paint
+      attachStateDirtyListeners();
     } else {
-      // SUBSEQUENT RUNS: write back only the user-edited state inputs in one call
-      const parseMoney = (id) => parseFloat((document.getElementById(id).value || '0').replace(/[\$,]/g,'')) || 0;
-
-      const payload = {
-        state: document.getElementById('state').value.trim(),
-        year:  parseInt(document.getElementById('year').value, 10) || undefined,
-        filingStatus: document.getElementById('filingStatus').value || undefined,
-        agi:  parseFloat((document.getElementById('totalAdjustedGrossIncome').value || '0').replace(/[\$,]/g,'')) || undefined,
-        taxableIncome: parseFloat((document.getElementById('taxableIncome').value || '0').replace(/[\$,]/g,'')) || undefined,
-
-        // four editable inputs
-        additions:          parseMoney('stateAdditionsToIncome'),
-        deductions:         parseMoney('stateDeductions'),
-        credits:            parseMoney('stateCredits'),
-        afterTaxDeductions: parseMoney('stateAfterTaxDeductions')
-      };
-
-      const resp = await fetch('/api/stateInputs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (!resp.ok) throw new Error(await resp.text());
-
-      const data = await resp.json();
-      renderStateSection(data);
+        const parseMoney = (id) =>
+          Number((document.getElementById(id).value || "0").replace(/[^0-9.-]/g, "")) || 0;
+        
+        const payload = {
+          state: document.getElementById('state').value.trim(),
+          year: Number(document.getElementById('year').value) || undefined,
+          filingStatus: document.getElementById('filingStatus').value || undefined,
+        
+          // Both AGI and Taxable Income available — backend will choose based on label
+          agi: Number((document.getElementById('totalAdjustedGrossIncome').value || "0").replace(/[^0-9.-]/g, "")) || undefined,
+          taxableIncome: Number((document.getElementById('taxableIncome').value || "0").replace(/[^0-9.-]/g, "")) || undefined,
+        
+          // Editable state fields
+          additions: parseMoney('stateAdditionsToIncome'),
+          deductions: parseMoney('stateDeductions'),
+          credits: parseMoney('stateCredits'),
+          afterTaxDeductions: parseMoney('stateAfterTaxDeductions'),
+        };
+        
+        const resp = await fetch('/api/stateInputs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        
+        if (!resp.ok) {
+          const txt = await resp.text();
+          throw new Error(`State tax update failed (${resp.status}): ${txt}`);
+        }
+        const data = await resp.json();
+        renderStateSection(data);
+        
+        // Reset button back to "Calculate State Taxes"
+        setStateButtonDirty(false);
     }
   } catch (err) {
-    console.error('[State] Calculation failed:', err);
-    alert(`State tax error: ${err.message}`);
+    console.error(err);
+    alert(err.message || 'State tax calculation failed.');
   } finally {
+    toggleStateLoader(false);
     btn.disabled = false;
   }
+  updateTotalTax();
+
 }
+ 
