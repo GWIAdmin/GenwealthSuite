@@ -2,7 +2,7 @@ const fetch = require('node-fetch');
 global.fetch = fetch;
 const express = require('express');
 const path    = require('path');
-const { calculateMultiple, startSession, closeSession, writeStateDeductions, writeStateAGI, locateStateSection, SHEET_URL, refreshWorkbook, fetchStateSection, upsertStateInputsAndRead } = require('./taxGraph');
+const { calculateMultiple, startSession, closeSession, writeStateDeductions, writeStateAGI, locateStateSection, SHEET_URL, refreshWorkbook, fetchStateSection, upsertStateInputsAndRead, upsertStateInputsAndReadFlex } = require('./taxGraph');
 
 const app = express();
 app.use(express.json());
@@ -292,6 +292,43 @@ app.post('/api/calculateStateTaxes2', async (req, res) => {
     if (typeof headers !== 'undefined') {
       await closeSession(headers);
     }
+  }
+});
+
+// NEW: flexible upsert + read for outlier states
+app.post('/api/stateInputsFlex', async (req, res) => {
+  try {
+    const {
+      state, year, filingStatus, agi, taxableIncome,
+      inputs = {}, schema
+    } = req.body;
+
+    if (!state?.trim()) return res.status(400).json({ error: 'State is required.' });
+    if (!schema || !schema.labels || !Object.keys(schema.labels).length) {
+      return res.status(400).json({ error: 'Schema with labels is required.' });
+    }
+
+    const reqId = `SIF-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
+    console.log(`[${reqId}] /api/stateInputsFlex start`, { state, year, filingStatus, agi, taxableIncome });
+
+
+    const data = await upsertStateInputsAndReadFlex(state.trim(), {
+      year: (typeof year === 'number') ? year : undefined,
+      filingStatus: (typeof filingStatus === 'string') ? filingStatus.trim() : undefined,
+      leadKey: schema.leadKey,
+      labels: schema.labels,        // { key -> label in Column A }
+      readKeys: schema.readKeys,
+      ioByKey:  schema.ioByKey
+    }, {
+      agi: (typeof agi === 'number') ? agi : undefined,
+      taxableIncome: (typeof taxableIncome === 'number') ? taxableIncome : undefined,
+      ...inputs
+    });
+
+    res.json(data);
+  } catch (err) {
+    console.error('stateInputsFlex error:', err);
+    return res.status(500).json({ error: err.message });
   }
 });
 

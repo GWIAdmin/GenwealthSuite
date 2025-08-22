@@ -684,7 +684,11 @@
       <!-- Indeterminate loader for State Taxes -->
       <div id="stateProgress" class="state-progress" aria-hidden="true"></div>
 
+      <!-- NEW: dynamic container for outlier states -->
+      <div id="stateDynamicContainer" class="form-group" style="display:none;"></div>
+
       <div id="stateTaxableIncomeContent"> 
+      <div id="stateStaticBlock">
         <div class="form-group">
           <label for="selectState">[ State ]</label>
           <input type="text" placeholder="Input State in &quot;Personal Information&quot;" id="selectState" name="selectState" readonly>
@@ -764,6 +768,8 @@
             <label for="stateEstimatedBalanceDue">Estimated Balance Due:</label>
             <input type="text" id="stateEstimatedBalanceDue" name="stateEstimatedBalanceDue" class="currency-field" readonly required>
           </div>
+
+        </div>
 
       </div>
       </section>
