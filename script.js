@@ -6816,7 +6816,7 @@ const OUTLIER_TEMPLATES = {
       { key: 'agi',                         label: 'AGI',                               io: 'output' },
       { key: 'additions',                   label: 'Additions to Income',               io: 'input'  },
       { key: 'deductions',                  label: 'Deductions',                        io: 'input'  },
-      { key: 'standardDeductionOrItemized', label: 'Standard Deduction or Itemized',    io: 'output' },
+      { key: 'standardDeductionOrItemized', label: 'Standard Deduction or Itemized',    io: 'input' },
       { key: 'stateTaxableIncome',          label: 'State Taxable Income',              io: 'output' },
       { key: 'stateTaxesDue',               label: 'State Taxes Due',                   io: 'output' },
       { key: 'localTax',                    label: 'Local Tax',                         io: 'output' },
@@ -7062,6 +7062,15 @@ function readLeadNumbers() {
             inputs[f.key] = readMoney(stateFieldId(f.key));
           }
         });
+
+       // Maryland requires the chosen "Standard Deduction or Itemized".
+       // Use your already-computed Total Deductions as the source of truth.
+       if (state === 'Maryland') {
+         const chosenDeduction = getFieldValue('totalDeductions'); // pulls & unformats "#totalDeductions"
+         if (!inputs.standardDeductionOrItemized || inputs.standardDeductionOrItemized <= 0) {
+           inputs.standardDeductionOrItemized = chosenDeduction;
+         }
+       }
 
         // Clamp some obviously non-negative concepts
         if (inputs.credits != null && inputs.credits < 0) inputs.credits = 0;
