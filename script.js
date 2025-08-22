@@ -6789,22 +6789,6 @@ function stateFieldId(key) {
 // - leadKey:'agi' or 'taxableIncome' (what the sheet expects as the key “driver” value)
 const OUTLIER_TEMPLATES = {
 
-  'California': { 
-    leadKey:'agi', 
-    fields:[
-      { key: 'caTaxableIncomeTop',         label:'California Taxable Income',              io:'output'},
-      { key: 'caTaxDueTop',                label:'California Tax Due',                     io:'output'},
-      { key: 'agi',                        label:'AGI',                                   io:'output'},
-      { key: 'additions',                  label:'Additions to Income',                   io:'input'},
-      { key: 'deductions',                 label:'Deductions',                            io:'input'},
-      { key: 'stateTaxableIncome',         label:'State Taxable Income',                  io:'output'},
-      { key: 'stateTaxesDue',              label:'State Taxes Due',                           io:'output'},
-      { key: 'credits',                    label:'Credits',                                   io:'input'},
-      { key: 'afterTaxDeductions',         label:'After tax Deductions',                      io:'input'},
-      { key: 'total',                      label:'Total',                                     io:'output'},
-    ] 
-  },
-
   'Connecticut': {
     leadKey: 'agi',  // CT block starts with AGI according to your sheet
     fields: [
@@ -6824,20 +6808,20 @@ const OUTLIER_TEMPLATES = {
     ]
   },
 
-  'Maryland': { 
-    leadKey:'agi', 
-    fields:[
-      { key: 'mdTaxableIncomeTop',         label:'Maryland Taxable Income',                   io:'output'},
-      { key: 'mdTaxDueTop',                label:'Maryland Tax Due',                          io:'output'},
-      { key: 'agi',                        label:'AGI',                                       io:'output'},
-      { key: 'additions',                  label:'Additions to Income',                       io:'input'},
-      { key: 'deductions',                 label:'Deductions',                                io:'input'},
-      { key: 'standardDeductionItemized',  label:'Standard Deduction/Itemized',               io:'output'},
-      { key: 'stateTaxableIncome',         label:'State Taxable Income',                      io:'output'},
-      { key: 'stateTaxesDue',              label:'State Taxes Due',                           io:'output'},
-      { key: 'localTax',                   label:'Local Tax',                                 io:'output'},
-      { key: 'total',                      label:'Total',                                     io:'output'},
-    ] 
+  'Maryland': {
+    leadKey: 'agi',
+    fields: [
+      { key: 'mdTaxableIncomeTop',          label: 'Maryland Taxable Income',           io: 'output' },
+      { key: 'mdTaxDueTop',                 label: 'Maryland Tax Due',                  io: 'output' },
+      { key: 'agi',                         label: 'AGI',                               io: 'output' },
+      { key: 'additions',                   label: 'Additions to Income',               io: 'input'  },
+      { key: 'deductions',                  label: 'Deductions',                        io: 'input'  },
+      { key: 'standardDeductionOrItemized', label: 'Standard Deduction or Itemized',    io: 'output' },
+      { key: 'stateTaxableIncome',          label: 'State Taxable Income',              io: 'output' },
+      { key: 'stateTaxesDue',               label: 'State Taxes Due',                   io: 'output' },
+      { key: 'localTax',                    label: 'Local Tax',                         io: 'output' },
+      { key: 'total',                       label: 'Total',                             io: 'output' }
+    ]
   },
 
   'Massachusetts': { 
@@ -7109,44 +7093,49 @@ function readLeadNumbers() {
         });
 
       } else {
-        // Normal 32-state flow → use your existing static ids + /api/stateInputs
-        const body = {
-          state,
-          year,
-          filingStatus,
-          agi,
-          taxableIncome,
-          additions:          readMoney('stateAdditionsToIncome'),
-          deductions:         readMoney('stateDeductions'),
-          credits:            readMoney('stateCredits'),
-          afterTaxDeductions: readMoney('stateAfterTaxDeductions')
-        };
-
-        const res = await fetch('/api/stateInputs', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
-        if (!res.ok) throw new Error(await res.text());
-        const data = await res.json();
-
-        D('Outlier response', data);
-
-        // Write back to the existing static fields you already have
-        const set = (id, key) => {
-          const el = document.getElementById(id);
-          if (el && data[key] !== undefined) el.value = formatCurrency(String(data[key]));
-        };
-        set('stateAdjustedGrossIncome', 'agi');
-        set('stateAdditionsToIncome',   'additions');
-        set('stateDeductions',          'deductions');
-        set('stateTaxableIncomeInput',  'stateTaxableIncomeInput');
-        set('stateTaxesDue',            'stateTaxesDue');
-        set('stateCredits',             'credits');
-        set('stateAfterTaxDeductions',  'afterTaxDeductions');
-        set('totalStateTax',            'totalStateTax');
+        // Normal 32-state flow:
+        // • First click uses /api/calculateStateTaxes2 (readStateData)
+        // • Subsequent updates use /api/stateInputs
+        if (!_stateSectionInitialized) {
+          const data = await readStateData(); // calls /api/calculateStateTaxes2
+          renderStateSection(data);
+          _stateSectionInitialized = true;
+          attachStateDirtyListeners();
+          setStateButtonDirty(false);
+        } else {
+          const body = {
+            state,
+            year,
+            filingStatus,
+            agi,
+            taxableIncome,
+            additions:          readMoney('stateAdditionsToIncome'),
+            deductions:         readMoney('stateDeductions'),
+            credits:            readMoney('stateCredits'),
+            afterTaxDeductions: readMoney('stateAfterTaxDeductions')
+          };
+          const res = await fetch('/api/stateInputs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+          if (!res.ok) throw new Error(await res.text());
+          const data = await res.json();
+          const set = (id, key) => {
+            const el = document.getElementById(id);
+            if (el && data[key] !== undefined) el.value = formatCurrency(String(data[key]));
+          };
+          set('stateAdjustedGrossIncome', 'agi');
+          set('stateAdditionsToIncome',   'additions');
+          set('stateDeductions',          'deductions');
+          set('stateTaxableIncomeInput',  'stateTaxableIncomeInput');
+          set('stateTaxesDue',            'stateTaxesDue');
+          set('stateCredits',             'credits');
+          set('stateAfterTaxDeductions',  'afterTaxDeductions');
+          set('totalStateTax',            'totalStateTax');
+          setStateButtonDirty(false);
+        }
       }
-
     } catch (err) {
       console.error(err);
       alert('State tax calculation failed: ' + (err.message || err));
@@ -7175,6 +7164,11 @@ function readLeadNumbers() {
       selectStateEl.classList.add('auto-copied');
     }
     switchStateLayout(stateName);
+    // If we're on a normal state, the next click should use /api/calculateStateTaxes2
+    if (!getOutlierTemplate(stateName)) {
+      _stateSectionInitialized = false;
+      setStateButtonDirty(false);
+    }
   });
 
   stateSel.dataset.layoutBound = 'true';

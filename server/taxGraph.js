@@ -363,6 +363,33 @@ async function findRowsByLabels(state, labels, headers) {
   const anchorIdx   = cells.findIndex(v => norm(v) === norm(anchor));
   if (anchorIdx === -1) throw new Error(`Could not find “${anchor}” between A${startRow} and A2465`);
 
+  // ──────────────────────────────────────────────────────────────────────────
+  // Maryland: use exact row offsets from the known anchor to avoid any label
+  // ambiguity. This does NOT affect any other state.
+  if (state === 'Maryland') {
+    const base = startRow + anchorIdx; // A1672
+    const mdMap = {
+      // top two lines
+      mdTaxableIncomeTop:       base - 1, // A1671
+      mdTaxDueTop:              base,     // A1672
+      // body rows
+      agi:                      base + 7, // A1679
+      additions:                base + 8, // A1680
+      deductions:               base + 9, // A1681
+      standardDeductionItemized:base +10, // A1682
+      stateTaxableIncome:       base +11, // A1683
+      stateTaxesDue:            base +12, // A1684
+      localTax:                 base +13, // A1685
+      total:                    base +14  // A1686
+    };
+    const rowsByKey = {};
+    for (const key of Object.keys(labels)) {
+      if (mdMap[key]) rowsByKey[key] = mdMap[key];
+    }
+    return rowsByKey;
+  }
+  // ──────────────────────────────────────────────────────────────────────────
+
   const rowsByKey = {};
   for (const [key, label] of Object.entries(labels)) {
     const want = norm(label);
@@ -470,16 +497,37 @@ async function upsertStateInputsAndReadFlex(state, opts, vals) {
       }).then(validate);
     }
 
-    // Recalc workbook once, then read only requested keys
+    // Recalc then read. Maryland sometimes lags one refresh, so retry briefly for MD only.
+    const readOnce = async () => {
+      const o = {};
+      for (const key of readKeys) {
+        const row = rowsByKey[key];
+        if (!row) continue;
+        const [[val]] = await fetchRange(`B${row}:B${row}`, headers);
+        o[key] = val;
+      }
+      return o;
+    };
+    
     await refreshWorkbook(headers);
-    const out = {};
-    for (const key of readKeys) {
-      const row = rowsByKey[key];
-      if (!row) continue;
-      const [[val]] = await fetchRange(`B${row}:B${row}`, headers);
-      out[key] = val;
+    let out = await readOnce();
+    
+    // MD-only: if everything (except AGI) is still empty, give it up to 2 quick retries
+    if (state === 'Maryland') {
+      const allBlankExceptAGI = () =>
+        Object.entries(out)
+          .filter(([k]) => k !== 'agi')
+          .every(([, v]) => v === '' || v == null);
+    
+      let tries = 0;
+      while (allBlankExceptAGI() && tries < 2) {
+        await new Promise(r => setTimeout(r, 175));
+        await refreshWorkbook(headers);
+        out = await readOnce();
+        tries++;
+      }
     }
-
+    
     return out;
   } finally {
     await closeSession(headers, true);
