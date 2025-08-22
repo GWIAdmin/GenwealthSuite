@@ -350,16 +350,159 @@ async function upsertStateInputsAndRead(state, inputs = {}) {
   }
 }
 
+function norm(s) {
+  return (s ?? '').toString().trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+async function findRowsByLabels(state, labels, headers) {
+  const startRow = 892;
+  const colAValues = await fetchRange(`A${startRow}:A2465`, headers);
+  const cells = colAValues.map(r => (r[0] || '').toString().trim());
+
+  const anchor      = `${state} Tax Due`;
+  const anchorIdx   = cells.findIndex(v => norm(v) === norm(anchor));
+  if (anchorIdx === -1) throw new Error(`Could not find “${anchor}” between A${startRow} and A2465`);
+
+  const rowsByKey = {};
+  for (const [key, label] of Object.entries(labels)) {
+    const want = norm(label);
+    let idx = -1;
+
+    // exact anchor match (top "Tax Due" line)
+    if (want === norm(anchor)) idx = anchorIdx;
+
+    // prefer matches below the anchor
+    if (idx === -1) {
+      idx = cells.findIndex((val, i) => i >= (anchorIdx + 1) && norm(val) === want);
+    }
+
+    // fall back to scanning upward
+    if (idx === -1) {
+      for (let i = anchorIdx - 1; i >= 0; i--) {
+        if (norm(cells[i]) === want) { idx = i; break; }
+      }
+    }
+
+    if (idx === -1) {
+      throw new Error(`Could not find label “${label}” for key “${key}” around A${startRow + anchorIdx}`);
+    }
+    rowsByKey[key] = startRow + idx;
+  }
+
+  return rowsByKey;
+}
+
+/**
+ * Flexible upsert + read for outlier schemas.
+ * opts: { year?, filingStatus?, leadKey?, labels:{key->label}, readKeys?:string[] }
+ * vals: { agi?, taxableIncome?, ...any inputs keyed by schema keys... }
+ */
+async function upsertStateInputsAndReadFlex(state, opts, vals) {
+  const headers = await startSession(false);
+  try {
+    const { labels, readKeys = Object.keys(labels), leadKey, ioByKey = {} } = opts || {};
+    if (!labels || !Object.keys(labels).length) {
+      throw new Error('Schema labels are required.');
+    }
+
+    // Set sheet context
+    const pre = [{ address: 'B3', value: `${state} Taxes` }];
+    if (typeof opts.year === 'number')        pre.push({ address: 'B1', value: opts.year });
+    if (typeof opts.filingStatus === 'string' && opts.filingStatus.trim() !== '') {
+      pre.push({ address: 'B2', value: opts.filingStatus.trim() });
+    }
+    for (const p of pre) {
+      await fetch(`${SHEET_URL}/range(address='${p.address}')`, {
+        method: 'PATCH', headers, body: JSON.stringify({ values: [[ p.value ]] })
+      }).then(validate);
+    }
+
+    const rowsByKey = await findRowsByLabels(state, labels, headers);
+
+    // Choose a safe write target (prefer AGI; never write to formula-only outputs)
+    const valByKey = { agi: vals.agi, taxableIncome: vals.taxableIncome };
+
+    function pickWriteKey() {
+      // 1) Prefer AGI when present and numeric
+      if (rowsByKey.agi != null && typeof valByKey.agi === 'number') return 'agi';
+    
+      // 2) Otherwise use the provided leadKey if it exists and is not flagged as an output
+      if (leadKey && rowsByKey[leadKey] != null) {
+        const io = ioByKey[leadKey];
+        if (io !== 'output' && typeof valByKey[leadKey] === 'number') return leadKey;
+      }
+    
+      // 3) Otherwise fall back to Taxable Income only if it's not flagged as output
+      if (rowsByKey.taxableIncome != null && typeof valByKey.taxableIncome === 'number') {
+        const io = ioByKey.taxableIncome;
+        if (io !== 'output') return 'taxableIncome';
+      }
+    
+      throw new Error('Unable to choose a safe write key (AGI/Taxable Income). Check your template labels and io flags.');
+    }
+
+    const writeKey = pickWriteKey();
+    const leadVal  = (writeKey === 'agi') ? vals.agi : vals.taxableIncome;
+    if (typeof leadVal !== 'number' || Number.isNaN(leadVal)) {
+      throw new Error(`Sheet expects "${writeKey.toUpperCase()}" but no valid number was provided.`);
+    }
+
+    // Build patches (lead first)
+    const patches = [{ address: `B${rowsByKey[writeKey]}`, value: leadVal }];
+
+    // Add numeric user inputs (front end only sends inputs for io:'input')
+    for (const [key, row] of Object.entries(rowsByKey)) {
+      if (key === writeKey) continue; // lead already handled
+      if (Object.prototype.hasOwnProperty.call(vals, key) && typeof vals[key] === 'number') {
+        patches.push({ address: `B${row}`, value: vals[key] });
+      }
+    }
+
+    // Safety: fail early if an address is malformed
+    for (const { address, value } of patches) {
+      if (!/^B\d+$/.test(address)) {
+        throw new Error(`Invalid cell address computed: ${address}. Check your template labels.`);
+      }
+      await fetch(`${SHEET_URL}/range(address='${address}')`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ values: [[ value ]] })
+      }).then(validate);
+    }
+
+    // Recalc workbook once, then read only requested keys
+    await refreshWorkbook(headers);
+    const out = {};
+    for (const key of readKeys) {
+      const row = rowsByKey[key];
+      if (!row) continue;
+      const [[val]] = await fetchRange(`B${row}:B${row}`, headers);
+      out[key] = val;
+    }
+
+    return out;
+  } finally {
+    await closeSession(headers, true);
+  }
+}
+
 module.exports = {
-  refreshWorkbook,
-  calculateMultiple,
-  fetchStateSection,
-  writeStateAGI,
-  locateStateSection,
-  writeStateDeductions,
+  // graph/session helpers
   startSession,
   closeSession,
-  SHEET_URL,
+  validate,
+  fetchRange,
   refreshWorkbook,
-  upsertStateInputsAndRead
+  SHEET_URL,
+  // state block helpers
+  locateStateSection,
+  fetchStateSection,
+  writeStateAGI,
+  writeStateDeductions,
+  calculateMultiple,
+  // classic 8-row flow (32 states)
+  upsertStateInputsAndRead,
+  // outlier schema flow (the 11 states)
+  upsertStateInputsAndReadFlex,
+  findRowsByLabels
 };

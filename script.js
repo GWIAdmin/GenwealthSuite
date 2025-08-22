@@ -854,6 +854,13 @@ const STATES_ARRAY = [
     { value: "WI", text: "Wisconsin" },
     { value: "WY", text: "Wyoming" }
 ];  
+
+// ===== DEBUG HELPERS =====
+window.DEBUG_TAX = window.DEBUG_TAX ?? (localStorage.DEBUG_TAX === '1'); // toggle in console: localStorage.DEBUG_TAX='1'
+function D(msg, ...args) {
+  if (!window.DEBUG_TAX) return;
+  console.debug(`[STATE/UI] ${msg}`, ...args);
+}
   
 // Turn "$65,000" or "65000" into 65000 (number)
 function getNumericFromInput(id) {
@@ -6656,7 +6663,7 @@ function renderStateSection(data) {
 }
     
 // Wire up the “Calculate State Taxes” button
-document.getElementById('calculateStateTaxesBTN').addEventListener('click', handleCalculateStateTaxes);
+//document.getElementById('calculateStateTaxesBTN').addEventListener('click', handleCalculateStateTaxes);
 
 async function readStateData() {
   const agi = parseFloat(document.getElementById('totalAdjustedGrossIncome').value.replace(/[\$,]/g, '')) || 0;
@@ -6762,3 +6769,413 @@ async function handleCalculateStateTaxes() {
 
 }
  
+/* ----- OUTLIER STATE TEMPLATES (UI + API) -----*/
+
+// No-tax jurisdictions (can short-circuit to zero)
+const NO_TAX_STATES = new Set([
+  'Alaska','Florida','Nevada','South Dakota','Tennessee','Texas','Washington','Wyoming','New Hampshire'
+]);
+
+// Use a slugged id for every dynamic state field so keys like "standardDeduction/Itemized"
+// don't create invalid/fragile element ids. The *label* stays verbatim for Graph lookups.
+function stateFieldId(key) {
+  return `state_${key.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+}
+
+// Template schema notes:
+// - key:    stable field id for UI & API
+// - label:  exact text from Column A in Excel for that state (server uses it to find the row)
+// - io:     'input' (editable) or 'output' (read-only)
+// - leadKey:'agi' or 'taxableIncome' (what the sheet expects as the key “driver” value)
+const OUTLIER_TEMPLATES = {
+
+  'California': { 
+    leadKey:'agi', 
+    fields:[
+      { key: 'caTaxableIncomeTop',         label:'California Taxable Income',              io:'output'},
+      { key: 'caTaxDueTop',                label:'California Tax Due',                     io:'output'},
+      { key: 'agi',                        label:'AGI',                                   io:'output'},
+      { key: 'additions',                  label:'Additions to Income',                   io:'input'},
+      { key: 'deductions',                 label:'Deductions',                            io:'input'},
+      { key: 'stateTaxableIncome',         label:'State Taxable Income',                  io:'output'},
+      { key: 'stateTaxesDue',              label:'State Taxes Due',                           io:'output'},
+      { key: 'credits',                    label:'Credits',                                   io:'input'},
+      { key: 'afterTaxDeductions',         label:'After tax Deductions',                      io:'input'},
+      { key: 'total',                      label:'Total',                                     io:'output'},
+    ] 
+  },
+
+  'Connecticut': {
+    leadKey: 'agi',  // CT block starts with AGI according to your sheet
+    fields: [
+      { key: 'ctTaxableIncomeTop',     label: 'Connecticut Taxable Income',                io: 'output' },
+      { key: 'ctTaxDueTop',            label: 'Connecticut Tax Due',                       io: 'output' },
+      { key: 'agi',                    label: 'AGI',                                       io: 'output' },
+      { key: 'additions',              label: 'Additions to Income',                       io: 'input'  },
+      { key: 'deductions',             label: 'Deductions',                                io: 'input'  },
+      { key: 'stateTaxableIncome',     label: 'State Taxable Income',                      io: 'output' },
+      { key: 'stateTaxesDue',          label: 'State Taxes Due',                           io: 'output' },
+      { key: 'taxRatePhaseOut',        label: 'Tax Rate Phase Out (Additional Tax)',       io: 'output' },
+      { key: 'benefitRecapturePhaseIn',label: 'Benefit Recapture Phase In',                io: 'output' },
+      { key: 'totalStateTaxesDue',     label: 'Total State Taxes Due',                     io: 'output' },
+      { key: 'credits',                label: 'Credits',                                   io: 'input'  },
+      { key: 'afterTaxDeductions',     label: 'After Tax Deductions',                      io: 'output' },
+      { key: 'total',                  label: 'Total',                                     io: 'output' }
+    ]
+  },
+
+  'Maryland': { 
+    leadKey:'agi', 
+    fields:[
+      { key: 'mdTaxableIncomeTop',         label:'Maryland Taxable Income',                   io:'output'},
+      { key: 'mdTaxDueTop',                label:'Maryland Tax Due',                          io:'output'},
+      { key: 'agi',                        label:'AGI',                                       io:'output'},
+      { key: 'additions',                  label:'Additions to Income',                       io:'input'},
+      { key: 'deductions',                 label:'Deductions',                                io:'input'},
+      { key: 'standardDeductionItemized',  label:'Standard Deduction/Itemized',               io:'output'},
+      { key: 'stateTaxableIncome',         label:'State Taxable Income',                      io:'output'},
+      { key: 'stateTaxesDue',              label:'State Taxes Due',                           io:'output'},
+      { key: 'localTax',                   label:'Local Tax',                                 io:'output'},
+      { key: 'total',                      label:'Total',                                     io:'output'},
+    ] 
+  },
+
+  'Massachusetts': { 
+    leadKey:'agi', 
+    fields:[
+      { key: 'maTaxableIncomeTop',         label:'Massachusetts Taxable Income',              io:'output'},
+      { key: 'maTaxDueTop',                label:'Massachusetts Tax Due',                     io:'output'},
+      { key: 'agi',                        label:'AGI',                                       io:'output'},
+      { key: 'additions',                  label:'Additions to Income',                       io:'input'},
+      { key: 'deductions',                 label:'Deductions',                                io:'input'},
+      { key: 'personalExemption',          label:'Personal Exemption',                        io:'output'},
+      { key: 'stateTaxableIncome',         label:'State Taxable Income',                      io:'output'},
+      { key: 'stateTaxesDue',              label:'State Taxes Due',                           io:'output'},
+      { key: 'credits',                    label:'Credits',                                   io:'input'},
+      { key: 'afterTaxDeductions',         label:'After tax Deductions',                      io:'input'},
+      { key: 'total',                      label:'Total',                                     io:'output'},
+    ] 
+  },
+
+  'Michigan': { 
+    leadKey:'agi', 
+    fields:[
+      { key: 'miTaxableIncomeTop',         label:'Michigan Taxable Income',                   io:'output'},
+      { key: 'miTaxDueTop',                label:'Michigan Tax Due',                          io:'output'},
+      { key: 'agi',                        label:'AGI',                            io:'output'},
+      { key: 'additions',                  label:'Additions to Income',                       io:'input'},
+      { key: 'deductions',                 label:'Deductions',                                io:'input'},
+      { key: 'exemption',                  label:'Exemption',                                 io:'input'},
+      { key: 'stateTaxableIncome',         label:'State Taxable Income',                      io:'output'},
+      { key: 'stateTaxesDue',              label:'State Taxes Due',                           io:'output'},
+      { key: 'credits',                    label:'Credits',                                   io:'input'},
+      { key: 'afterTaxDeductions',         label:'After tax Deductions',                      io:'input'},
+      { key: 'total',                      label:'Total',                                     io:'output'},
+    ] 
+  },
+
+  'Nebraska': { 
+    leadKey:'agi', 
+    fields:[
+      { key: 'neTaxableIncomeTop',         label:'Nebraska Taxable Income',                   io:'output'},
+      { key: 'neTaxDueTop',                label:'Nebraska Tax Due',                          io:'output'},
+      { key: 'agi',                        label:'AGI',                                       io:'output'},
+      { key: 'additions',                  label:'Additions to Income',                       io:'input'},
+      { key: 'deductions',                 label:'Deductions',                                io:'input'},
+      { key: 'standardDeduction',          label:'Standard Deduction',                        io:'output'},
+      { key: 'stateTaxableIncome',         label:'State Taxable Income',                      io:'output'},
+      { key: 'stateTaxesDue',              label:'State Taxes Due',                           io:'output'},
+      { key: 'credits',                    label:'Credits',                                   io:'input'},
+      { key: 'afterTaxDeductions',         label:'After tax Deductions',                      io:'input'},
+      { key: 'total',                      label:'Total',                                     io:'output'},
+    ] 
+  },
+
+  'Oregon': { 
+    leadKey:'agi', 
+    fields:[
+      { key: 'orTaxableIncomeTop',         label:'Oregon Taxable Income',                     io:'output'},
+      { key: 'orTaxDueTop',                label:'Oregon Tax Due',                            io:'output'},
+      { key: 'agi',                        label:'AGI',                                       io:'output'},
+      { key: 'additions',                  label:'Additions to Income',                       io:'input'},
+      { key: 'exemption',                  label:'Exemption',                                 io:'output'},
+      { key: 'standardDeduction',          label:'Standard Deduction',                        io:'output'},
+      { key: 'stateTaxableIncome',         label:'State Taxable Income',                      io:'output'},
+      { key: 'stateTaxesDue',              label:'State Taxes Due',                           io:'output'},
+      { key: 'credits',                    label:'Credits',                                   io:'input'},
+      { key: 'afterTaxDeductions',         label:'After tax Deductions',                      io:'input'},
+      { key: 'total',                      label:'Total',                                     io:'output'},
+    ] 
+  },
+
+  'Wisconsin': { 
+    leadKey:'agi', 
+    fields:[
+      { key: 'wiTaxableIncomeTop',         label:'Wisconsin Taxable Income',                  io:'output'},
+      { key: 'wiTaxDueTop',                label:'Wisconsin Tax Due',                         io:'output'},
+      { key: 'agi',                        label:'AGI',                                       io:'output'},
+      { key: 'additions',                  label:'Additions to Income',                       io:'input'},
+      { key: 'deductions',                 label:'Deductions',                                io:'input'},
+      { key: 'totalIncome',                label:'Total Income',                              io:'output'},
+      { key: 'standardDeduction',          label:'Standard Deduction',                        io:'output'},
+      { key: 'stateTaxableIncome',         label:'State Taxable Income',                      io:'output'},
+      { key: 'stateTaxesDue',              label:'State Taxes Due',                           io:'output'},
+      { key: 'credits',                    label:'Credits',                                   io:'input'},
+      { key: 'afterTaxDeductions',         label:'After tax Deductions',                      io:'input'},
+      { key: 'total',                      label:'Total',                                     io:'output'},
+    ] 
+  },
+
+  // TODO: Fill these the same way (copy CT as a starting point, set correct labels from Col A)
+  'Missouri':       { leadKey:'taxableIncome', fields:[/*...*/] },
+  'New York':       { leadKey:'agi', fields:[/*...*/] },
+  'Yonkers':        { leadKey:'agi', fields:[/*...*/] },
+  'Washington D.C.':{ leadKey:'agi', fields:[/*...*/] },
+};
+
+// helper: returns template object or null
+function getOutlierTemplate(stateName) {
+  return OUTLIER_TEMPLATES[stateName] || null;
+}
+
+function showStateLoader(show) {
+  const bar = document.getElementById('stateProgress');
+  if (!bar) return;
+  bar.setAttribute('aria-hidden', show ? 'false' : 'true');
+  bar.style.display = show ? 'block' : 'none';
+}
+
+// Build one UI field
+function renderField(container, tplField) {
+  const wrap = document.createElement('div');
+  wrap.className = 'form-group';
+
+  const label = document.createElement('label');
+  label.htmlFor = stateFieldId(tplField.key);
+  label.textContent = tplField.label + ':';
+  wrap.appendChild(label);
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.id = stateFieldId(tplField.key);
+  input.name = stateFieldId(tplField.key);
+  input.classList.add('currency-field');
+  if (tplField.io === 'output') {
+    input.readOnly = true;
+  }
+  wrap.appendChild(input);
+
+  container.appendChild(wrap);
+}
+
+// Render a full template (outlier state)
+function renderOutlierUI(stateName) {
+  const staticBlock = document.getElementById('stateStaticBlock');
+  const dyn = document.getElementById('stateDynamicContainer');
+  const tpl = getOutlierTemplate(stateName);
+  if (!dyn || !tpl) return;
+
+  // hide static block, show dynamic
+  if (staticBlock) staticBlock.style.display = 'none';
+  dyn.style.display = 'block';
+  dyn.innerHTML = ''; // clear
+
+  D(`Render outlier UI for ${stateName}`, getOutlierTemplate(stateName));
+
+  // header readout for selected state (to mirror your static "[ State ]" field)
+  const header = document.createElement('div');
+  header.className = 'form-group';
+  header.innerHTML = `
+    <label>[ State ]</label>
+    <input type="text" id="selectStateDyn" readonly value="${stateName}">
+  `;
+  dyn.appendChild(header);
+
+  // add all configured fields
+  tpl.fields.forEach(f => renderField(dyn, f));
+}
+
+// Switch UI for a selected state
+function switchStateLayout(stateName) {
+  const staticBlock = document.getElementById('stateStaticBlock');
+  const dyn = document.getElementById('stateDynamicContainer');
+
+  if (NO_TAX_STATES.has(stateName)) {
+    // No tax: show static block for familiarity, zero out totals, disable button
+    if (dyn) dyn.style.display = 'none';
+    if (staticBlock) staticBlock.style.display = 'block';
+    // zero-out key outputs
+    const zero = v => (document.getElementById(v) && (document.getElementById(v).value = formatCurrency('0')));
+    ['stateAdjustedGrossIncome','stateTaxableIncomeInput','stateTaxesDue','totalStateTax'].forEach(zero);
+    const btn = document.getElementById('calculateStateTaxesBTN');
+    if (btn) { btn.disabled = true; btn.title = 'No state income tax'; }
+    return;
+  }
+
+  const tpl = getOutlierTemplate(stateName);
+  const btn = document.getElementById('calculateStateTaxesBTN');
+  if (btn) { btn.disabled = false; btn.title = ''; }
+
+  if (tpl) {
+    renderOutlierUI(stateName);
+  } else {
+    // normal state → keep your existing static block
+    if (dyn) dyn.style.display = 'none';
+    if (staticBlock) staticBlock.style.display = 'block';
+  }
+}
+
+// Pull number safely from either static or dynamic field ids
+function readMoney(id) {
+  const el = document.getElementById(id);
+  if (!el) return 0;
+  return unformatCurrency(el.value || '0');
+}
+
+// Read AGI/Taxable Income from your existing totals
+function readLeadNumbers() {
+  return {
+    agi:           readMoney('totalAdjustedGrossIncome'),
+    taxableIncome: readMoney('taxableIncome')
+  };
+}
+
+// Attach or replace the calculate handler exactly once
+(function wireStateCalcButton() {
+  const btn = document.getElementById('calculateStateTaxesBTN');
+  if (!btn || btn.dataset.bound === 'true') return;
+
+  btn.addEventListener('click', async () => {
+    const state = document.getElementById('state')?.value;
+    if (!state) return;
+
+    const { agi, taxableIncome } = readLeadNumbers();
+    const year = parseInt(document.getElementById('year')?.value, 10) || undefined;
+    const filingStatus = document.getElementById('filingStatus')?.value || undefined;
+
+    D('Click Update State Taxes', { state, year, filingStatus, agi, taxableIncome });
+
+    // Nice UX
+    btn.dataset.originalText = btn.dataset.originalText || btn.textContent;
+    btn.textContent = (btn.textContent.includes('Calculate')) ? 'Update State Taxes' : 'Update State Taxes';
+    showStateLoader(true);
+
+    try {
+      const tpl = getOutlierTemplate(state);
+
+      if (tpl) {
+        // Build schema & inputs for flex endpoint
+         const schema = {
+           leadKey: tpl.leadKey,
+           labels:  Object.fromEntries(tpl.fields.map(f => [f.key, f.label])),
+           readKeys: tpl.fields.map(f => f.key),
+           ioByKey: Object.fromEntries(tpl.fields.map(f => [f.key, f.io]))
+         };
+        const inputs = {};
+        tpl.fields.forEach(f => {
+          if (f.io === 'input') {
+            // dynamic ids are "state_<key>"
+            inputs[f.key] = readMoney(stateFieldId(f.key));
+          }
+        });
+
+        // Clamp some obviously non-negative concepts
+        if (inputs.credits != null && inputs.credits < 0) inputs.credits = 0;
+        if (inputs.deductions != null && inputs.deductions < 0) inputs.deductions = 0;
+
+        // Call flexible endpoint
+        const payload = {
+          state, year, filingStatus, agi, taxableIncome,
+          inputs, schema
+        };
+        const res = await fetch('/api/stateInputsFlex', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+
+        // Paint outputs back into dynamic UI
+        tpl.fields.forEach(f => {
+          const id = stateFieldId(f.key);
+          const el = document.getElementById(id);
+          if (el && data[f.key] !== undefined) {
+            el.value = formatCurrency(String(data[f.key]));
+          }
+
+          D('Outlier request payload', { state, year, filingStatus, agi, taxableIncome, schema, inputs });
+
+        });
+
+      } else {
+        // Normal 32-state flow → use your existing static ids + /api/stateInputs
+        const body = {
+          state,
+          year,
+          filingStatus,
+          agi,
+          taxableIncome,
+          additions:          readMoney('stateAdditionsToIncome'),
+          deductions:         readMoney('stateDeductions'),
+          credits:            readMoney('stateCredits'),
+          afterTaxDeductions: readMoney('stateAfterTaxDeductions')
+        };
+
+        const res = await fetch('/api/stateInputs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+
+        D('Outlier response', data);
+
+        // Write back to the existing static fields you already have
+        const set = (id, key) => {
+          const el = document.getElementById(id);
+          if (el && data[key] !== undefined) el.value = formatCurrency(String(data[key]));
+        };
+        set('stateAdjustedGrossIncome', 'agi');
+        set('stateAdditionsToIncome',   'additions');
+        set('stateDeductions',          'deductions');
+        set('stateTaxableIncomeInput',  'stateTaxableIncomeInput');
+        set('stateTaxesDue',            'stateTaxesDue');
+        set('stateCredits',             'credits');
+        set('stateAfterTaxDeductions',  'afterTaxDeductions');
+        set('totalStateTax',            'totalStateTax');
+      }
+
+    } catch (err) {
+      console.error(err);
+      alert('State tax calculation failed: ' + (err.message || err));
+  } finally {
+    showStateLoader(false);
+    btn.classList.add('updating');
+    // Ensure totals refresh for both normal and outlier paths
+    updateTotalTax();
+  }
+  });
+
+  btn.dataset.bound = 'true';
+})();
+
+// When the user changes the state, flip between static/dynamic layouts
+(function wireStateChangeLayout() {
+  const stateSel = document.getElementById('state');
+  if (!stateSel || stateSel.dataset.layoutBound === 'true') return;
+
+  stateSel.addEventListener('change', function() {
+    const stateName = this.value;
+    // keep your existing mirror to [ State ] field
+    const selectStateEl = document.getElementById('selectState');
+    if (selectStateEl) {
+      selectStateEl.value = stateName;
+      selectStateEl.classList.add('auto-copied');
+    }
+    switchStateLayout(stateName);
+  });
+
+  stateSel.dataset.layoutBound = 'true';
+})();
