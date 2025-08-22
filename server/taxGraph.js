@@ -370,17 +370,17 @@ async function findRowsByLabels(state, labels, headers) {
     const base = startRow + anchorIdx; // A1672
     const mdMap = {
       // top two lines
-      mdTaxableIncomeTop:       base - 1, // A1671
-      mdTaxDueTop:              base,     // A1672
-      // body rows
-      agi:                      base + 7, // A1679
-      additions:                base + 8, // A1680
-      deductions:               base + 9, // A1681
-      standardDeductionItemized:base +10, // A1682
-      stateTaxableIncome:       base +11, // A1683
-      stateTaxesDue:            base +12, // A1684
-      localTax:                 base +13, // A1685
-      total:                    base +14  // A1686
+      mdTaxableIncomeTop:          base - 1, // A1671
+      mdTaxDueTop:                 base,     // A1672
+      // body rows   
+      agi:                         base + 7, // A1679
+      additions:                   base + 8, // A1680
+      deductions:                  base + 9, // A1681
+      standardDeductionOrItemized: base +10, // A1682
+      stateTaxableIncome:          base +11, // A1683
+      stateTaxesDue:               base +12, // A1684
+      localTax:                    base +13, // A1685
+      total:                       base +14  // A1686
     };
     const rowsByKey = {};
     for (const key of Object.keys(labels)) {
