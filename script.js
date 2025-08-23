@@ -6909,12 +6909,29 @@ const OUTLIER_TEMPLATES = {
       { key: 'total',                      label:'Total',                                     io:'output'},
     ] 
   },
+  
+  'Washington D.C.': { 
+    leadKey:'agi', 
+    fields:[
+      { key: 'dcTaxableIncomeTop',         label:'Washington D.C. Taxable Income',            io:'output'},
+      { key: 'dcTaxDueTop',                label:'Washington D.C. Tax Due',                   io:'output'},
+      { key: 'agi',                        label:'AGI',                                       io:'output'},
+      { key: 'additions',                  label:'Additions to Income',                       io:'input'},
+      { key: 'deductions',                 label:'Deductions',                                io:'input'},
+      { key: 'stateTaxableIncome',         label:'State Taxable Income',                      io:'output'},
+      { key: 'spouse1',                    label:'Spouse 1 Portion of Income',                io:'output'},
+      { key: 'spouse2',                    label:'Spouse 2 Portion of Income',                io:'input'},
+      { key: 'stateTaxesDue',              label:'State Taxes Due',                           io:'output'},
+      { key: 'credits',                    label:'Credits',                                   io:'input'},
+      { key: 'afterTaxDeductions',         label:'After tax Deductions',                      io:'input'},
+      { key: 'total',                      label:'Total',                                     io:'output'},
+    ] 
+  },
 
   // TODO: Fill these the same way (copy CT as a starting point, set correct labels from Col A)
   'Missouri':       { leadKey:'taxableIncome', fields:[/*...*/] },
   'New York':       { leadKey:'agi', fields:[/*...*/] },
   'Yonkers':        { leadKey:'agi', fields:[/*...*/] },
-  'Washington D.C.':{ leadKey:'agi', fields:[/*...*/] },
 };
 
 // helper: returns template object or null
