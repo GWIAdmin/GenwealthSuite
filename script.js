@@ -6292,25 +6292,25 @@ window.computeOrdinaryTax = computeOrdinaryTax;
 
   const CG_THRESHOLDS = {
     2022: {
-      Single:   { zero: 41675, fifteen: 459750 },
+      Single:                      { zero: 41675, fifteen: 459750 },
       'Married Filing Jointly':    { zero: 83350, fifteen: 517200 },
       'Married Filing Separately': { zero: 41675, fifteen: 258600 },
       'Head of Household':         { zero: 55800, fifteen: 488500 }
     },
     2023: {
-      Single:   { zero: 44625, fifteen: 492300 },
+      Single:                      { zero: 44625, fifteen: 492300 },
       'Married Filing Jointly':    { zero: 89250, fifteen: 553850 },
       'Married Filing Separately': { zero: 44625, fifteen: 276900 },
       'Head of Household':         { zero: 59750, fifteen: 523050 }
     },
     2024: {
-      Single:   { zero: 47025, fifteen: 518900 },
+      Single:                      { zero: 47025, fifteen: 518900 },
       'Married Filing Jointly':    { zero: 94050, fifteen: 583750 },
       'Married Filing Separately': { zero: 47025, fifteen: 291850 },
       'Head of Household':         { zero: 63000, fifteen: 551350 }
     },
     2025: {
-      Single:   { zero: 48350, fifteen: 533400 },
+      Single:                      { zero: 48350, fifteen: 533400 },
       'Married Filing Jointly':    { zero: 96700, fifteen: 600050 },
       'Married Filing Separately': { zero: 48350, fifteen: 300000 },
       'Head of Household':         { zero: 64750, fifteen: 566700 }
@@ -6792,145 +6792,146 @@ const OUTLIER_TEMPLATES = {
   'Connecticut': {
     leadKey: 'agi',  // CT block starts with AGI according to your sheet
     fields: [
-      { key: 'ctTaxableIncomeTop',     label: 'Connecticut Taxable Income',                io: 'output' },
-      { key: 'ctTaxDueTop',            label: 'Connecticut Tax Due',                       io: 'output' },
-      { key: 'agi',                    label: 'AGI',                                       io: 'output' },
-      { key: 'additions',              label: 'Additions to Income',                       io: 'input'  },
-      { key: 'deductions',             label: 'Deductions',                                io: 'input'  },
-      { key: 'stateTaxableIncome',     label: 'State Taxable Income',                      io: 'output' },
-      { key: 'stateTaxesDue',          label: 'State Taxes Due',                           io: 'output' },
-      { key: 'taxRatePhaseOut',        label: 'Tax Rate Phase Out (Additional Tax)',       io: 'output' },
-      { key: 'benefitRecapturePhaseIn',label: 'Benefit Recapture Phase In',                io: 'output' },
-      { key: 'totalStateTaxesDue',     label: 'Total State Taxes Due',                     io: 'output' },
-      { key: 'credits',                label: 'Credits',                                   io: 'input'  },
-      { key: 'afterTaxDeductions',     label: 'After Tax Deductions',                      io: 'output' },
-      { key: 'total',                  label: 'Total',                                     io: 'output' }
-    ]
-  },
+      { key: 'ctTaxableIncomeTop',          label: 'Connecticut Taxable Income',               io: 'output' },
+      { key: 'ctTaxDueTop',                 label: 'Connecticut Tax Due',                      io: 'output' },
+      { key: 'agi',                         label: 'AGI',                                      io: 'output' },
+      { key: 'additions',                   label: 'Additions to Income',                      io: 'input'  },
+      { key: 'deductions',                  label: 'Deductions',                               io: 'input'  },
+      { key: 'stateTaxableIncome',          label: 'State Taxable Income',                     io: 'output' },
+      { key: 'stateTaxesDue',               label: 'State Taxes Due',                          io: 'output' },
+      { key: 'taxRatePhaseOut',             label: 'Tax Rate Phase Out (Additional Tax)',      io: 'output' },
+      { key: 'benefitRecapturePhaseIn',     label: 'Benefit Recapture Phase In',               io: 'output' },
+      { key: 'totalStateTaxesDue',          label: 'Total State Taxes Due',                    io: 'output' },
+      { key: 'credits',                     label: 'Credits',                                  io: 'input'  },
+      { key: 'afterTaxDeductions',          label: 'After Tax Deductions',                     io: 'output' },
+      { key: 'total',                       label: 'Total',                                    io: 'output' }
+    ]   
+  },    
 
-  'Maryland': {
-    leadKey: 'agi',
-    fields: [
-      { key: 'mdTaxableIncomeTop',          label: 'Maryland Taxable Income',           io: 'output' },
-      { key: 'mdTaxDueTop',                 label: 'Maryland Tax Due',                  io: 'output' },
-      { key: 'agi',                         label: 'AGI',                               io: 'output' },
-      { key: 'additions',                   label: 'Additions to Income',               io: 'input'  },
-      { key: 'deductions',                  label: 'Deductions',                        io: 'input'  },
-      { key: 'standardDeductionOrItemized', label: 'Standard Deduction or Itemized',    io: 'input' },
-      { key: 'stateTaxableIncome',          label: 'State Taxable Income',              io: 'output' },
-      { key: 'stateTaxesDue',               label: 'State Taxes Due',                   io: 'output' },
-      { key: 'localTax',                    label: 'Local Tax',                         io: 'output' },
-      { key: 'total',                       label: 'Total',                             io: 'output' }
+  'Maryland': {   
+    leadKey: 'agi',   
+    fields: [   
+      { key: 'mdTaxableIncomeTop',          label: 'Maryland Taxable Income',                  io: 'output' },
+      { key: 'mdTaxDueTop',                 label: 'Maryland Tax Due',                         io: 'output' },
+      { key: 'agi',                         label: 'AGI',                                      io: 'output' },
+      { key: 'additions',                   label: 'Additions to Income',                      io: 'input'  },
+      { key: 'deductions',                  label: 'Deductions',                               io: 'input'  },
+      { key: 'standardDeductionOrItemized', label: 'Standard Deduction or Itemized',           io: 'input'  },
+      { key: 'stateTaxableIncome',          label: 'State Taxable Income',                     io: 'output' },
+      { key: 'stateTaxesDue',               label: 'State Taxes Due',                          io: 'output' },
+      { key: 'localTax',                    label: 'Local Tax',                                io: 'output' },
+      { key: 'total',                       label: 'Total',                                    io: 'output' }
     ]
   },
 
   'Massachusetts': { 
     leadKey:'agi', 
     fields:[
-      { key: 'maTaxableIncomeTop',         label:'Massachusetts Taxable Income',              io:'output'},
-      { key: 'maTaxDueTop',                label:'Massachusetts Tax Due',                     io:'output'},
-      { key: 'agi',                        label:'AGI',                                       io:'output'},
-      { key: 'additions',                  label:'Additions to Income',                       io:'input'},
-      { key: 'deductions',                 label:'Deductions',                                io:'input'},
-      { key: 'personalExemption',          label:'Personal Exemption',                        io:'output'},
-      { key: 'stateTaxableIncome',         label:'State Taxable Income',                      io:'output'},
-      { key: 'stateTaxesDue',              label:'State Taxes Due',                           io:'output'},
-      { key: 'credits',                    label:'Credits',                                   io:'input'},
-      { key: 'afterTaxDeductions',         label:'After tax Deductions',                      io:'input'},
-      { key: 'total',                      label:'Total',                                     io:'output'},
-    ] 
-  },
-
-  'Michigan': { 
-    leadKey:'agi', 
-    fields:[
-      { key: 'miTaxableIncomeTop',         label:'Michigan Taxable Income',                   io:'output'},
-      { key: 'miTaxDueTop',                label:'Michigan Tax Due',                          io:'output'},
-      { key: 'agi',                        label:'AGI',                            io:'output'},
-      { key: 'additions',                  label:'Additions to Income',                       io:'input'},
-      { key: 'deductions',                 label:'Deductions',                                io:'input'},
-      { key: 'exemption',                  label:'Exemption',                                 io:'input'},
-      { key: 'stateTaxableIncome',         label:'State Taxable Income',                      io:'output'},
-      { key: 'stateTaxesDue',              label:'State Taxes Due',                           io:'output'},
-      { key: 'credits',                    label:'Credits',                                   io:'input'},
-      { key: 'afterTaxDeductions',         label:'After tax Deductions',                      io:'input'},
-      { key: 'total',                      label:'Total',                                     io:'output'},
-    ] 
-  },
-
-  'Nebraska': { 
-    leadKey:'agi', 
-    fields:[
-      { key: 'neTaxableIncomeTop',         label:'Nebraska Taxable Income',                   io:'output'},
-      { key: 'neTaxDueTop',                label:'Nebraska Tax Due',                          io:'output'},
-      { key: 'agi',                        label:'AGI',                                       io:'output'},
-      { key: 'additions',                  label:'Additions to Income',                       io:'input'},
-      { key: 'deductions',                 label:'Deductions',                                io:'input'},
-      { key: 'standardDeduction',          label:'Standard Deduction',                        io:'output'},
-      { key: 'stateTaxableIncome',         label:'State Taxable Income',                      io:'output'},
-      { key: 'stateTaxesDue',              label:'State Taxes Due',                           io:'output'},
-      { key: 'credits',                    label:'Credits',                                   io:'input'},
-      { key: 'afterTaxDeductions',         label:'After tax Deductions',                      io:'input'},
-      { key: 'total',                      label:'Total',                                     io:'output'},
-    ] 
-  },
-
-  'Oregon': { 
-    leadKey:'agi', 
-    fields:[
-      { key: 'orTaxableIncomeTop',         label:'Oregon Taxable Income',                     io:'output'},
-      { key: 'orTaxDueTop',                label:'Oregon Tax Due',                            io:'output'},
-      { key: 'agi',                        label:'AGI',                                       io:'output'},
-      { key: 'additions',                  label:'Additions to Income',                       io:'input'},
-      { key: 'exemption',                  label:'Exemption',                                 io:'output'},
-      { key: 'standardDeduction',          label:'Standard Deduction',                        io:'output'},
-      { key: 'stateTaxableIncome',         label:'State Taxable Income',                      io:'output'},
-      { key: 'stateTaxesDue',              label:'State Taxes Due',                           io:'output'},
-      { key: 'credits',                    label:'Credits',                                   io:'input'},
-      { key: 'afterTaxDeductions',         label:'After tax Deductions',                      io:'input'},
-      { key: 'total',                      label:'Total',                                     io:'output'},
-    ] 
-  },
-
-  'Wisconsin': { 
-    leadKey:'agi', 
-    fields:[
-      { key: 'wiTaxableIncomeTop',         label:'Wisconsin Taxable Income',                  io:'output'},
-      { key: 'wiTaxDueTop',                label:'Wisconsin Tax Due',                         io:'output'},
-      { key: 'agi',                        label:'AGI',                                       io:'output'},
-      { key: 'additions',                  label:'Additions to Income',                       io:'input'},
-      { key: 'deductions',                 label:'Deductions',                                io:'input'},
-      { key: 'totalIncome',                label:'Total Income',                              io:'output'},
-      { key: 'standardDeduction',          label:'Standard Deduction',                        io:'output'},
-      { key: 'stateTaxableIncome',         label:'State Taxable Income',                      io:'output'},
-      { key: 'stateTaxesDue',              label:'State Taxes Due',                           io:'output'},
-      { key: 'credits',                    label:'Credits',                                   io:'input'},
-      { key: 'afterTaxDeductions',         label:'After tax Deductions',                      io:'input'},
-      { key: 'total',                      label:'Total',                                     io:'output'},
-    ] 
-  },
+      { key: 'maTaxableIncomeTop',          label: 'Massachusetts Taxable Income',              io: 'output' },
+      { key: 'maTaxDueTop',                 label: 'Massachusetts Tax Due',                     io: 'output' },
+      { key: 'agi',                         label: 'AGI',                                       io: 'output' },
+      { key: 'additions',                   label: 'Additions to Income',                       io: 'input'  },
+      { key: 'deductions',                  label: 'Deductions',                                io: 'input'  },
+      { key: 'personalExemption',           label: 'Personal Exemption',                        io: 'output' },
+      { key: 'stateTaxableIncome',          label: 'State Taxable Income',                      io: 'output' },
+      { key: 'stateTaxesDue',               label: 'State Taxes Due',                           io: 'output' },
+      { key: 'credits',                     label: 'Credits',                                   io: 'input'  },
+      { key: 'afterTaxDeductions',          label: 'After tax Deductions',                      io: 'input'  },
+      { key: 'total',                       label: 'Total',                                     io: 'output' },
+    ]  
+  }, 
+ 
+  'Michigan': {  
+    leadKey:'agi',  
+    fields:[ 
+      { key: 'miTaxableIncomeTop',          label: 'Michigan Taxable Income',                   io: 'output' },
+      { key: 'miTaxDueTop',                 label: 'Michigan Tax Due',                          io: 'output' },
+      { key: 'agi',                         label: 'AGI',                                       io: 'output' },
+      { key: 'additions',                   label: 'Additions to Income',                       io: 'input'  },
+      { key: 'deductions',                  label: 'Deductions',                                io: 'input'  },
+      { key: 'exemption',                   label: 'Exemption',                                 io: 'input'  },
+      { key: 'stateTaxableIncome',          label: 'State Taxable Income',                      io: 'output' },
+      { key: 'stateTaxesDue',               label: 'State Taxes Due',                           io: 'output' },
+      { key: 'credits',                     label: 'Credits',                                   io: 'input'  },
+      { key: 'afterTaxDeductions',          label: 'After tax Deductions',                      io: 'input'  },
+      { key: 'total',                       label: 'Total',                                     io: 'output' },
+    ]  
+  }, 
+ 
+  'Nebraska': {  
+    leadKey:'agi',  
+    fields:[ 
+      { key: 'neTaxableIncomeTop',          label: 'Nebraska Taxable Income',                   io: 'output' },
+      { key: 'neTaxDueTop',                 label: 'Nebraska Tax Due',                          io: 'output' },
+      { key: 'agi',                         label: 'AGI',                                       io: 'output' },
+      { key: 'additions',                   label: 'Additions to Income',                       io: 'input'  },
+      { key: 'deductions',                  label: 'Deductions',                                io: 'input'  },
+      { key: 'standardDeduction',           label: 'Standard Deduction',                        io: 'output' },
+      { key: 'stateTaxableIncome',          label: 'State Taxable Income',                      io: 'output' },
+      { key: 'stateTaxesDue',               label: 'State Taxes Due',                           io: 'output' },
+      { key: 'credits',                     label: 'Credits',                                   io: 'input'  },
+      { key: 'afterTaxDeductions',          label: 'After tax Deductions',                      io: 'input'  },
+      { key: 'total',                       label: 'Total',                                     io: 'output' },
+    ]   
+  },  
   
-  'Washington D.C.': { 
-    leadKey:'agi', 
-    fields:[
-      { key: 'dcTaxableIncomeTop',         label:'Washington D.C. Taxable Income',            io:'output'},
-      { key: 'dcTaxDueTop',                label:'Washington D.C. Tax Due',                   io:'output'},
-      { key: 'agi',                        label:'AGI',                                       io:'output'},
-      { key: 'additions',                  label:'Additions to Income',                       io:'input'},
-      { key: 'deductions',                 label:'Deductions',                                io:'input'},
-      { key: 'stateTaxableIncome',         label:'State Taxable Income',                      io:'output'},
-      { key: 'spouse1',                    label:'Spouse 1 Portion of Income',                io:'output'},
-      { key: 'spouse2',                    label:'Spouse 2 Portion of Income',                io:'input'},
-      { key: 'stateTaxesDue',              label:'State Taxes Due',                           io:'output'},
-      { key: 'credits',                    label:'Credits',                                   io:'input'},
-      { key: 'afterTaxDeductions',         label:'After tax Deductions',                      io:'input'},
-      { key: 'total',                      label:'Total',                                     io:'output'},
+  'Oregon': {   
+    leadKey:'agi',   
+    fields:[  
+      { key: 'orTaxableIncomeTop',          label: 'Oregon Taxable Income',                     io: 'output' },
+      { key: 'orTaxDueTop',                 label: 'Oregon Tax Due',                            io: 'output' },
+      { key: 'agi',                         label: 'AGI',                                       io: 'output' },
+      { key: 'additions',                   label: 'Additions to Income',                       io: 'input'  },
+      { key: 'exemption',                   label: 'Exemption',                                 io: 'output' },
+      { key: 'standardDeduction',           label: 'Standard Deduction',                        io: 'output' },
+      { key: 'stateTaxableIncome',          label: 'State Taxable Income',                      io: 'output' },
+      { key: 'stateTaxesDue',               label: 'State Taxes Due',                           io: 'output' },
+      { key: 'credits',                     label: 'Credits',                                   io: 'input'  },
+      { key: 'afterTaxDeductions',          label: 'After tax Deductions',                      io: 'input'  },
+      { key: 'total',                       label: 'Total',                                     io: 'output' },
+    ]   
+  },  
+  
+  'Wisconsin': {   
+    leadKey:'agi',   
+    fields:[  
+      { key: 'wiTaxableIncomeTop',          label: 'Wisconsin Taxable Income',                  io: 'output' },
+      { key: 'wiTaxDueTop',                 label: 'Wisconsin Tax Due',                         io: 'output' },
+      { key: 'agi',                         label: 'AGI',                                       io: 'output' },
+      { key: 'additions',                   label: 'Additions to Income',                       io: 'input'  },
+      { key: 'deductions',                  label: 'Deductions',                                io: 'input'  },
+      { key: 'totalIncome',                 label: 'Total Income',                              io: 'output' },
+      { key: 'standardDeduction',           label: 'Standard Deduction',                        io: 'output' },
+      { key: 'stateTaxableIncome',          label: 'State Taxable Income',                      io: 'output' },
+      { key: 'stateTaxesDue',               label: 'State Taxes Due',                           io: 'output' },
+      { key: 'credits',                     label: 'Credits',                                   io: 'input'  },
+      { key: 'afterTaxDeductions',          label: 'After tax Deductions',                      io: 'input'  },
+      { key: 'total',                       label: 'Total',                                     io: 'output' },
+    ]   
+  },  
+    
+  'Washington D.C.': {   
+    leadKey:'agi',   
+    fields:[  
+      { key: 'dcTaxableIncomeTop',          label: 'Washington D.C. Taxable Income',            io: 'output' },
+      { key: 'dcTaxDueTop',                 label: 'Washington D.C. Tax Due',                   io: 'output' },
+      { key: 'agi',                         label: 'AGI',                                       io: 'output' },
+      { key: 'additions',                   label: 'Additions to Income',                       io: 'input'  },
+      { key: 'deductions',                  label: 'Deductions',                                io: 'input'  },
+      { key: 'stateTaxableIncome',          label: 'State Taxable Income',                      io: 'output' },
+      { key: 'spouse1',                     label: 'Spouse 1 Portion of Income',                io: 'output' },
+      { key: 'spouse2',                     label: 'Spouse 2 Portion of Income',                io: 'input'  },
+      { key: 'stateTaxesDue',               label: 'State Taxes Due',                           io: 'output' },
+      { key: 'credits',                     label: 'Credits',                                   io: 'input'  },
+      { key: 'afterTaxDeductions',          label: 'After tax Deductions',                      io: 'input'  },
+      { key: 'total',                       label: 'Total',                                     io: 'output' },
     ] 
   },
 
   // TODO: Fill these the same way (copy CT as a starting point, set correct labels from Col A)
   'Missouri':       { leadKey:'taxableIncome', fields:[/*...*/] },
   'New York':       { leadKey:'agi', fields:[/*...*/] },
+  'New York City':  { leadkey:'agi', fields:[/*...*/] },
   'Yonkers':        { leadKey:'agi', fields:[/*...*/] },
 };
 
