@@ -6782,6 +6782,25 @@ function stateFieldId(key) {
   return `state_${key.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
 }
 
+// Some "output" fields should still be editable in the UI.
+// state => set of keys that are editable despite io:'output'
+const EDITABLE_OUTPUT_OVERRIDES = {
+  'New York': new Set(['standardDeductionOrItemized'])
+};
+
+function isEditableOutput(stateName, key) {
+  return !!(EDITABLE_OUTPUT_OVERRIDES[stateName] && EDITABLE_OUTPUT_OVERRIDES[stateName].has(key));
+}
+
+// helper: read only if the user entered something
+function readMoneyIfPresent(id) {
+  const el = document.getElementById(id);
+  if (!el) return undefined;
+  const raw = (el.value ?? '').trim();
+  if (raw === '') return undefined;     // <- key change: don't force 0
+  return unformatCurrency(raw);
+}
+
 // Template schema notes:
 // - key:    stable field id for UI & API
 // - label:  exact text from Column A in Excel for that state (server uses it to find the row)
@@ -6971,7 +6990,7 @@ function showStateLoader(show) {
 }
 
 // Build one UI field
-function renderField(container, tplField) {
+function renderField(container, tplField, stateName) {
   const wrap = document.createElement('div');
   wrap.className = 'form-group';
 
@@ -6985,8 +7004,12 @@ function renderField(container, tplField) {
   input.id = stateFieldId(tplField.key);
   input.name = stateFieldId(tplField.key);
   input.classList.add('currency-field');
-  if (tplField.io === 'output') {
+  // Keep outputs read-only *unless* explicitly overridden
+  if (tplField.io === 'output' && !isEditableOutput(stateName, tplField.key)) {
     input.readOnly = true;
+  } else {
+    input.readOnly = false;
+    input.classList.remove('readonly');
   }
   wrap.appendChild(input);
 
@@ -7017,7 +7040,7 @@ function renderOutlierUI(stateName) {
   dyn.appendChild(header);
 
   // add all configured fields
-  tpl.fields.forEach(f => renderField(dyn, f));
+  tpl.fields.forEach(f => renderField(dyn, f, stateName));
 }
 
 // Switch UI for a selected state
@@ -7096,11 +7119,17 @@ function readLeadNumbers() {
            readKeys: tpl.fields.map(f => f.key),
            ioByKey: Object.fromEntries(tpl.fields.map(f => [f.key, f.io]))
          };
-        const inputs = {};
-        tpl.fields.forEach(f => {
-          if (f.io === 'input') {
-            // dynamic ids are "state_<key>"
-            inputs[f.key] = readMoney(stateFieldId(f.key));
+         const inputs = {};
+         tpl.fields.forEach(f => {
+           // Normal editable inputs...
+           if (f.io === 'input') {
+             inputs[f.key] = readMoney(stateFieldId(f.key));
+             return;
+           }
+          // Editable "outputs" (only include if user typed something)
+          if (isEditableOutput(state, f.key)) {
+            const maybe = readMoneyIfPresent(stateFieldId(f.key));
+            if (maybe !== undefined) inputs[f.key] = maybe;
           }
         });
 
