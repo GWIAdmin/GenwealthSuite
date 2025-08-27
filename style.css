@@ -389,33 +389,33 @@ body.dark-mode .res-comp-btn:hover { background-color: var(--accent); color: #55
   color: #1b1b1b;
 }
 
-/* --- Thin indeterminate progress bar used during both calls --- */
-.state-progress {
-  width: 240px;
-  height: 6px;
-  margin: -6px auto 16px;      /* tucks right under the button */
-  border-radius: 999px;
-  background: rgba(255,255,255,.15);
-  overflow: hidden;
-  opacity: 0;
-  transform: translateY(-6px);
-  transition: opacity .2s ease;
+/* Smooth, on-button gradient while loading */
+@property --mix {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 0%;
+}
+
+#calculateStateTaxesBTN.is-loading {
+  --mix: 0%;
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, #fa4e22 calc(100% - var(--mix)), #ff9f1a var(--mix)),
+    color-mix(in oklab, #ff9f1a calc(100% - var(--mix)), #fa4e22 var(--mix))
+  );
+  background-size: 200% 200%;
+  animation: stateBtnPulse 0.9s ease-in-out infinite alternate;
+  color: #1b1b1b;            /* stays readable on warm gradient */
+  cursor: progress;          /* keep the loading cursor */
+}
+
+@keyframes stateBtnPulse {
+  0%   { --mix: 0%;   background-position: 0% 50%; }
+  100% { --mix: 100%; background-position: 100% 50%; }
+}
+
+/* Button loading animation (replaces separate state-progress bar) */
+#calculateStateTaxesBTN.is-loading {
   position: relative;
-}
-.state-progress.active { opacity: 1; }
-
-.state-progress::before {
-  content: "";
-  position: absolute;
-  left: -40%;
-  top: 0;
-  width: 40%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  animation: stateProgressSlide 1s linear infinite;
-}
-
-@keyframes stateProgressSlide {
-  from { left: -40%; }
-  to   { left: 100%; }
+  cursor: progress;
 }

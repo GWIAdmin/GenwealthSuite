@@ -77,11 +77,14 @@
         <div id="personalInformationContent">
         
           <div class="form-group">
-          <label for="prelim">Preliminary Analysis?:</label>
-          <select id="prelim" name="prelim" required>
+          <label for="typeOfAnalysis">Type of Analysis?:</label>
+          <select id="typeOfAnalysis" name="typeOfAnalysis" required>
             <option value="please select" disabled selected>Please Select</option>
-            <option value="Yes">Yes</option>
-            <option value="No">No</option>
+            <option value="Actual">Actual</option>
+            <option value="Draft">Draft</option>
+            <option value="Mock">Mock</option>
+            <option value="Restructure">Restructure</option>
+            <option value="TSAI">TSAI</option>
           </select>
         </div>
 
@@ -680,9 +683,6 @@
       <button type="button" id="calculateStateTaxesBTN" style="display:block; margin:0 auto 1rem;">
         Calculate State Taxes
       </button>
-
-      <!-- Indeterminate loader for State Taxes -->
-      <div id="stateProgress" class="state-progress" aria-hidden="true"></div>
 
       <!-- NEW: dynamic container for outlier states -->
       <div id="stateDynamicContainer" class="form-group" style="display:none;"></div>

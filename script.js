@@ -6612,15 +6612,15 @@ function attachStateDirtyListeners() {
 }
 
 function toggleStateLoader(on) {
-  const bar = document.getElementById('stateProgress');
-  if (bar) bar.classList.toggle('active', !!on);
+  // Drive the in-button animation
+  showStateLoader(on);
 
-  // Subtle per-field spinner using your existing .state-field-loading CSS
+  // Keep the existing per-field spinner behavior
   const container = document.getElementById('stateTaxableIncomeContent');
   if (container) {
     container.querySelectorAll('input').forEach(inp => {
       inp.classList.toggle('state-field-loading', !!on);
-      inp.readOnly = on ? true : inp.hasAttribute('readonly'); // don't unlock read-only fields afterwards
+      inp.readOnly = on ? true : inp.hasAttribute('readonly');
     });
   }
 }
@@ -6966,15 +6966,8 @@ const OUTLIER_TEMPLATES = {
     ] 
   },
 
-
-
-
-
-
-  // TODO: Fill these the same way (copy CT as a starting point, set correct labels from Col A)
+  // TODO:
   'Missouri':       { leadKey:'taxableIncome', fields:[/*...*/] },
-  'New York City':  { leadkey:'agi', fields:[/*...*/] },
-  'Yonkers':        { leadKey:'agi', fields:[/*...*/] },
 };
 
 // helper: returns template object or null
@@ -6983,10 +6976,11 @@ function getOutlierTemplate(stateName) {
 }
 
 function showStateLoader(show) {
-  const bar = document.getElementById('stateProgress');
-  if (!bar) return;
-  bar.setAttribute('aria-hidden', show ? 'false' : 'true');
-  bar.style.display = show ? 'block' : 'none';
+  const btn = document.getElementById('calculateStateTaxesBTN');
+  if (!btn) return;
+  btn.classList.toggle('is-loading', !!show);
+  btn.disabled = !!show;
+  btn.setAttribute('aria-busy', show ? 'true' : 'false');
 }
 
 // Build one UI field
@@ -7041,6 +7035,13 @@ function renderOutlierUI(stateName) {
 
   // add all configured fields
   tpl.fields.forEach(f => renderField(dyn, f, stateName));
+
+  // Mark button dirty on any edit in the dynamic state block
+  dyn.addEventListener('input', (e) => {
+    if (e.target && e.target.matches('input')) {
+      setStateButtonDirty(true);
+    }
+  }, { once: false });
 }
 
 // Switch UI for a selected state
@@ -7166,6 +7167,7 @@ function readLeadNumbers() {
           if (el && data[f.key] !== undefined) {
             el.value = formatCurrency(String(data[f.key]));
           }
+          setStateButtonDirty(false);
 
           D('Outlier request payload', { state, year, filingStatus, agi, taxableIncome, schema, inputs });
 
@@ -7220,7 +7222,6 @@ function readLeadNumbers() {
       alert('State tax calculation failed: ' + (err.message || err));
   } finally {
     showStateLoader(false);
-    btn.classList.add('updating');
     // Ensure totals refresh for both normal and outlier paths
     updateTotalTax();
   }
