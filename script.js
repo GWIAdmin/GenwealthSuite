@@ -6928,9 +6928,32 @@ const OUTLIER_TEMPLATES = {
     ] 
   },
 
+  'New York': {   
+    leadKey:'agi',   
+    fields:[  
+      { key: 'nyTaxableIncomeTop',          label: 'New York Taxable Income',                   io: 'output' },
+      { key: 'nyTaxDueTop',                 label: 'New York Tax Due',                          io: 'output' },
+      { key: 'agi',                         label: 'AGI',                                       io: 'output' },
+      { key: 'additions',                   label: 'Additions to Income',                       io: 'input'  },
+      { key: 'deductions',                  label: 'Deductions',                                io: 'input'  },
+      { key: 'nyagi',                       label: 'New York AGI',                              io: 'output' },
+      { key: 'standardDeductionOrItemized', label: 'Standard or Itemized Deduction',            io: 'output' },
+      { key: 'otherDeductions',             label: 'Other Deductions',                          io: 'input'  },
+      { key: 'stateTaxableIncome',          label: 'State Taxable Income',                      io: 'output' },
+      { key: 'newYorkTaxDue',               label: 'New York Tax Due',                          io: 'output' },
+      { key: 'credits',                     label: 'Credits',                                   io: 'input'  },
+      { key: 'afterTaxDeductions',          label: 'After Tax Deductions',                      io: 'input'  },
+      { key: 'total',                       label: 'Total',                                     io: 'output' },
+    ] 
+  },
+
+
+
+
+
+
   // TODO: Fill these the same way (copy CT as a starting point, set correct labels from Col A)
   'Missouri':       { leadKey:'taxableIncome', fields:[/*...*/] },
-  'New York':       { leadKey:'agi', fields:[/*...*/] },
   'New York City':  { leadkey:'agi', fields:[/*...*/] },
   'Yonkers':        { leadKey:'agi', fields:[/*...*/] },
 };
