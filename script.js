@@ -871,6 +871,56 @@ function getNumericFromInput(id) {
   return Number.isFinite(n) ? n : undefined;
 }
 
+// Replace your current updateTotalStateTax() with this:
+function updateTotalStateTax() {
+  // 1) Build Total State Tax = State Taxes Due + Local Tax after Credits
+  const stateTaxesDue   = getFieldValue('stateTaxesDue');            // readonly field populated by state calc
+  const localTax        = getFieldValue('localTaxAfterCredits');     // user entry
+  const totalStateTax   = stateTaxesDue + localTax;
+
+  // 2) Payments and adjustments
+  const stateWithholdings       = getFieldValue('stateWithholdings');
+  const statePaymentsAndCredits = getFieldValue('statePaymentsAndCredits');
+  const stateInterest           = getFieldValue('stateInterest');    // late interest (adds to amount owed)
+  const statePenalty            = getFieldValue('statePenalty');     // penalties (add to amount owed)
+
+  // Amount paid (reduces what’s owed)
+  const totalPaid = stateWithholdings + statePaymentsAndCredits;
+
+  // Amount owed before comparing to payments
+  const amountOwed = totalStateTax + stateInterest + statePenalty;
+
+  // 3) Split into either Balance Due or Overpayment (Refund)
+  const balanceDue   = Math.max(0, amountOwed - totalPaid);
+  const overpayment  = Math.max(0, totalPaid - amountOwed);
+
+  // 4) Write outputs back to the DOM
+  const totalStateTaxField = document.getElementById('totalStateTax');
+  if (totalStateTaxField) {
+    totalStateTaxField.value = formatCurrency(String(totalStateTax));
+  }
+
+  const balanceDueField = document.getElementById('stateEstimatedBalanceDue');
+  if (balanceDueField) {
+    balanceDueField.value = formatCurrency(String(balanceDue));
+  }
+
+  const refundField = document.getElementById('stateEstimatedRefundOverpayment');
+  if (refundField) {
+    refundField.value = formatCurrency(String(overpayment));
+  }
+}
+
+['stateWithholdings','statePaymentsAndCredits','stateInterest','statePenalty']
+  .forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', () => {
+        updateTotalStateTax();
+      });
+    }
+  });
+
 //-------------------------------------//
 // CHILD TAX CREDIT CONSTANTS & RULES //
 //-------------------------------------//
@@ -6287,6 +6337,17 @@ function computeOrdinaryTax(income, filingStatus, year) {
     console.log(`  → ordinary tax total = $${tax}`);
     return tax;
 }
+
+// IRS Tax Table emulation for taxable income under $100,000
+function computeOrdinaryTaxUsingTable(amount, filingStatus, year) {
+  if (amount <= 0) return 0;
+  const bandMidpoint = Math.floor(amount / 50) * 50 + 25;
+  return Math.round(computeOrdinaryTax(bandMidpoint, filingStatus, year));
+}
+
+// Optional: expose for console testing
+window.computeOrdinaryTaxUsingTable = computeOrdinaryTaxUsingTable;
+
 // expose for console testing
 window.computeOrdinaryTax = computeOrdinaryTax;
 
@@ -6369,7 +6430,10 @@ function computeCapitalGainTax(
   );
 
   // 2) Compute ordinary-rate tax on the ordinary slice:
-  const ordinaryTax = computeOrdinaryTax(ordinarySlice, filingStatus, year);
+  const useTaxTable = taxableIncome < 100000;
+  const ordinaryTax = useTaxTable
+    ? computeOrdinaryTaxUsingTable(ordinarySlice, filingStatus, year)
+    : computeOrdinaryTax(ordinarySlice, filingStatus, year);
 
   // 3) Map your 2-letter codes back to the full labels in CG_THRESHOLDS:
   const STATUS_MAP = {
@@ -6545,6 +6609,19 @@ document.getElementById('doNotTouchBtn').addEventListener('click', function () {
   }
 });
 
+document.getElementById('localTaxAfterCredits')
+  .addEventListener('input', () => {
+    updateTotalStateTax();
+
+  });
+
+document.getElementById('stateTaxesDue')
+  .addEventListener('input', () => {
+    updateTotalStateTax();
+
+  });
+
+
 function followCursor(event) {
   const offsetX = 20; // Adjust if you want pet slightly offset from cursor
   const offsetY = 20;
@@ -6660,6 +6737,8 @@ function renderStateSection(data) {
       el.classList.remove('readonly');
     }
   });
+  updateTotalStateTax();
+
 }
     
 // Wire up the “Calculate State Taxes” button
