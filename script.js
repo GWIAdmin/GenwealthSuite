@@ -861,22 +861,19 @@ function D(msg, ...args) {
   if (!window.DEBUG_TAX) return;
   console.debug(`[STATE/UI] ${msg}`, ...args);
 }
-  
-// Turn "$65,000" or "65000" into 65000 (number)
-function getNumericFromInput(id) {
-  const el = document.getElementById(id);
-  if (!el) return undefined;
-  const cleaned = String(el.value || '').replace(/[^0-9.-]/g, '');
-  const n = Number(cleaned);
-  return Number.isFinite(n) ? n : undefined;
-}
 
 // Replace your current updateTotalStateTax() with this:
 function updateTotalStateTax() {
-  // 1) Build Total State Tax = State Taxes Due + Local Tax after Credits
-  const stateTaxesDue   = getFieldValue('stateTaxesDue');            // readonly field populated by state calc
-  const localTax        = getFieldValue('localTaxAfterCredits');     // user entry
-  const totalStateTax   = stateTaxesDue + localTax;
+  
+  // 1) Build Total State Tax base
+  // For outlier states, use the dynamic "Total:" as the base; otherwise fall back to stateTaxesDue.
+  const outlierTotalEl = document.getElementById('state_total');
+  let baseStateTax = outlierTotalEl
+    ? unformatCurrency(outlierTotalEl.value || '0')  // outlier "Total:"
+    : getFieldValue('stateTaxesDue');                // normal states
+
+  const localTax = getFieldValue('localTaxAfterCredits');
+  const totalStateTax = baseStateTax + localTax;
 
   // 2) Payments and adjustments
   const stateWithholdings       = getFieldValue('stateWithholdings');
@@ -7089,6 +7086,72 @@ function renderField(container, tplField, stateName) {
   container.appendChild(wrap);
 }
 
+// Renders the common state adjustments for BOTH normal and outlier flows
+// Uses the SAME IDs as the static block so existing logic keeps working.
+function renderCommonStateAdjustments(container) {
+  const block = document.createElement('div');
+  block.className = 'form-group';
+  block.id = 'stateCommonAdjustments';
+
+  block.innerHTML = `
+    <div class="form-group">
+      <label for="localTaxAfterCredits">Local Tax after Credits:</label>
+      <input type="text" id="localTaxAfterCredits" name="localTaxAfterCredits" class="currency-field">
+    </div>
+
+    <div class="form-group">
+      <label for="stateWithholdings">Withholdings:</label>
+      <input type="text" id="stateWithholdings" name="stateWithholdings" class="currency-field">
+    </div>
+
+    <div class="form-group">
+      <label for="statePaymentsAndCredits">Payments and Credits:</label>
+      <input type="text" id="statePaymentsAndCredits" name="statePaymentsAndCredits" class="currency-field">
+    </div>
+
+    <div class="form-group">
+      <label for="stateInterest">Interest:</label>
+      <input type="text" id="stateInterest" name="stateInterest" class="currency-field">
+    </div>
+
+    <div class="form-group">
+      <label for="statePenalty">Penalty:</label>
+      <input type="text" id="statePenalty" name="statePenalty" class="currency-field">
+    </div>
+
+    <div class="form-group">
+      <label for="stateEstimatedRefundOverpayment">Estimated Refund (Overpayment):</label>
+      <input type="text" id="stateEstimatedRefundOverpayment" name="stateEstimatedRefundOverpayment" class="currency-field" readonly required>
+    </div>
+
+    <div class="form-group">
+      <label for="stateEstimatedBalanceDue">Estimated Balance Due:</label>
+      <input type="text" id="stateEstimatedBalanceDue" name="stateEstimatedBalanceDue" class="currency-field" readonly required>
+    </div>
+  `;
+
+  container.appendChild(block);
+
+  // Currency formatting on blur (reuse your global helper)
+  block.querySelectorAll('.currency-field').forEach((el) => {
+    el.addEventListener('blur', () => {
+      el.value = formatCurrency(el.value);
+    });
+  });
+
+  // Live recompute when users type
+  ['localTaxAfterCredits','stateWithholdings','statePaymentsAndCredits','stateInterest','statePenalty']
+    .forEach(id => {
+      const el = block.querySelector('#' + id);
+      if (el) {
+        el.addEventListener('input', () => {
+          updateTotalStateTax();
+          updateTotalTax(); // keep grand totals synced
+        });
+      }
+    });
+}
+
 // Render a full template (outlier state)
 function renderOutlierUI(stateName) {
   const staticBlock = document.getElementById('stateStaticBlock');
@@ -7121,18 +7184,56 @@ function renderOutlierUI(stateName) {
       setStateButtonDirty(true);
     }
   }, { once: false });
+
+  // At the end of renderOutlierUI(stateName)
+  const outlierTotalEl = document.getElementById('state_total'); // the dynamic "Total:" for outliers
+  if (outlierTotalEl) {
+    const syncTotal = () => {
+      const n = unformatCurrency(outlierTotalEl.value || '0');
+      const totalStateTaxEl = document.getElementById('totalStateTax');
+      if (totalStateTaxEl) {
+        totalStateTaxEl.value = formatCurrency(String(n));
+      }
+      updateTotalStateTax(); // keep balance/refund in sync
+    };
+    outlierTotalEl.addEventListener('input', syncTotal);
+    syncTotal(); // run once immediately
+  }
+
+  updateTotalStateTax();
+}
+
+function moveFormGroupByFieldId(fieldId, targetContainer) {
+  const field = document.getElementById(fieldId);
+  if (!field) return;
+  const group = field.closest('.form-group') || field;
+  targetContainer.appendChild(group);
+}
+
+// Move the common state adjustment groups between static and dynamic containers.
+function relocateCommonStateAdjustments(fromContainer, toContainer) {
+  // Order matters so the UI looks sane
+  const idsInOrder = [
+    'localTaxAfterCredits',
+    'totalStateTax',
+    'stateWithholdings',
+    'statePaymentsAndCredits',
+    'stateInterest',
+    'statePenalty',
+    'stateEstimatedRefundOverpayment',
+    'stateEstimatedBalanceDue'
+  ];
+  idsInOrder.forEach(id => moveFormGroupByFieldId(id, toContainer));
 }
 
 // Switch UI for a selected state
 function switchStateLayout(stateName) {
   const staticBlock = document.getElementById('stateStaticBlock');
-  const dyn = document.getElementById('stateDynamicContainer');
+  const dyn         = document.getElementById('stateDynamicContainer');
 
   if (NO_TAX_STATES.has(stateName)) {
-    // No tax: show static block for familiarity, zero out totals, disable button
     if (dyn) dyn.style.display = 'none';
     if (staticBlock) staticBlock.style.display = 'block';
-    // zero-out key outputs
     const zero = v => (document.getElementById(v) && (document.getElementById(v).value = formatCurrency('0')));
     ['stateAdjustedGrossIncome','stateTaxableIncomeInput','stateTaxesDue','totalStateTax'].forEach(zero);
     const btn = document.getElementById('calculateStateTaxesBTN');
@@ -7145,11 +7246,30 @@ function switchStateLayout(stateName) {
   if (btn) { btn.disabled = false; btn.title = ''; }
 
   if (tpl) {
-    renderOutlierUI(stateName);
+    // Show dynamic block, hide static, paint outlier fields
+    if (staticBlock) staticBlock.style.display = 'none';
+    if (dyn) {
+      dyn.style.display = 'block';
+      dyn.innerHTML = '';                  // clear dyn
+      renderOutlierUI(stateName);          // render outlier-specific fields
+
+      // ⬇️ Move the existing common groups from static → dynamic to avoid duplicate IDs
+      relocateCommonStateAdjustments(staticBlock, dyn);
+
+      // Recompute totals once everything is in place
+      updateTotalStateTax();
+      updateTotalTax();
+    }
   } else {
-    // normal state → keep your existing static block
+    // Normal state → show static block again and move groups back
     if (dyn) dyn.style.display = 'none';
-    if (staticBlock) staticBlock.style.display = 'block';
+    if (staticBlock) {
+      staticBlock.style.display = 'block';
+      // ⬇️ Move the common groups back into static block
+      relocateCommonStateAdjustments(dyn, staticBlock);
+      updateTotalStateTax();
+      updateTotalTax();
+    }
   }
 }
 
@@ -7251,6 +7371,15 @@ function readLeadNumbers() {
           D('Outlier request payload', { state, year, filingStatus, agi, taxableIncome, schema, inputs });
 
         });
+
+      // 🔁 Copy the outlier "Total:" value into "Total State Tax:"
+      const dynTotalEl = document.getElementById('state_total'); // outlier “Total:”
+      const totalStateTaxEl = document.getElementById('totalStateTax');
+      if (dynTotalEl && totalStateTaxEl) {
+        const n = unformatCurrency(dynTotalEl.value || '0');
+        totalStateTaxEl.value = formatCurrency(String(n));
+      }
+
 
       } else {
         // Normal 32-state flow:
