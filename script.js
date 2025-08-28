@@ -862,51 +862,44 @@ function D(msg, ...args) {
   console.debug(`[STATE/UI] ${msg}`, ...args);
 }
 
-// Replace your current updateTotalStateTax() with this:
 function updateTotalStateTax() {
-  
-  // 1) Build Total State Tax base
-  // For outlier states, use the dynamic "Total:" as the base; otherwise fall back to stateTaxesDue.
+  // Base = Outlier "Total:" if present, otherwise fall back to stateTaxesDue (normal states)
   const outlierTotalEl = document.getElementById('state_total');
-  let baseStateTax = outlierTotalEl
-    ? unformatCurrency(outlierTotalEl.value || '0')  // outlier "Total:"
+  const baseStateTax = outlierTotalEl
+    ? unformatCurrency(outlierTotalEl.value || '0') // outlier "Total:"
     : getFieldValue('stateTaxesDue');                // normal states
 
+  // Add Local tax after credits
   const localTax = getFieldValue('localTaxAfterCredits');
+
+  // This is the amount of state tax before payments/interest/penalty
   const totalStateTax = baseStateTax + localTax;
 
-  // 2) Payments and adjustments
-  const stateWithholdings       = getFieldValue('stateWithholdings');
-  const statePaymentsAndCredits = getFieldValue('statePaymentsAndCredits');
-  const stateInterest           = getFieldValue('stateInterest');    // late interest (adds to amount owed)
-  const statePenalty            = getFieldValue('statePenalty');     // penalties (add to amount owed)
+  // Payments and adjustments
+  const withholdings       = getFieldValue('stateWithholdings');
+  const paymentsAndCredits = getFieldValue('statePaymentsAndCredits');
+  const interest           = getFieldValue('stateInterest'); // adds to amount owed
+  const penalty            = getFieldValue('statePenalty');  // adds to amount owed
 
-  // Amount paid (reduces what’s owed)
-  const totalPaid = stateWithholdings + statePaymentsAndCredits;
+  // Totals
+  const totalPaid  = withholdings + paymentsAndCredits;
+  const amountOwed = totalStateTax + interest + penalty;
 
-  // Amount owed before comparing to payments
-  const amountOwed = totalStateTax + stateInterest + statePenalty;
+  // Split into refund vs balance due
+  const overpayment = Math.max(0, totalPaid - amountOwed);        // "Estimated Refund (Overpayment)"
+  const balanceDue  = Math.max(0, amountOwed - totalPaid);        // "Estimated Balance Due"
 
-  // 3) Split into either Balance Due or Overpayment (Refund)
-  const balanceDue   = Math.max(0, amountOwed - totalPaid);
-  const overpayment  = Math.max(0, totalPaid - amountOwed);
-
-  // 4) Write outputs back to the DOM
+  // Write back to the DOM
   const totalStateTaxField = document.getElementById('totalStateTax');
-  if (totalStateTaxField) {
-    totalStateTaxField.value = formatCurrency(String(totalStateTax));
-  }
-
-  const balanceDueField = document.getElementById('stateEstimatedBalanceDue');
-  if (balanceDueField) {
-    balanceDueField.value = formatCurrency(String(balanceDue));
-  }
+  if (totalStateTaxField) totalStateTaxField.value = formatCurrency(String(totalStateTax));
 
   const refundField = document.getElementById('stateEstimatedRefundOverpayment');
-  if (refundField) {
-    refundField.value = formatCurrency(String(overpayment));
-  }
+  if (refundField) refundField.value = formatCurrency(String(overpayment));
+
+  const balanceDueField = document.getElementById('stateEstimatedBalanceDue');
+  if (balanceDueField) balanceDueField.value = formatCurrency(String(balanceDue));
 }
+
 
 ['stateWithholdings','statePaymentsAndCredits','stateInterest','statePenalty']
   .forEach(id => {
