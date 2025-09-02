@@ -4410,6 +4410,22 @@ taxCreditFields.forEach(id => {
   }
 });
 
+// Payments inputs that drive refund/balance due
+const paymentsFields = [
+  'withholdings',
+  'withholdingsOnAdditionalMedicareWages',
+  'estimatedTaxPayments',
+  'otherPaymentsAndCredits',
+  'penalty'
+];
+
+paymentsFields.forEach(id => {
+  const el = document.getElementById(id);
+  if (el) {
+    el.addEventListener('input', updateFederalPayments);
+    el.addEventListener('change', updateFederalPayments);
+  }
+});
 
 // Add specific listener for year changes to recalculate Child Tax Credit
 const yearField = document.getElementById('year');
@@ -6592,10 +6608,7 @@ function updateTotalTax() {
   // 9) Write everything back to the form
   const taxField   = document.getElementById('tax');
   const fedField   = document.getElementById('totalFederalTax');
-  const balanceDueEl = document.getElementById('estimatedBalanceDue');
-  if (balanceDueEl) {
-    balanceDueEl.textContent = formatCurrency(totalFed);
-  }
+
   const totalField = document.getElementById('totalTax');
   const stateTax = getFieldValue('totalStateTax');
   
@@ -6606,6 +6619,30 @@ function updateTotalTax() {
     const grandTotal = totalFed + stateTax + employeeFICA + employerFICA;
     totalField.value = fmt(grandTotal);
   }
+  
+  // Keep Payments section in sync with latest federal tax
+  updateFederalPayments();
+}
+
+function updateFederalPayments() {
+  const fedTax          = getFieldValue('totalFederalTax');
+  const penalty         = getFieldValue('penalty');
+  const manualWH        = getFieldValue('withholdings');
+  const addlMedWH       = getFieldValue('withholdingsOnAdditionalMedicareWages');
+  const estPays         = getFieldValue('estimatedTaxPayments');
+  const otherPays       = getFieldValue('otherPaymentsAndCredits');
+
+  const totalPayments   = manualWH + addlMedWH + estPays + otherPays;
+  const liability       = fedTax + penalty;
+
+  const balanceDue      = Math.max(0, liability - totalPayments);
+  const overpayment     = Math.max(0, totalPayments - liability);
+
+  const refundEl  = document.getElementById('estimatedRefundOverpayment');
+  const dueEl     = document.getElementById('estimatedBalanceDue');
+
+  if (refundEl) refundEl.value = formatCurrency(String(overpayment));
+  if (dueEl)    dueEl.value    = formatCurrency(String(balanceDue));
 }
 
 const pet = document.getElementById('petSprite');
