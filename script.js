@@ -212,11 +212,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     // Append it to the document, for example, to the body or a specific container:
     document.body.appendChild(rcField);
 
-    const userPrefersDark = localStorage.getItem('preferred-theme') === 'dark';
-    if (userPrefersDark) {
-      darkModeCheckbox.checked = true;
-      document.body.classList.add('dark-mode');
-    }
+  const userPrefersDark = localStorage.getItem('preferred-theme') === 'dark';
+  const darkToggleEl = document.getElementById('darkModeToggle');
+  if (userPrefersDark && darkToggleEl) {
+    darkToggleEl.checked = true;
+    document.body.classList.add('dark-mode');
+  }
 
     // ─── NOW wire up your live‑update mapping ───
     mappings
@@ -4386,6 +4387,30 @@ fieldsToWatch.forEach(fieldId => {
     }
 });
 
+// Tax & Credit inputs that feed directly into updateTotalTax
+const taxCreditFields = [
+  'AMT',
+  'otherTaxes',
+  'foreignTaxCredit',
+  'creditForChildAndDependentCareExpenses',
+  'generalBusinessCredit',
+  'childTaxCredit',
+  'otherCredits',
+  'additionalMedicareTax',
+  'netInvestmentTax',
+  'selfEmploymentTax',
+  'educationCredits'
+];
+
+taxCreditFields.forEach(id => {
+  const el = document.getElementById(id);
+  if (el) {
+    el.addEventListener('input', updateTotalTax);
+    el.addEventListener('change', updateTotalTax);
+  }
+});
+
+
 // Add specific listener for year changes to recalculate Child Tax Credit
 const yearField = document.getElementById('year');
 if (yearField) {
@@ -6527,33 +6552,35 @@ function updateTotalTax() {
   const netInvestment      = getFieldValue('netInvestmentTax');
   const selfEmployment     = getFieldValue('selfEmploymentTax');
   const otherTaxes         = getFieldValue('otherTaxes');
+  const amt                = getFieldValue('AMT');
 
   // 5) Credits
   const foreignCredit   = getFieldValue('foreignTaxCredit');
-  const minTaxCredit    = getFieldValue('priorYearMinimumTaxCredit');
-  const personalCredits = getFieldValue('nonrefundablePersonalCredits');
   const businessCredit  = getFieldValue('generalBusinessCredit');
   const childCredit     = getFieldValue('childTaxCredit');
   const otherCredits    = getFieldValue('otherCredits');
+  const childAndDependentCareCredit   = getFieldValue('creditForChildAndDependentCareExpenses');
+  const educationCredits = getFieldValue('educationCredits');
 
   // 6) State & payroll taxes
-  const stateTotalTax = getFieldValue('stateTotalTax');
   const employeeFICA  = getFieldValue('employeeTaxes');
   const employerFICA  = getFieldValue('employerTaxes');
+
 
   // 7) Build your Total Federal Tax (income‐tax only)
   let totalFed =
       computedTax
+    + amt
     + additionalMedicare
     + netInvestment
     + selfEmployment
     + otherTaxes
-    - foreignCredit
-    - minTaxCredit
-    - personalCredits
-    - businessCredit
-    - childCredit
-    - otherCredits;
+    + foreignCredit
+    + childAndDependentCareCredit
+    + businessCredit
+    + childCredit
+    + otherCredits
+    + educationCredits;
 
   // 8) Formatting helper
   function fmt(amount) {
