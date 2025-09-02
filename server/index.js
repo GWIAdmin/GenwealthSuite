@@ -4,6 +4,10 @@ const express = require('express');
 const path    = require('path');
 const { calculateMultiple, startSession, closeSession, writeStateDeductions, writeStateAGI, locateStateSection, SHEET_URL, refreshWorkbook, fetchStateSection, upsertStateInputsAndRead, upsertStateInputsAndReadFlex } = require('./taxGraph');
 
+require('dotenv').config({ path: __dirname + '/.env' });   // load server/.env for LOCAL_XLSX_PATH
+const XlsxPopulate = require('xlsx-populate');
+const fs = require('fs/promises');
+
 const app = express();
 app.use(express.json());
 
@@ -329,6 +333,257 @@ app.post('/api/stateInputsFlex', async (req, res) => {
   } catch (err) {
     console.error('stateInputsFlex error:', err);
     return res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COLUMN-AWARE SUBMIT that persists a “Year Type” run into the correct column
+// Header row (labels like “2024 Draft”) lives on row 24.
+// We scan B..J for an existing match or the first empty cell, then write there.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Excel columns: 1=A, 2=B, ..., 26=Z, 27=AA...
+function colLetter(n) {
+  let s = '';
+  while (n > 0) {
+    const m = (n - 1) % 26;
+    s = String.fromCharCode(65 + m) + s;
+    n = Math.floor((n - 1) / 26);
+  }
+  return s;
+}
+function colNumber(letter) {
+  let n = 0;
+  for (const ch of letter.toUpperCase()) {
+    if (ch < 'A' || ch > 'Z') break;
+    n = n * 26 + (ch.charCodeAt(0) - 64);
+  }
+  return n;
+}
+function swapToColumn(cellAddr, targetColLetter) {
+  const m = /^([A-Z]+)(\d+)$/.exec(cellAddr);
+  if (!m) return cellAddr;
+  return `${targetColLetter}${m[2]}`;
+}
+
+/**
+ * Find the column to write based on "YYYY <Type>" marker on row 24.
+ * If an exact label already exists, update that column; otherwise use the
+ * first empty cell to the right of B24. Writes the label and returns the letter.
+ *
+ * @param {object} headers Graph workbook-session headers
+ * @param {number} year
+ * @param {string} analysisType
+ * @param {string} [scanRightmost='J'] last column to scan, inclusive
+ * @returns {Promise<string>} column letter (e.g., 'B', 'C', ...)
+ */
+async function resolveColumnForRun(headers, year, analysisType, scanRightmost='J') {
+  const headerRow = 24;
+  const label = `${year} ${analysisType}`;
+  const startColLetter = 'B';
+  const range = `B${headerRow}:${scanRightmost}${headerRow}`;
+
+  const values2D = await fetch(`${SHEET_URL}/range(address='${range}')`, {
+    method: 'GET',
+    headers
+  }).then(r => r.json()).then(j => j.values || []);
+
+  // GET /range returns a 2D array; normalize to a flat row array
+  const rowVals = (values2D[0] ? values2D[0] : values2D).map(v => (v ?? '').toString());
+
+  // 1) Exact match?
+  let idx = rowVals.findIndex(v => v === label);
+  if (idx >= 0) {
+    return colLetter(colNumber(startColLetter) + idx);
+  }
+
+  // 2) First empty cell?
+  idx = rowVals.findIndex(v => v === '' || v === null || v === undefined);
+  if (idx === -1) {
+    throw new Error(`No free column found between B${headerRow} and ${scanRightmost}${headerRow}`);
+  }
+  const targetCol = colLetter(colNumber(startColLetter) + idx);
+
+  // Write the label into the chosen header cell
+  const address = `${targetCol}${headerRow}`;
+  await fetch(`${SHEET_URL}/range(address='${address}')`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify({ values: [[ label ]] })
+  });
+
+  return targetCol;
+}
+
+/**
+ * Persist the mapped writes into the resolved column and recalc.
+ * Body: { year, analysisType, writes:[{cell:'B1', value:…}, …] }
+ *
+ * All cells are specified relative to column B; the server shifts them to
+ * the chosen column (B/C/D/…) based on the header decision.
+ */
+app.post('/api/submitRun', async (req, res) => {
+  // basic sanitizer for numeric-like values
+  function asNumber(x) {
+    if (typeof x === 'number') return x;
+    if (typeof x === 'string') {
+      const cleaned = x.replace(/[^0-9.-]/g, '');
+      const n = Number(cleaned);
+      return Number.isFinite(n) ? n : undefined;
+    }
+    return undefined;
+  }
+
+  const year = asNumber(req.body.year);
+  const analysisType = (req.body.analysisType || '').toString().trim();
+  const writes = Array.isArray(req.body.writes) ? req.body.writes : [];
+
+  if (!year || !analysisType) {
+    return res.status(400).json({ error: 'year and analysisType are required.' });
+  }
+  if (!writes.length) {
+    return res.status(400).json({ error: 'writes[] is required.' });
+  }
+
+  // Use a persisting session so changes are committed to the workbook.
+  const headers = await startSession(true);
+  try {
+    // 1) Find the target column letter, writing the header if new.
+    const targetCol = await resolveColumnForRun(headers, year, analysisType, 'J'); // widen to 'Z' if you want
+
+    // 2) Translate "Brow" → "{targetCol}row" for every write and PATCH.
+    for (const w of writes) {
+      if (!w || !w.cell) continue;
+      const address = swapToColumn(w.cell, targetCol);
+
+      // keep strings as-is, coerce numeric-like values
+      const val = (typeof w.value === 'string')
+        ? w.value
+        : (Number.isFinite(w.value) ? w.value : null);
+
+      if (val === null || val === undefined) continue;
+
+      await fetch(`${SHEET_URL}/range(address='${address}')`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ values: [[ val ]] })
+      });
+    }
+
+    // 3) Recalc and return info
+    await refreshWorkbook(headers);
+    res.json({ ok: true, column: targetCol, label: `${year} ${analysisType}` });
+  } catch (err) {
+    console.error('submitRun error:', err);
+    res.status(500).json({ error: err.message || String(err) });
+  } finally {
+    // commit (discard=false)
+    await closeSession(headers, false);
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LOCAL FILE SUBMIT — writes to a local .xlsx (no Graph/OneDrive touch)
+// Uses same header-row logic: row 24 holds "YYYY <Type>", scan B..J, write label,
+// then shift all "B##" writes into the chosen column and save the workbook.
+// Config:
+//   LOCAL_XLSX_PATH   = absolute path to the local .xlsx you want to write
+//   LOCAL_WORKSHEET   = (optional) sheet name; defaults to WORKSHEET from .env
+// ─────────────────────────────────────────────────────────────────────────────
+app.post('/api/submitRunLocal', async (req, res) => {
+  const filePath = process.env.LOCAL_XLSX_PATH;
+  const sheetName = process.env.LOCAL_WORKSHEET || process.env.WORKSHEET;
+  if (!filePath) {
+    return res.status(400).json({
+      error: 'LOCAL_XLSX_PATH is not set. Add it to server/.env (absolute path to your local .xlsx).'
+    });
+  }
+  if (!sheetName) {
+    return res.status(400).json({
+      error: 'Set LOCAL_WORKSHEET or WORKSHEET in .env so we know which tab to write.'
+    });
+  }
+
+  function asNumber(x) {
+    if (typeof x === 'number') return x;
+    if (typeof x === 'string') {
+      const cleaned = x.replace(/[^0-9.-]/g, '');
+      const n = Number(cleaned);
+      return Number.isFinite(n) ? n : undefined;
+    }
+    return undefined;
+  }
+
+  const year = asNumber(req.body.year);
+  const analysisType = (req.body.analysisType || '').toString().trim();
+  const writes = Array.isArray(req.body.writes) ? req.body.writes : [];
+
+  if (!year || !analysisType) {
+    return res.status(400).json({ error: 'year and analysisType are required.' });
+  }
+  if (!writes.length) {
+    return res.status(400).json({ error: 'writes[] is required.' });
+  }
+
+  try {
+    // Load workbook
+    try {
+      await fs.access(filePath);
+    } catch {
+      return res.status(404).json({
+        error: `Local Excel not found at ${filePath}. Create/copy your local .xlsx and set LOCAL_XLSX_PATH.`
+      });
+    }
+
+    const wb = await XlsxPopulate.fromFileAsync(filePath);
+    const sht = wb.sheet(sheetName);
+    if (!sht) {
+      return res.status(400).json({ error: `Worksheet "${sheetName}" not found in ${filePath}.` });
+    }
+
+    // 1) Find or create the column based on row 24 header ("YYYY Type") scanning B..J
+    const headerRow = 24;
+    const startColLetter = 'B';
+    const scanRightmost = 'J'; // widen to 'Z' if you want more runs
+    const rng = sht.range(`${startColLetter}${headerRow}:${scanRightmost}${headerRow}`);
+    const values = rng.value(); // 2D array [[..., ...]]
+    const rowVals = Array.isArray(values) && values.length ? values[0].map(v => (v ?? '').toString()) : [];
+    const label = `${year} ${analysisType}`;
+
+    let idx = rowVals.findIndex(v => v === label);
+    if (idx < 0) {
+      idx = rowVals.findIndex(v => v === '' || v == null);
+      if (idx < 0) {
+        return res.status(400).json({ error:
+          `No free column found between ${startColLetter}${headerRow} and ${scanRightmost}${headerRow}.` });
+      }
+      const targetCol = String.fromCharCode(startColLetter.charCodeAt(0) + idx);
+      sht.cell(`${targetCol}${headerRow}`).value(label);
+      // Use that new column
+      const chosen = targetCol;
+      // 2) Write all mapped cells (shift B## -> chosen##)
+      for (const w of writes) {
+        if (!w || !w.cell) continue;
+        const address = swapToColumn(w.cell, chosen);
+        sht.cell(address).value(w.value);
+      }
+      // 3) Save back to disk
+      await wb.toFileAsync(filePath);
+      return res.json({ ok: true, mode: 'local', column: chosen, label, filePath, worksheet: sheetName });
+    } else {
+      // Existing column with same label
+      const chosen = String.fromCharCode(startColLetter.charCodeAt(0) + idx);
+      for (const w of writes) {
+        if (!w || !w.cell) continue;
+        const address = swapToColumn(w.cell, chosen);
+        sht.cell(address).value(w.value);
+      }
+      await wb.toFileAsync(filePath);
+      return res.json({ ok: true, mode: 'local', column: chosen, label, filePath, worksheet: sheetName });
+    }
+  } catch (err) {
+    console.error('submitRunLocal error:', err);
+    return res.status(500).json({ error: err.message || String(err) });
   }
 });
 

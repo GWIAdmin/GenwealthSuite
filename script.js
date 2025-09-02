@@ -282,30 +282,174 @@ function initUI() {
 // 1. SUBMIT HANDLER AND RESULTS //
 //-------------------------------//
 
+// --- Custom validation so hidden/ collapsed fields don't trigger "not focusable" ---
+
+function isVisible(el) {
+  return !!(el && el.offsetParent !== null);
+}
+
+// Open any collapsed parents so the browser can focus the field
+function expandSectionFor(el) {
+  let node = el;
+  while (node) {
+    if (node.id && node.id.endsWith('Content')) {
+      node.style.display = 'block'; // your collapsible uses style.display
+    }
+    node = node.parentElement;
+  }
+}
+
+// Validate only what matters (and only if visible)
+function validateBeforeSubmit() {
+  const problems = [];
+
+  // Core required fields at the top of the form
+  const requiredIds = [
+    'typeOfAnalysis','firstName','lastName','year','filingStatus','state','residentInState'
+  ];
+  requiredIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const v = (el.value || '').trim();
+    if (!v || v === 'please select' || v === 'Please Select') {
+      problems.push({ el, msg: 'This field is required.' });
+    }
+  });
+
+  // W-2: validate selects that actually exist and are visible
+  document.querySelectorAll("select[id^='w2IsClientBusiness_']").forEach(sel => {
+    if (isVisible(sel) && !sel.value) {
+      problems.push({ el: sel, msg: 'Please choose Yes or No.' });
+    }
+  });
+  // MFJ: “Whose W-2 is this?” if present
+  document.querySelectorAll("select[id^='w2WhoseW2_']").forEach(sel => {
+    if (isVisible(sel) && !sel.value) {
+      problems.push({ el: sel, msg: 'Please select whose W-2 this is.' });
+    }
+  });
+
+  // Payments: if user left it blank, treat as 0 rather than blocking submit
+  const est = document.getElementById('estimatedTaxPayments');
+  if (est && !est.value.trim()) est.value = '0';
+
+  if (problems.length) {
+    problems.forEach(p => expandSectionFor(p.el)); // open sections
+    problems[0].el.focus();
+    alert('Please complete the highlighted required fields.');
+    return false;
+  }
+  return true;
+}
+
 document.getElementById('taxForm').addEventListener('submit', async function (e) {
-    e.preventDefault();
+  e.preventDefault();
+
+  if (!validateBeforeSubmit()) return;
+
+  // Build the Excel writes from the mapping table (base column 'B' is assumed).
+  function toNumberMaybe(v) {
+    if (v == null) return 0;
+    if (typeof v === 'number') return v;
+    // currency like $1,234 or (1,234)
+    const neg = /^\s*\(.*\)\s*$/.test(v);
+    const cleaned = String(v).replace(/[^0-9.]/g, '');
+    if (cleaned === '') return 0;
+    const n = Number(cleaned);
+    return neg ? -n : n;
+  }
+
+  const writes = [];
+  (window.mappingsTotal || []).forEach(m => {
+    if (m.type !== 'write') return;
+    const el = document.getElementById(m.id);
+    if (!el) return;
+
+    let raw = el.value;
+
+    if (raw == null || raw === '' || raw === 'please select' || raw === 'Please Select') {
+      return; // skip empties
+    }
+
+    // Normalizations that match your sheet’s expectations
+    if (m.id === 'state') {
+      raw = `${raw} Taxes`;
+    } else if (m.id === 'blind') {
+      const map = { 'Zero': 0, 'One': 1, 'Two': 2, '0': 0, '1': 1, '2': 2 };
+      raw = (Object.prototype.hasOwnProperty.call(map, raw) ? map[raw] : 0);
+    } else if (typeof raw === 'string' && /[$,()]/.test(raw)) {
+      raw = toNumberMaybe(raw);
+    } else if (!isNaN(+raw)) {
+      raw = +raw;
+    }
+
+    writes.push({ cell: m.cell, value: raw });
+  });
+
+  // Optionally inject a few important computed fields if present in your UI
+  const childCreditEl = document.getElementById('childTaxCredit');
+  if (childCreditEl && childCreditEl.value) {
+    writes.push({ cell: 'B90', value: toNumberMaybe(childCreditEl.value) });
+  }
+  const fedTaxEl = document.getElementById('totalFederalTax');
+  if (fedTaxEl && fedTaxEl.value) {
+    writes.push({ cell: 'B93', value: toNumberMaybe(fedTaxEl.value) });
+  }
+  const totalTaxEl = document.getElementById('totalTax');
+  if (totalTaxEl && totalTaxEl.value) {
+    writes.push({ cell: 'B147', value: toNumberMaybe(totalTaxEl.value) });
+  }
+
+  // Resolve year and analysis label
+  const yearSel = document.getElementById('year');
+  const typeSel = document.getElementById('typeOfAnalysis');
+  const year = parseInt(yearSel?.value || '0', 10);
+  const analysisType = (typeSel?.value || '').trim();
+
+  const resultsDiv = document.getElementById('results');
+  resultsDiv.classList.remove('hidden');
+  resultsDiv.innerHTML = '<p>Saving to Excel…</p>';
+
+  try {
+    const resp = await fetch('/api/submitRunLocal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ year, analysisType, writes })
+    });
+    if (!resp.ok) {
+      const t = await resp.text();
+      throw new Error(t || 'Submit failed');
+    }
+    const info = await resp.json();
+    resultsDiv.innerHTML =
+      `<p><strong>Saved:</strong> wrote ${analysisType} ${year} into column <b>${info.column}</b> on <b>${info.worksheet}</b> of <code>${info.filePath}</code> (header row 24).` +
+      ` Change inputs and submit again for a new year/type to fill the next column.</p>`;
+  } catch (err) {
+    console.error(err);
+    resultsDiv.innerHTML = `<p class="red-disclaimer">Excel save failed: ${err.message || err}</p>`;
+  }
+
+  // Keep your existing Python call if you need it (optional; errors ignored)
+  try {
     const formData = new FormData(e.target);
     const data = Object.fromEntries(formData.entries());
     for (let key in data) {
-        if (!isNaN(data[key]) && data[key].trim() !== '') {
-            data[key] = parseFloat(data[key].replace(/[^0-9.-]/g, ''));
-        }
+      if (!isNaN(data[key]) && data[key].trim() !== '') {
+        data[key] = parseFloat(data[key].replace(/[^0-9.-]/g, ''));
+      }
     }
-    const resultsDiv = document.getElementById('results');
-    resultsDiv.innerHTML = '<p>Processing your data...</p>';
-    resultsDiv.classList.remove('hidden');
-    try {
-        const response = await fetch('http://127.0.0.1:5000/process-tax-data', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-        });
-        if (!response.ok) throw new Error('Failed to process the data.');
-        const resultData = await response.json();
-        displayResults(resultData);
-    } catch (error) {
-        resultsDiv.innerHTML = '<p>Error processing your data. Try again later.</p>';
+    const response = await fetch('http://127.0.0.1:5000/process-tax-data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (response.ok) {
+      const resultData = await response.json();
+      displayResults(resultData);
     }
+  } catch (ign) {
+    // ignore; this call is optional
+  }
 });
 
 function displayResults(resultData) {
@@ -6709,6 +6853,96 @@ const mappings = [
     { id: 'stateEstimatedBalanceDue',               type: 'read', cell: 'B116' },
     { id: 'totalTax',                               type: 'read', cell: 'B117' },
 ];
+
+const mappingsTotal = [
+  // ------- TOP META -------
+  { id: 'year',                 type: 'write', cell: 'B1'  },
+  { id: 'filingStatus',         type: 'write', cell: 'B2'  },
+  { id: 'state',                type: 'write', cell: 'B3'  }, // normalized to "<State> Taxes"
+  { id: 'residentInState',      type: 'write', cell: 'B4'  },
+  { id: 'olderthan65',          type: 'write', cell: 'B11' },
+  { id: 'blind',                type: 'write', cell: 'B12' },
+
+  // ------- INCOME (partial demo – expand as desired) -------
+  { id: 'wages',                        type: 'write', cell: 'B26' },
+  { id: 'taxExemptInterest',            type: 'write', cell: 'B30' },
+  { id: 'taxableInterest',              type: 'write', cell: 'B31' },
+  { id: 'taxableIRA',                   type: 'write', cell: 'B32' },
+  { id: 'taxableDividends',             type: 'write', cell: 'B33' },
+  { id: 'qualifiedDividends',           type: 'write', cell: 'B34' },
+  { id: 'iraDistributions',             type: 'write', cell: 'B35' },
+  { id: 'pensions',                     type: 'write', cell: 'B36' },
+  { id: 'longTermCapitalGains',         type: 'write', cell: 'B37' },
+  { id: 'shortTermCapitalGains',        type: 'write', cell: 'B38' },
+  { id: 'otherIncome',                  type: 'write', cell: 'B52' },
+  { id: 'interestPrivateBonds',         type: 'write', cell: 'B53' },
+  { id: 'passiveActivityLossAdjustments', type: 'write', cell: 'B55' },
+  { id: 'qualifiedBusinessDeduction',   type: 'write', cell: 'B56' },
+  { id: 'totalIncome',                  type: 'write', cell: 'B57' },
+
+  // ------- ADJUSTED GROSS INCOME -------
+  { id: 'halfSETax',                    type: 'write', cell: 'B59' },
+  { id: 'retirementDeduction',          type: 'write', cell: 'B60' },
+  { id: 'medicalReimbursementPlan',     type: 'write', cell: 'B61' },
+  { id: 'SEHealthInsurance',            type: 'write', cell: 'B62' },
+  { id: 'alimonyPaid',                  type: 'write', cell: 'B63' },
+  { id: 'otherAdjustments',             type: 'write', cell: 'B64' },
+  { id: 'totalAdjustedGrossIncome',     type: 'write', cell: 'B66' },
+
+  // ------- DEDUCTIONS (partial) -------
+  { id: 'medical',                      type: 'write', cell: 'B68' },
+  { id: 'stateAndLocalTaxes',           type: 'write', cell: 'B69' },
+  { id: 'otherTaxesFromSchK-1',         type: 'write', cell: 'B70' },
+  { id: 'interest',                     type: 'write', cell: 'B71' },
+  { id: 'contributions',                type: 'write', cell: 'B72' },
+  { id: 'otherDeductions',              type: 'write', cell: 'B73' },
+  { id: 'carryoverLoss',                type: 'write', cell: 'B74' },
+  { id: 'casualtyAndTheftLosses',       type: 'write', cell: 'B75' },
+  { id: 'miscellaneousDeductions',      type: 'write', cell: 'B76' },
+  { id: 'totalDeductions',              type: 'write', cell: 'B78' },
+
+  // ------- TAX & CREDITS (partial) -------
+  { id: 'taxableIncome',                type: 'write', cell: 'B80' },
+  { id: 'tax',                          type: 'write', cell: 'B81' },
+  { id: 'additionalMedicareTax',        type: 'write', cell: 'B82' },
+  { id: 'netInvestmentTax',             type: 'write', cell: 'B83' },
+  { id: 'selfEmploymentTax',            type: 'write', cell: 'B84' },
+  { id: 'otherTaxes',                   type: 'write', cell: 'B85' },
+  { id: 'foreignTaxCredit',             type: 'write', cell: 'B86' },
+  { id: 'AMT',                          type: 'write', cell: 'B87' },
+  { id: 'creditForChildAndDependentCareExpenses', type: 'write', cell: 'B88' },
+  { id: 'generalBusinessCredit',        type: 'write', cell: 'B89' },
+  // B90 (Child Tax Credit) is injected in the submit handler if present
+  { id: 'otherCredits',                 type: 'write', cell: 'B91' },
+  { id: 'educationCredits',             type: 'write', cell: 'B92' },
+  // B93 (Total Federal tax) can be injected from UI if you capture it
+
+  // ------- PAYMENTS -------
+  { id: 'withholdings',                 type: 'write', cell: 'B96' },
+  { id: 'withholdingsOnAdditionalMedicareWages', type: 'write', cell: 'B97' },
+  { id: 'estimatedTaxPayments',         type: 'write', cell: 'B98' },
+  { id: 'otherPaymentsAndCredits',      type: 'write', cell: 'B99' },
+  { id: 'penalty',                      type: 'write', cell: 'B100' },
+  { id: 'estimatedRefundOverpayment',   type: 'write', cell: 'B101' },
+  { id: 'estimatedBalanceDue',          type: 'write', cell: 'B102' },
+
+  // ------- EMPLOYEE/EMPLOYER TAXES -------
+  { id: 'employeeTaxes',                type: 'write', cell: 'B104' },
+  { id: 'employerTaxes',                type: 'write', cell: 'B105' },
+
+  // ------- STATE TAX BLOCK (front-end inputs only) -------
+  { id: 'localTaxAfterCredits',         type: 'write', cell: 'B109' },
+  { id: 'stateWithholdings',            type: 'write', cell: 'B111' },
+  { id: 'statePaymentsAndCredits',      type: 'write', cell: 'B112' },
+  { id: 'stateInterest',                type: 'write', cell: 'B113' },
+  { id: 'statePenalty',                 type: 'write', cell: 'B114' },
+  { id: 'stateEstimatedRefundOverpayment', type: 'write', cell: 'B115' },
+  { id: 'stateEstimatedBalanceDue',     type: 'write', cell: 'B116' },
+
+  // ------- GRAND TOTAL -------
+  { id: 'totalTax',                     type: 'write', cell: 'B147' },
+];
+
 
 // ─── State-Tax “Calculate” Button Flow ─────────────────────────────────
 let _stateSectionInitialized = false;
