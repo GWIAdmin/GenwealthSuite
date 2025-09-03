@@ -538,7 +538,7 @@ app.post('/api/submitRunLocal', async (req, res) => {
     .replace(/[^A-Za-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '');
   const namePart = [clientLastName, clientFirstName].filter(Boolean).map(slug).join('_') || 'Client';
-  const baseFile = `${namePart}.xlsx`;
+  const baseFile = `${namePart}.xlsm`;
   const targetPath = path.join(outDir, baseFile);
 
   // Copy once (first submit). If file already exists, reuse it (no duplicate copies).

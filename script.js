@@ -360,7 +360,7 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
   }
 
   const writes = [];
-  (window.mappingsTotal || []).forEach(m => {
+  (mappingsTotal || []).forEach(m => {
     if (m.type !== 'write') return;
     const el = document.getElementById(m.id);
     if (!el) return;
