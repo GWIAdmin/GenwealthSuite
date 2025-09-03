@@ -483,12 +483,7 @@ app.post('/api/submitRun', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// LOCAL FILE SUBMIT — writes to a local .xlsx (no Graph/OneDrive touch)
-// Uses same header-row logic: row 24 holds "YYYY <Type>", scan B..J, write label,
-// then shift all "B##" writes into the chosen column and save the workbook.
-// Config:
-//   LOCAL_XLSX_PATH   = absolute path to the local .xlsx you want to write
-//   LOCAL_WORKSHEET   = (optional) sheet name; defaults to WORKSHEET from .env
+// LOCAL FILE SUBMIT — writes to a client-named copy (template remains intact)
 // ─────────────────────────────────────────────────────────────────────────────
 app.post('/api/submitRunLocal', async (req, res) => {
   const filePath = process.env.LOCAL_XLSX_PATH;
@@ -513,10 +508,13 @@ app.post('/api/submitRunLocal', async (req, res) => {
     }
     return undefined;
   }
-
-  const year = asNumber(req.body.year);
+  const year         = asNumber(req.body.year);
   const analysisType = (req.body.analysisType || '').toString().trim();
-  const writes = Array.isArray(req.body.writes) ? req.body.writes : [];
+  const writes       = Array.isArray(req.body.writes) ? req.body.writes : [];
+
+  // NEW: names provided by the client
+  const clientFirstName = (req.body.clientFirstName || '').toString().trim();
+  const clientLastName  = (req.body.clientLastName  || '').toString().trim();
 
   if (!year || !analysisType) {
     return res.status(400).json({ error: 'year and analysisType are required.' });
@@ -525,62 +523,86 @@ app.post('/api/submitRunLocal', async (req, res) => {
     return res.status(400).json({ error: 'writes[] is required.' });
   }
 
-  try {
-    // Load workbook
-    try {
-      await fs.access(filePath);
-    } catch {
-      return res.status(404).json({
-        error: `Local Excel not found at ${filePath}. Create/copy your local .xlsx and set LOCAL_XLSX_PATH.`
-      });
-    }
+  // Verify the template exists
+  try { await fs.access(filePath); }
+  catch {
+    return res.status(404).json({
+      error: `Template Excel not found at ${filePath}. Create/copy your template and set LOCAL_XLSX_PATH.`
+    });
+  }
 
-    const wb = await XlsxPopulate.fromFileAsync(filePath);
+  // NEW: compute the client-named destination path in LOCAL_OUTPUT_DIR or alongside template
+  const outDir  = process.env.LOCAL_OUTPUT_DIR || path.dirname(filePath);
+  const slug = s => s
+    .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  const namePart = [clientLastName, clientFirstName].filter(Boolean).map(slug).join('_') || 'Client';
+  const baseFile = `${namePart}.xlsx`;
+  const targetPath = path.join(outDir, baseFile);
+
+  // Copy once (first submit). If file already exists, reuse it (no duplicate copies).
+  let createdCopy = false;
+  try {
+    await fs.access(targetPath); // exists → reuse
+  } catch {
+    await fs.copyFile(filePath, targetPath);
+    createdCopy = true;
+  }
+
+  try {
+    const wb  = await XlsxPopulate.fromFileAsync(targetPath);
     const sht = wb.sheet(sheetName);
     if (!sht) {
-      return res.status(400).json({ error: `Worksheet "${sheetName}" not found in ${filePath}.` });
+      return res.status(400).json({ error: `Worksheet "${sheetName}" not found in ${targetPath}.` });
     }
 
-    // 1) Find or create the column based on row 24 header ("YYYY Type") scanning B..J
-    const headerRow = 24;
-    const startColLetter = 'B';
-    const scanRightmost = 'J'; // widen to 'Z' if you want more runs
-    const rng = sht.range(`${startColLetter}${headerRow}:${scanRightmost}${headerRow}`);
-    const values = rng.value(); // 2D array [[..., ...]]
-    const rowVals = Array.isArray(values) && values.length ? values[0].map(v => (v ?? '').toString()) : [];
-    const label = `${year} ${analysisType}`;
+    // Helper: B..J header row logic (unchanged)
+    const headerRow       = 24;
+    const startColLetter  = 'B';
+    const scanRightmost   = 'J';
+    const rng             = sht.range(`${startColLetter}${headerRow}:${scanRightmost}${headerRow}`);
+    const values          = rng.value();
+    const rowVals         = Array.isArray(values) && values.length ? values[0].map(v => (v ?? '').toString()) : [];
+    const label           = `${year} ${analysisType}`;
 
+    // Find existing column for this exact label or first empty slot
     let idx = rowVals.findIndex(v => v === label);
     if (idx < 0) {
       idx = rowVals.findIndex(v => v === '' || v == null);
       if (idx < 0) {
-        return res.status(400).json({ error:
-          `No free column found between ${startColLetter}${headerRow} and ${scanRightmost}${headerRow}.` });
+        return res.status(400).json({
+          error: `No free column found between ${startColLetter}${headerRow} and ${scanRightmost}${headerRow}.`
+        });
       }
       const targetCol = String.fromCharCode(startColLetter.charCodeAt(0) + idx);
       sht.cell(`${targetCol}${headerRow}`).value(label);
-      // Use that new column
-      const chosen = targetCol;
-      // 2) Write all mapped cells (shift B## -> chosen##)
+
       for (const w of writes) {
         if (!w || !w.cell) continue;
-        const address = swapToColumn(w.cell, chosen);
+        const address = swapToColumn(w.cell, targetCol);
         sht.cell(address).value(w.value);
       }
-      // 3) Save back to disk
-      await wb.toFileAsync(filePath);
-      return res.json({ ok: true, mode: 'local', column: chosen, label, filePath, worksheet: sheetName });
     } else {
-      // Existing column with same label
-      const chosen = String.fromCharCode(startColLetter.charCodeAt(0) + idx);
+      const targetCol = String.fromCharCode(startColLetter.charCodeAt(0) + idx);
       for (const w of writes) {
         if (!w || !w.cell) continue;
-        const address = swapToColumn(w.cell, chosen);
+        const address = swapToColumn(w.cell, targetCol);
         sht.cell(address).value(w.value);
       }
-      await wb.toFileAsync(filePath);
-      return res.json({ ok: true, mode: 'local', column: chosen, label, filePath, worksheet: sheetName });
     }
+
+    await wb.toFileAsync(targetPath);
+    return res.json({
+      ok: true,
+      mode: 'local-copy',
+      createdCopy,
+      column: String.fromCharCode(startColLetter.charCodeAt(0) + idx),
+      label,
+      filePath: targetPath,
+      worksheet: sheetName,
+      template: filePath
+    });
   } catch (err) {
     console.error('submitRunLocal error:', err);
     return res.status(500).json({ error: err.message || String(err) });

@@ -374,6 +374,8 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
     // Normalizations that match your sheet’s expectations
     if (m.id === 'state') {
       raw = `${raw} Taxes`;
+      } else if (m.id === 'filingStatus') {
+      raw = (FS_MAP && FS_MAP[raw]) ? FS_MAP[raw] : raw;
     } else if (m.id === 'blind') {
       const map = { 'Zero': 0, 'One': 1, 'Two': 2, '0': 0, '1': 1, '2': 2 };
       raw = (Object.prototype.hasOwnProperty.call(map, raw) ? map[raw] : 0);
@@ -406,6 +408,10 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
   const year = parseInt(yearSel?.value || '0', 10);
   const analysisType = (typeSel?.value || '').trim();
 
+  // NEW: grab names for file naming
+  const clientFirstName = document.getElementById('firstName')?.value?.trim() || '';
+  const clientLastName  = document.getElementById('lastName')?.value?.trim()  || '';
+
   const resultsDiv = document.getElementById('results');
   resultsDiv.classList.remove('hidden');
   resultsDiv.innerHTML = '<p>Saving to Excel…</p>';
@@ -414,7 +420,7 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
     const resp = await fetch('/api/submitRunLocal', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ year, analysisType, writes })
+      body: JSON.stringify({ year, analysisType, writes, clientFirstName, clientLastName })
     });
     if (!resp.ok) {
       const t = await resp.text();
@@ -7046,6 +7052,9 @@ async function readStateData() {
 
       if (m.id === 'state') {
         value = `${raw} Taxes`;
+      } else if (m.id === 'filingStatus') {
+        // Map UI label → sheet code (MFJ, MFS, HOH, QW; Single stays Single)
+        value = (FS_MAP && FS_MAP[raw]) ? FS_MAP[raw] : raw;
       } else if (m.id === 'blind') {
         const code = raw.toLowerCase();
         if (code === 'zero') value = 0;
@@ -7590,7 +7599,8 @@ function readLeadNumbers() {
 
     const { agi, taxableIncome } = readLeadNumbers();
     const year = parseInt(document.getElementById('year')?.value, 10) || undefined;
-    const filingStatus = document.getElementById('filingStatus')?.value || undefined;
+    const filingStatusUI = document.getElementById('filingStatus')?.value || undefined;
+    const filingStatus   = (FS_MAP && FS_MAP[filingStatusUI]) ? FS_MAP[filingStatusUI] : filingStatusUI;
 
     D('Click Update State Taxes', { state, year, filingStatus, agi, taxableIncome });
 
