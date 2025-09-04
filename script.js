@@ -6845,11 +6845,11 @@ const mappingsTotal = [
   { id: 'pensions',                     type: 'write', cell: 'B36' },
   { id: 'longTermCapitalGains',         type: 'write', cell: 'B37' },
   { id: 'shortTermCapitalGains',        type: 'write', cell: 'B38' },
-  { id: 'otherIncome',                  type: 'write', cell: 'B52' },
-  { id: 'interestPrivateBonds',         type: 'write', cell: 'B53' },
-  { id: 'passiveActivityLossAdjustments', type: 'write', cell: 'B55' },
-  { id: 'qualifiedBusinessDeduction',   type: 'write', cell: 'B56' },
-  { id: 'totalIncome',                  type: 'write', cell: 'B57' },
+  { id: 'otherIncome',                  type: 'write', cell: 'B51' },
+  { id: 'interestPrivateBonds',         type: 'write', cell: 'B52' },
+  { id: 'passiveActivityLossAdjustments', type: 'write', cell: 'B54' },
+  { id: 'qualifiedBusinessDeduction',   type: 'write', cell: 'B55' },
+  { id: 'totalIncome',                  type: 'write', cell: 'B56' },
 
   // ------- ADJUSTED GROSS INCOME -------
   { id: 'halfSETax',                    type: 'write', cell: 'B59' },
@@ -6858,7 +6858,7 @@ const mappingsTotal = [
   { id: 'SEHealthInsurance',            type: 'write', cell: 'B62' },
   { id: 'alimonyPaid',                  type: 'write', cell: 'B63' },
   { id: 'otherAdjustments',             type: 'write', cell: 'B64' },
-  { id: 'totalAdjustedGrossIncome',     type: 'write', cell: 'B66' },
+  { id: 'totalAdjustedGrossIncome',     type: 'write', cell: 'B65' },
 
   // ------- DEDUCTIONS (partial) -------
   { id: 'medical',                      type: 'write', cell: 'B68' },
@@ -6870,7 +6870,7 @@ const mappingsTotal = [
   { id: 'carryoverLoss',                type: 'write', cell: 'B74' },
   { id: 'casualtyAndTheftLosses',       type: 'write', cell: 'B75' },
   { id: 'miscellaneousDeductions',      type: 'write', cell: 'B76' },
-  { id: 'totalDeductions',              type: 'write', cell: 'B78' },
+  { id: 'totalDeductions',              type: 'write', cell: 'B77' },
 
   // ------- TAX & CREDITS (partial) -------
   { id: 'taxableIncome',                type: 'write', cell: 'B80' },
