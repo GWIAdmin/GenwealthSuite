@@ -388,20 +388,6 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
     writes.push({ cell: m.cell, value: raw });
   });
 
-  // Optionally inject a few important computed fields if present in your UI
-  const childCreditEl = document.getElementById('childTaxCredit');
-  if (childCreditEl && childCreditEl.value) {
-    writes.push({ cell: 'B90', value: toNumberMaybe(childCreditEl.value) });
-  }
-  const fedTaxEl = document.getElementById('totalFederalTax');
-  if (fedTaxEl && fedTaxEl.value) {
-    writes.push({ cell: 'B93', value: toNumberMaybe(fedTaxEl.value) });
-  }
-  const totalTaxEl = document.getElementById('totalTax');
-  if (totalTaxEl && totalTaxEl.value) {
-    writes.push({ cell: 'B147', value: toNumberMaybe(totalTaxEl.value) });
-  }
-
   // Resolve year and analysis label
   const yearSel = document.getElementById('year');
   const typeSel = document.getElementById('typeOfAnalysis');
@@ -435,27 +421,6 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
     resultsDiv.innerHTML = `<p class="red-disclaimer">Excel save failed: ${err.message || err}</p>`;
   }
 
-  // Keep your existing Python call if you need it (optional; errors ignored)
-  try {
-    const formData = new FormData(e.target);
-    const data = Object.fromEntries(formData.entries());
-    for (let key in data) {
-      if (!isNaN(data[key]) && data[key].trim() !== '') {
-        data[key] = parseFloat(data[key].replace(/[^0-9.-]/g, ''));
-      }
-    }
-    const response = await fetch('http://127.0.0.1:5000/process-tax-data', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (response.ok) {
-      const resultData = await response.json();
-      displayResults(resultData);
-    }
-  } catch (ign) {
-    // ignore; this call is optional
-  }
 });
 
 function displayResults(resultData) {
