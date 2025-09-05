@@ -7725,3 +7725,267 @@ function readLeadNumbers() {
 
   stateSel.dataset.layoutBound = 'true';
 })();
+
+/* === 2025 Restructure Grid (vanilla JS) — names only prefilled === */
+(() => {
+  const bodyEl     = document.getElementById('gw-body');
+  const rateEl     = document.getElementById('gw-tax-rate');
+  const addBtn     = document.getElementById('gw-add-row');
+  const resetBtn   = document.getElementById('gw-reset');
+  const exportBtn  = document.getElementById('gw-export');
+
+  const tSavingsEl  = document.getElementById('gw-t-savings');
+  const tFiveEl     = document.getElementById('gw-t-5yr');
+  const tInvestEl   = document.getElementById('gw-t-investment');
+  const tRetainedEl = document.getElementById('gw-t-retained');
+  const tDeductEl   = document.getElementById('gw-t-deductions');
+
+  if (!bodyEl || !rateEl) return;
+
+  const LS_ROWS = 'gw_restructure_rows_v1';
+  const LS_RATE = 'gw_restructure_rate_v1';
+
+  const fmt = (n) => {
+    if (n === null || n === undefined || isNaN(n)) return '';
+    const s = Math.round(Number(n));
+    const abs = Math.abs(s).toLocaleString('en-US');
+    return s < 0 ? `($${abs})` : `$${abs}`;
+  };
+  const unfmt = (s) => {
+    if (typeof s === 'number') return s;
+    if (!s) return 0;
+    s = ('' + s).trim();
+    const neg = (s.startsWith('(') && s.endsWith(')')) || s.startsWith('-');
+    const num = Number(s.replace(/[^\d.]/g, '')) || 0;
+    return neg ? -num : num;
+  };
+
+  // Prefill only strategy names; all numeric fields blank strings
+  const DEFAULT_ROWS = [
+    { name: 'Hiring Children & Family',   investment: '', retained: '', deductions: '' },
+    { name: 'Professional Fees',          investment: '', retained: '', deductions: '' },
+    { name: 'Accountable Plan',           investment: '', retained: '', deductions: '' },
+    { name: 'Admin HO',                   investment: '', retained: '', deductions: '' },
+    { name: 'Augusta',                    investment: '', retained: '', deductions: '' },
+    { name: 'Disability',                 investment: '', retained: '', deductions: '' },
+    { name: '412(e)(3) Plan',             investment: '', retained: '', deductions: '' },
+    { name: 'REP & Cost Segregation',     investment: '', retained: '', deductions: '' }
+  ];
+
+  function loadState() {
+    try {
+      const rows = JSON.parse(localStorage.getItem(LS_ROWS) || 'null');
+      const rate = JSON.parse(localStorage.getItem(LS_RATE) || 'null');
+      return {
+        rows: Array.isArray(rows) && rows.length ? rows : DEFAULT_ROWS,
+        // default to 0; we’ll leave the input visually blank
+        rate: typeof rate === 'number' && !isNaN(rate) ? rate : 0
+      };
+    } catch {
+      return { rows: DEFAULT_ROWS, rate: 0 };
+    }
+  }
+  function saveState(rows, rate) {
+    localStorage.setItem(LS_ROWS, JSON.stringify(rows));
+    localStorage.setItem(LS_RATE, JSON.stringify(rate));
+  }
+
+  let state = loadState();
+  rateEl.value = state.rate ? state.rate : ''; // show empty if 0
+
+  function totals() {
+    const rate = Number(rateEl.value || 0);
+    let tSav = 0, t5 = 0, tInv = 0, tRet = 0, tDed = 0;
+    state.rows.forEach(r => {
+      const d = r.deductions === '' ? 0 : unfmt(r.deductions);
+      const s = (d * rate) / 100;
+      tSav += s;
+      t5   += s * 5;
+      tInv += r.investment === '' ? 0 : unfmt(r.investment);
+      tRet += r.retained   === '' ? 0 : unfmt(r.retained);
+      tDed += d;
+    });
+    tSavingsEl.textContent  = fmt(tSav);
+    tFiveEl.textContent     = fmt(t5);
+    tInvestEl.textContent   = fmt(tInv);
+    tRetainedEl.textContent = fmt(tRet);
+    tDeductEl.textContent   = fmt(tDed);
+  }
+
+  function render() {
+    bodyEl.innerHTML = '';
+    const rate = Number(rateEl.value || 0);
+
+    state.rows.forEach((row, idx) => {
+      const tr = document.createElement('tr');
+
+      // Name (editable)
+      const tdName = document.createElement('td');
+      const nameInput = document.createElement('input');
+      nameInput.className = 'gw-name';
+      nameInput.value = row.name;
+      nameInput.placeholder = 'Line item';
+      nameInput.addEventListener('input', () => {
+        row.name = nameInput.value;
+        saveState(state.rows, state.rate);
+      });
+      tdName.appendChild(nameInput);
+
+      // Computed fields (blank until both rate and deductions exist)
+      const dedN = row.deductions === '' ? 0 : unfmt(row.deductions);
+      const showComputed = rate > 0 && row.deductions !== '';
+      const savingsVal = showComputed ? (dedN * rate) / 100 : null;
+
+      const tdSav = document.createElement('td');
+      tdSav.className = 'num';
+      const savInput = document.createElement('input');
+      savInput.className = 'gw-money';
+      savInput.value = showComputed ? fmt(savingsVal) : '';
+      savInput.readOnly = true;
+      tdSav.appendChild(savInput);
+
+      const td5 = document.createElement('td');
+      td5.className = 'num';
+      const fiveInput = document.createElement('input');
+      fiveInput.className = 'gw-money';
+      fiveInput.value = showComputed ? fmt(savingsVal * 5) : '';
+      fiveInput.readOnly = true;
+      td5.appendChild(fiveInput);
+
+      // Investment (editable; keep blank if user leaves it blank)
+      const tdInv = document.createElement('td'); tdInv.className = 'num';
+      const invInput = document.createElement('input'); invInput.className = 'gw-money';
+      invInput.value = row.investment === '' ? '' : fmt(row.investment);
+      invInput.addEventListener('blur', () => {
+        const raw = invInput.value.trim();
+        if (raw === '') { row.investment = ''; invInput.value = ''; }
+        else { row.investment = unfmt(raw); invInput.value = fmt(row.investment); }
+        saveState(state.rows, state.rate);
+        totals();
+      });
+      invInput.addEventListener('input', totals);
+      tdInv.appendChild(invInput);
+
+      // Retained (editable)
+      const tdRet = document.createElement('td'); tdRet.className = 'num';
+      const retInput = document.createElement('input'); retInput.className = 'gw-money';
+      retInput.value = row.retained === '' ? '' : fmt(row.retained);
+      retInput.addEventListener('blur', () => {
+        const raw = retInput.value.trim();
+        if (raw === '') { row.retained = ''; retInput.value = ''; }
+        else { row.retained = unfmt(raw); retInput.value = fmt(row.retained); }
+        saveState(state.rows, state.rate);
+        totals();
+      });
+      retInput.addEventListener('input', totals);
+      tdRet.appendChild(retInput);
+
+      // Deductions (editable + recompute)
+      const tdDed = document.createElement('td'); tdDed.className = 'num';
+      const dedInput = document.createElement('input'); dedInput.className = 'gw-money';
+      dedInput.value = row.deductions === '' ? '' : fmt(row.deductions);
+      const commitDeductions = () => {
+        const raw = dedInput.value.trim();
+        if (raw === '') {
+          row.deductions = '';
+          dedInput.value = '';
+          savInput.value = '';
+          fiveInput.value = '';
+        } else {
+          row.deductions = unfmt(raw);
+          dedInput.value = fmt(row.deductions);
+          const r = Number(rateEl.value || 0);
+          const show = r > 0;
+          const s = show ? (row.deductions * r) / 100 : null;
+          savInput.value  = show ? fmt(s)     : '';
+          fiveInput.value = show ? fmt(s * 5) : '';
+        }
+        saveState(state.rows, state.rate);
+        totals();
+      };
+      dedInput.addEventListener('blur', commitDeductions);
+      dedInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') dedInput.blur(); });
+      tdDed.appendChild(dedInput);
+
+      // Delete row
+      const tdDel = document.createElement('td'); tdDel.className = 'num';
+      const delBtn = document.createElement('button');
+      delBtn.className = 'gw-del';
+      delBtn.textContent = '✕';
+      delBtn.title = 'Remove row';
+      delBtn.addEventListener('click', () => {
+        state.rows.splice(idx, 1);
+        saveState(state.rows, state.rate);
+        render();
+      });
+      tdDel.appendChild(delBtn);
+
+      tr.appendChild(tdName);
+      tr.appendChild(tdSav);
+      tr.appendChild(td5);
+      tr.appendChild(tdInv);
+      tr.appendChild(tdRet);
+      tr.appendChild(tdDed);
+      tr.appendChild(tdDel);
+      bodyEl.appendChild(tr);
+    });
+    totals();
+  }
+
+  // Events
+  rateEl.addEventListener('input', () => {
+    // Keep 0 in state but leave input blank if emptied
+    const v = rateEl.value === '' ? 0 : Number(rateEl.value);
+    state.rate = isFinite(v) ? v : 0;
+    saveState(state.rows, state.rate);
+    render();
+  });
+
+  addBtn.addEventListener('click', () => {
+    state.rows.push({ name: 'New Strategy', investment: '', retained: '', deductions: '' });
+    saveState(state.rows, state.rate);
+    render();
+  });
+
+  resetBtn.addEventListener('click', () => {
+    if (!confirm('Reset table to default names and blanks?')) return;
+    state = { rows: JSON.parse(JSON.stringify(DEFAULT_ROWS)), rate: 0 };
+    rateEl.value = '';
+    saveState(state.rows, state.rate);
+    render();
+  });
+
+  exportBtn.addEventListener('click', () => {
+      const headers = ['Line item','Savings','5 Yr','Investment','Retained Assets','Deductions'];
+      const rate = Number(rateEl.value || 0);
+      const rows = state.rows.map(r => {
+        const d = r.deductions === '' ? '' : unfmt(r.deductions);
+        const s = (d === '' || rate === 0) ? '' : (d * rate) / 100;
+        const five = s === '' ? '' : s * 5;
+        const inv = r.investment === '' ? '' : unfmt(r.investment);
+        const ret = r.retained   === '' ? '' : unfmt(r.retained);
+        return [r.name, s, five, inv, ret, d];
+      });
+      const totalsRow = [
+        'Totals',
+        rows.reduce((a,b)=>a+(typeof b[1]==='number'?b[1]:0),0),
+        rows.reduce((a,b)=>a+(typeof b[2]==='number'?b[2]:0),0),
+        rows.reduce((a,b)=>a+(typeof b[3]==='number'?b[3]:0),0),
+        rows.reduce((a,b)=>a+(typeof b[4]==='number'?b[4]:0),0),
+        rows.reduce((a,b)=>a+(typeof b[5]==='number'?b[5]:0),0),
+      ];
+      const all = [headers, ...rows, totalsRow];
+      const csv = all
+        .map(r => r.map(x => x === '' ? '' : (typeof x === 'string' ? `"${x.replace(/"/g,'""')}"` : x)).join(','))
+        .join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '2025_restructure.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  
+    render();
+  })();

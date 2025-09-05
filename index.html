@@ -799,9 +799,51 @@
       <button id="doNotTouchBtn" class="notes-btn" style="margin-top: 20px;">🚫 Do NOT Touch</button>
       <img id="petSprite" src="Assets/Chicken_Run.gif" style="position: fixed; width: 50px; top: 100px; left: 100px; display: none; z-index: 9999;" />
 
-
-    </form>
-  </div>
+      <!-- 2025 Restructure -->
+      <section class="gw-restruct-card" id="gw-restructure">
+        <div class="gw-restruct-header">
+          <h2>2025 Restructure</h2>
+          <div class="gw-controls">
+            <label for="gw-tax-rate">Tax Rate (%)</label>
+            <input id="gw-tax-rate" type="number" min="0" max="100" step="0.01" placeholder="%">
+            <button id="gw-add-row" type="button">Add Row</button>
+            <button id="gw-reset" type="button">Reset</button>
+            <button id="gw-export" type="button">Export CSV</button>
+          </div>
+        </div>
+      
+        <p class="gw-note">Savings = Deductions × Tax Rate. 5 Yr = Savings × 5.</p>
+      
+        <div class="gw-table-wrap">
+          <table class="gw-table" id="gw-grid">
+            <thead>
+              <tr>
+                <th style="width:34%">Line item</th>
+                <th class="num">Savings</th>
+                <th class="num">5 Yr</th>
+                <th class="num">Investment</th>
+                <th class="num">Retained Assets</th>
+                <th class="num">Deductions</th>
+                <th class="num"></th>
+              </tr>
+            </thead>
+            <tbody id="gw-body"></tbody>
+            <tfoot>
+              <tr>
+                <th>Totals</th>
+                <td class="num" id="gw-t-savings">$0</td>
+                <td class="num" id="gw-t-5yr">$0</td>
+                <td class="num" id="gw-t-investment">$0</td>
+                <td class="num" id="gw-t-retained">$0</td>
+                <td class="num" id="gw-t-deductions">$0</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </section>
+          </form>
+        </div>
 
   <div class="quote-section">
     <p>“If you want to keep most of your paycheck, start by thinking beyond it.”</p>
@@ -812,6 +854,8 @@
     <!-- Back to Top Button -->
     <button id="backToTopBtn" title="Go to top"><i class="fas fa-arrow-up"></i></button>
   </div>
+
+
 
   <script type="module" src="./script.js"></script>
   
