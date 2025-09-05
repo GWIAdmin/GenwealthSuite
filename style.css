@@ -420,10 +420,10 @@ body.dark-mode .res-comp-btn:hover { background-color: var(--accent); color: #55
   cursor: progress;
 }
 
-/* === Restructure Grid – sizing + theme fixes (append at very end) === */
+/* === Restructure Card UI (replaces the old grid/table styles) === */
 
-/* 1) Neutralize global h2 card styling inside the grid header */
-.gw-restruct-header h2 {
+/* neutralize your global h2 & button rules inside this component only */
+.gw-restruct-header {
   background: transparent !important;
   border: 0 !important;
   padding: 0 !important;
@@ -434,12 +434,6 @@ body.dark-mode .res-comp-btn:hover { background-color: var(--accent); color: #55
   font-size: clamp(24px, 3vw, 34px) !important;
   cursor: default !important;
 }
-.gw-restruct-header h2:hover {
-  background: transparent !important;
-  border-radius: 0 !important;
-}
-
-/* 2) Override global button { width:100%; display:block; } for our small controls */
 .gw-controls button,
 #gw-add-row, #gw-reset, #gw-export {
   display: inline-flex !important;
@@ -453,66 +447,128 @@ body.dark-mode .res-comp-btn:hover { background-color: var(--accent); color: #55
   border-radius: 8px !important;
 }
 
-/* Keep hover pleasant and compact */
-#gw-add-row:hover, #gw-reset:hover, #gw-export:hover {
-  filter: brightness(1.06);
-}
-
-/* 3) Inputs: keep compact currency fields even with global input styles */
-.gw-money {
-  width: 130px !important;
-  padding: 8px 10px !important;
-  box-sizing: border-box;
-  font-size: 14px;
-}
-@media (max-width: 880px) {
-  .gw-money { width: 110px !important; }
-}
-
-/* 4) Controls bar spacing and rate input height for clean alignment */
+/* toolbar + rate input */
 .gw-controls {
+  display: flex;
   gap: 10px;
+  align-items: center;
   padding: 10px 12px;
+  background: var(--card-dark);
+  border: 2px solid var(--border-dark);
+  border-radius: 12px;
 }
 #gw-tax-rate {
   height: 36px;
   line-height: 36px;
   font-size: 14px;
+  max-width: 110px;
 }
 
-/* 5) Tight, consistent table density */
-.gw-table thead th,
-.gw-table tbody td,
-.gw-table tfoot td,
-.gw-table tfoot th {
-  padding: 10px 12px !important;
-  font-size: 15px;
+/* card list */
+.gw-card-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+@media (min-width: 880px) {
+  .gw-card-list { grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); }
 }
 
-/* 6) Dark-mode parity with your theme tokens */
-body.dark-mode .gw-restruct-card {
-  background-color: var(--section-dark) !important;
-  border-color: var(--border-dark) !important;
-  color: var(--h3-dark) !important;
+/* single card */
+.gw-card {
+  background: #fff;
+  border: 4px solid #552583;
+  border-radius: 16px;
+  padding: 14px;
 }
-body.dark-mode .gw-controls {
-  background-color: var(--business-entry) !important;
-  border-color: var(--border-dark) !important;
+body.dark-mode .gw-card {
+  background: var(--business-entry);
+  border-color: var(--border-dark);
 }
-body.dark-mode #gw-tax-rate {
-  background-color: var(--input-dark) !important;
-  border-color: var(--border-dark) !important;
-  color: var(--h3-dark) !important;
+
+/* card header: name + delete */
+.gw-card-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
 }
-body.dark-mode .gw-table {
-  background-color: var(--business-entry) !important;
-  border-color: var(--border-dark) !important;
+.gw-card .gw-del {
+  background: #ff4f4f;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
 }
-body.dark-mode .gw-table thead th {
-  background-color: #552583 !important; /* keep your brand bar */
-  color: var(--h2-dark) !important;
+.gw-card .gw-del:hover { background: #ff0000; }
+
+/* card body grid (three fields + chips) */
+.gw-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 10px;
+  align-items: end;
 }
-body.dark-mode .gw-money[readonly] {
-  background-color: rgba(253,185,39,.08) !important;
-  color: var(--h3-dark) !important;
+@media (max-width: 640px) {
+  .gw-card-grid { grid-template-columns: 1fr; }
 }
+
+/* money inputs scoped here */
+.gw-money {
+  width: 100% !important;
+  padding: 10px !important;
+  box-sizing: border-box;
+  font-size: 14px;
+}
+
+/* computed chips */
+.gw-chips {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+.gw-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: #EFEAF8;
+  border: 2px solid #552583;
+  font-weight: 700;
+}
+body.dark-mode .gw-chip {
+  background: rgba(253,185,39,.1);
+  color: var(--h3-dark);
+  border-color: var(--border-dark);
+}
+
+/* footer summary */
+.gw-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+.gw-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #EFEAF8;
+  border: 2px solid #552583;
+}
+body.dark-mode .gw-summary .gw-pill {
+  background: var(--section-dark);
+  border-color: var(--border-dark);
+  color: var(--h3-dark);
+}
+
+/* small helper */
+.gw-note { color: var(--text-light); font-size: 12px; margin: 10px 0 14px; }
+
