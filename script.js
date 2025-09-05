@@ -6848,17 +6848,17 @@ const mappingsTotal = [
   { id: 'otherIncome',                  type: 'write', cell: 'B51' },
   { id: 'interestPrivateBonds',         type: 'write', cell: 'B52' },
   { id: 'passiveActivityLossAdjustments', type: 'write', cell: 'B54' },
-  { id: 'qualifiedBusinessDeduction',   type: 'write', cell: 'B55' },
-  { id: 'totalIncome',                  type: 'write', cell: 'B56' },
+  // { id: 'qualifiedBusinessDeduction',   type: 'write', cell: 'B55' },
+  // { id: 'totalIncome',                  type: 'write', cell: 'B56' },
 
   // ------- ADJUSTED GROSS INCOME -------
-  { id: 'halfSETax',                    type: 'write', cell: 'B59' },
+  // { id: 'halfSETax',                    type: 'write', cell: 'B59' },
   { id: 'retirementDeduction',          type: 'write', cell: 'B60' },
   { id: 'medicalReimbursementPlan',     type: 'write', cell: 'B61' },
   { id: 'SEHealthInsurance',            type: 'write', cell: 'B62' },
   { id: 'alimonyPaid',                  type: 'write', cell: 'B63' },
   { id: 'otherAdjustments',             type: 'write', cell: 'B64' },
-  { id: 'totalAdjustedGrossIncome',     type: 'write', cell: 'B65' },
+  // { id: 'totalAdjustedGrossIncome',     type: 'write', cell: 'B65' },
 
   // ------- DEDUCTIONS (partial) -------
   { id: 'medical',                      type: 'write', cell: 'B68' },
@@ -6870,23 +6870,21 @@ const mappingsTotal = [
   { id: 'carryoverLoss',                type: 'write', cell: 'B74' },
   { id: 'casualtyAndTheftLosses',       type: 'write', cell: 'B75' },
   { id: 'miscellaneousDeductions',      type: 'write', cell: 'B76' },
-  { id: 'totalDeductions',              type: 'write', cell: 'B77' },
+  // { id: 'totalDeductions',              type: 'write', cell: 'B77' },
 
   // ------- TAX & CREDITS (partial) -------
-  { id: 'taxableIncome',                type: 'write', cell: 'B80' },
-  { id: 'tax',                          type: 'write', cell: 'B81' },
-  { id: 'additionalMedicareTax',        type: 'write', cell: 'B82' },
-  { id: 'netInvestmentTax',             type: 'write', cell: 'B83' },
-  { id: 'selfEmploymentTax',            type: 'write', cell: 'B84' },
+  // { id: 'taxableIncome',                type: 'write', cell: 'B80' },
+  // { id: 'tax',                          type: 'write', cell: 'B81' },
+  // { id: 'additionalMedicareTax',        type: 'write', cell: 'B82' },
+  // { id: 'netInvestmentTax',             type: 'write', cell: 'B83' },
+  // { id: 'selfEmploymentTax',            type: 'write', cell: 'B84' },
   { id: 'otherTaxes',                   type: 'write', cell: 'B85' },
   { id: 'foreignTaxCredit',             type: 'write', cell: 'B86' },
   { id: 'AMT',                          type: 'write', cell: 'B87' },
   { id: 'creditForChildAndDependentCareExpenses', type: 'write', cell: 'B88' },
   { id: 'generalBusinessCredit',        type: 'write', cell: 'B89' },
-  // B90 (Child Tax Credit) is injected in the submit handler if present
   { id: 'otherCredits',                 type: 'write', cell: 'B91' },
-  { id: 'educationCredits',             type: 'write', cell: 'B92' },
-  // B93 (Total Federal tax) can be injected from UI if you capture it
+  // { id: 'educationCredits',             type: 'write', cell: 'B92' },
 
   // ------- PAYMENTS -------
   { id: 'withholdings',                 type: 'write', cell: 'B96' },
@@ -6894,12 +6892,12 @@ const mappingsTotal = [
   { id: 'estimatedTaxPayments',         type: 'write', cell: 'B98' },
   { id: 'otherPaymentsAndCredits',      type: 'write', cell: 'B99' },
   { id: 'penalty',                      type: 'write', cell: 'B100' },
-  { id: 'estimatedRefundOverpayment',   type: 'write', cell: 'B101' },
-  { id: 'estimatedBalanceDue',          type: 'write', cell: 'B102' },
+  // { id: 'estimatedRefundOverpayment',   type: 'write', cell: 'B101' },
+  // { id: 'estimatedBalanceDue',          type: 'write', cell: 'B102' },
 
   // ------- EMPLOYEE/EMPLOYER TAXES -------
-  { id: 'employeeTaxes',                type: 'write', cell: 'B104' },
-  { id: 'employerTaxes',                type: 'write', cell: 'B105' },
+  // { id: 'employeeTaxes',                type: 'write', cell: 'B104' },
+  // { id: 'employerTaxes',                type: 'write', cell: 'B105' },
 
   // ------- STATE TAX BLOCK (front-end inputs only) -------
   { id: 'localTaxAfterCredits',         type: 'write', cell: 'B109' },
@@ -6911,7 +6909,7 @@ const mappingsTotal = [
   { id: 'stateEstimatedBalanceDue',     type: 'write', cell: 'B116' },
 
   // ------- GRAND TOTAL -------
-  { id: 'totalTax',                     type: 'write', cell: 'B147' },
+  // { id: 'totalTax',                     type: 'write', cell: 'B147' },
 ];
 
 
