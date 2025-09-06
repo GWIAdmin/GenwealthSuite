@@ -7726,7 +7726,9 @@ function readLeadNumbers() {
   stateSel.dataset.layoutBound = 'true';
 })();
 
-/* === 2025 Restructure — Card UI (names only prefilled) === */
+// ------------------------------//
+// 30. Deduction Strategy Box    //
+// ------------------------------//
 (() => {
   const listEl     = document.getElementById('gw-list');
   const rateEl     = document.getElementById('gw-tax-rate');
@@ -7765,28 +7767,18 @@ function readLeadNumbers() {
     { name: 'Hiring Children & Family',   investment: '', retained: '', deductions: '' },
     { name: 'Professional Fees',          investment: '', retained: '', deductions: '' },
     { name: 'Accountable Plan',           investment: '', retained: '', deductions: '' },
-    { name: 'Admin HO',                   investment: '', retained: '', deductions: '' },
-    { name: 'Augusta',                    investment: '', retained: '', deductions: '' },
-    { name: 'Disability',                 investment: '', retained: '', deductions: '' },
+    { name: 'Administrative Home Office', investment: '', retained: '', deductions: '' },
+    { name: 'Augusta Loophole',           investment: '', retained: '', deductions: '' },
+    { name: 'Disability Insurance',       investment: '', retained: '', deductions: '' },
     { name: '412(e)(3) Plan',             investment: '', retained: '', deductions: '' },
-    { name: 'REP & Cost Segregation',     investment: '', retained: '', deductions: '' }
   ];
 
   function loadState() {
-    try {
-      const rows = JSON.parse(localStorage.getItem(LS_ROWS) || 'null');
-      const rate = JSON.parse(localStorage.getItem(LS_RATE) || 'null');
-      return {
-        rows: Array.isArray(rows) && rows.length ? rows : DEFAULT_ROWS,
-        rate: typeof rate === 'number' && !isNaN(rate) ? rate : 0
-      };
-    } catch {
-      return { rows: DEFAULT_ROWS, rate: 0 };
-    }
+    return { rows: DEFAULT_ROWS, rate: 0 };
   }
-  function saveState(rows, rate) {
-    localStorage.setItem(LS_ROWS, JSON.stringify(rows));
-    localStorage.setItem(LS_RATE, JSON.stringify(rate));
+
+  function saveState(/*rows, rate*/) {
+    // no-op: stop persisting to localStorage
   }
 
   let state = loadState();
