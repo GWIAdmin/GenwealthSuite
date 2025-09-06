@@ -453,14 +453,15 @@ body.dark-mode .res-comp-btn:hover { background-color: var(--accent); color: #55
   gap: 10px;
   align-items: center;
   padding: 10px 12px;
-  background: var(--card-dark);
+  background: #ffffff;
   border: 2px solid var(--border-dark);
   border-radius: 12px;
 }
+
 #gw-tax-rate {
   height: 36px;
   line-height: 36px;
-  font-size: 14px;
+  font-size: 16px;
   max-width: 110px;
 }
 
@@ -523,52 +524,117 @@ body.dark-mode .gw-card {
   font-size: 14px;
 }
 
-/* computed chips */
 .gw-chips {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 8px;
-}
-.gw-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 999px;
-  background: #EFEAF8;
-  border: 2px solid #552583;
-  font-weight: 700;
-}
-body.dark-mode .gw-chip {
-  background: rgba(253,185,39,.1);
-  color: var(--h3-dark);
-  border-color: var(--border-dark);
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 10px !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;   /* keep chips on one row; allow horizontal scroll instead */
+  justify-content: flex-start !important;
 }
 
-/* footer summary */
-.gw-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 14px;
-}
+/* ===================================================================
+   Chips & Pills — harmonized with root variables (light + dark parity)
+   =================================================================== */
+
+/* Base styles shared by both chip and pill variants */
+.gw-chip,
 .gw-pill {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
   border-radius: 999px;
-  background: #EFEAF8;
-  border: 2px solid #552583;
+  font-weight: 700;
+  font-size: 0.875rem;
+  line-height: 1;
+  background: var(--card-light);     /* light-mode surface from :root */
+  border: 2px solid #552583;         /* brand border (keeps existing look) */
+  transition: background-color .25s ease, color .25s ease,
+              border-color .25s ease, box-shadow .2s ease;
+  white-space: nowrap;
+  vertical-align: middle;
 }
-body.dark-mode .gw-summary .gw-pill {
-  background: var(--section-dark);
+
+/* Chip: neutral surface (used throughout the UI) */
+.gw-chip {
+  background: var(--card-light);
+  color: var(--text-light);
+  border-color: #552583;
+  box-shadow: 0 6px 12px rgba(28, 12, 44, 0.12);
+  display: inline-flex !important;   /* keep inline flow */
+  flex: 0 0 auto !important;         /* don't grow or shrink to fill line */
+  width: auto !important;            /* ensure no full-width override */
+  max-width: none !important;
+  min-width: 0 !important;
+  white-space: nowrap !important;  /* keep contents on one line inside the chip */
+}
+
+/* Pill: stronger/fill variant (brand-filled style in light mode) */
+.gw-pill {
+  background:#FFFFFF;               /* brand-filled pill */
+  color: #000000;                  
+  border-color: #552583;
+  display: inline-flex !important;
+  flex-wrap: nowrap !important;
+  width: auto !important;
+  white-space: nowrap !important;
+  margin: 0 !important;
+  flex-direction: row !important ;
+}
+
+/* Layout helper for lists of chips/pills */
+.gw-summary {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;          /* keep chips side-by-side */
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 30px !important;
+  overflow-x: auto !important;          /* allow horizontal scroll on narrow screens */
+
+  margin-bottom: 8px;
+  margin-top: 16px;
+}
+
+.gw-summary > * {
+  display: inline-flex !important;
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+}
+
+/* Hover / focus affordances (subtle) */
+.gw-chip:hover, .gw-chip:focus,
+.gw-pill:hover, .gw-pill:focus {
+  box-shadow: 0 8px 18px rgba(0,0,0,0.06);
+  transform: translateY(-1px);
+}
+
+/* Dark-mode parity — follow your existing dark-mode variable pattern */
+body.dark-mode .gw-chip {
+  background: #000000;
   border-color: var(--border-dark);
   color: var(--h3-dark);
+  box-shadow: none;
 }
 
-/* small helper */
-.gw-note { color: var(--text-light); font-size: 12px; margin: 10px 0 14px; }
+body.dark-mode .gw-pill {
+  /* treat pill as a brand-accent pill in dark mode while preserving contrast */
+  background: #000000;
+  color: var(--h3-dark);
+  border-color: var(--border-dark);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+}
 
+/* Small helper text */
+.gw-note {
+  color: var(--text-light);
+  font-size: 14px;
+  margin: 10px 0 14px;
+}
+
+body.dark-mode .gw-controls{
+  background: var(--card-dark) !important;
+  border-color: var(--border-dark) !important;
+}
