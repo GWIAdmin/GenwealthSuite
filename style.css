@@ -62,7 +62,7 @@ body {
 /* Smooth theme transitions (keep list lean) */
 body, h1, h2, h3, section, label, input, select, textarea,
 button, .container, .navbar, .notes-editor, .notes-container {
-  transition: background-color .3s ease, color .3s ease, border-color .3s ease, box-shadow .3s ease;
+  transition: background-color .3s ease, color .3s ease, border-color .3s ease, box-shadow .3s ease, border-radius .3s ease;
 }
 
 h1, h2 { font-family: 'Merriweather', serif; margin-bottom: 20px; }
@@ -355,7 +355,7 @@ body.dark-mode .w2-code-box { background-color: var(--business-entry) !important
   background-color: #552583; border: none; border-radius: 20px;
   border-bottom: 4px solid #552583; border-top: 4px solid #552583; border-right: 4px solid #552583; border-left: 4px solid #552583;
 }
-.dark-mode h2:hover, .dark-mode h3:hover { background-color: var(--accent-hover); border-radius: 20px; cursor: pointer; }
+.dark-mode h2:hover, .dark-mode h3:hover { background-color: var(--accent-hover); border-radius: 40px; cursor: pointer; }
 
 body.dark-mode .dynamic-heading, body.dark-mode .apportionment-text { color: var(--h3-dark); }
 body.dark-mode .red-disclaimer { color: var(--disclaimer-red-dark) !important; }

@@ -245,20 +245,19 @@ window.getBrackets        = getBrackets;
 window.calculateStateTax  = calculateStateTax;
 
 function initCollapsibles() {
-  document.querySelectorAll('h2[data-target], h3[data-target]')
-    .forEach(header => {
-      const content = document.getElementById(header.dataset.target);
-      if (!content) return;
+  document.querySelectorAll('h2[data-target], h3[data-target]').forEach(header => {
+    const content = document.getElementById(header.dataset.target);
+    if (!content) return;
 
-      // start collapsed
-      content.style.display = 'none';
-      header.style.cursor = 'pointer';
+    // Ensure the animatable class exists on the target
+    content.classList.add('collapsible-content');
+    content.classList.remove('active');       // start collapsed
 
-      header.addEventListener('click', () => {
-        const isOpen = content.style.display === 'block';
-        content.style.display = isOpen ? 'none' : 'block';
-      });
+    header.style.cursor = 'pointer';
+    header.addEventListener('click', () => {
+      content.classList.toggle('active');     // <-- animates via CSS max-height
     });
+  });
 }
 
 function initUI() {
@@ -288,12 +287,12 @@ function isVisible(el) {
   return !!(el && el.offsetParent !== null);
 }
 
-// Open any collapsed parents so the browser can focus the field
 function expandSectionFor(el) {
   let node = el;
   while (node) {
     if (node.id && node.id.endsWith('Content')) {
-      node.style.display = 'block'; // your collapsible uses style.display
+      node.classList.add('active');          // open the CSS collapsible
+      node.style.removeProperty('display');  // kill old inline display toggles
     }
     node = node.parentElement;
   }
@@ -5161,6 +5160,13 @@ function populateBusinessNameDropdown(dropdown) {
 }   
 
 function addW2Block() {
+    // Ensure the W-2 container is an animatable collapsible and force it open
+    const w2Container = document.getElementById('w2sContainer');
+    if (w2Container) {
+      w2Container.classList.add('collapsible-content', 'active');
+      w2Container.style.removeProperty('display'); // remove legacy inline display
+    }
+
     w2Counter++;
     // Create container for one W-2 block
     const w2Block = document.createElement('div');
@@ -5570,6 +5576,7 @@ function addW2Block() {
     stateBreakdownContainer.classList.add('form-group');
     
     const stateBreakdownLabel = document.createElement('label');
+    stateBreakdownLabel.setAttribute('for', `w2StateBreakdownDropdown_${w2Counter}_1`);
     stateBreakdownLabel.textContent = "State Breakdown of Wages (if different from primary state):";
     stateBreakdownContainer.appendChild(stateBreakdownLabel);
     
@@ -5734,9 +5741,6 @@ function addW2Block() {
     collapsibleContent.appendChild(removeBtn);
 
     document.getElementById('w2sContainer').appendChild(w2Block);
-    const bigSection = document.getElementById('w2sContainer');
-    if (bigSection) bigSection.style.display = 'block';
-    collapsibleContent.style.display = 'block';
 
     w2Block.querySelectorAll('.currency-field').forEach((field) => {
           field.addEventListener('blur', function() {
