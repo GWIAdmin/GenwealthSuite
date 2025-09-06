@@ -638,3 +638,62 @@ body.dark-mode .gw-controls{
   background: var(--card-dark) !important;
   border-color: var(--border-dark) !important;
 }
+
+/* Center the last card when there’s an odd count (desktop, 2-col grid) */
+@media (min-width: 880px) {
+  .gw-card-list > .gw-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;              /* take the full row */
+    justify-self: center;              /* center within that row */
+    width: calc((100% - 14px) / 2);    /* same width as one column (gap = 14px) */
+  }
+}
+
+/* ============== Smooth UX for Add/Delete in Restructure ============== */
+
+/* Micro-interactions for buttons */
+#gw-add-row,
+.gw-card .gw-del {
+  transition:
+    background-color .20s ease,
+    color .20s ease,
+    transform .12s ease,
+    box-shadow .20s ease,
+    filter .20s ease;
+}
+
+#gw-add-row:hover { box-shadow: 0 6px 14px rgba(0,0,0,.15); }
+#gw-add-row:active { transform: translateY(1px) scale(0.98); }
+
+.gw-card .gw-del:hover { filter: brightness(1.05); box-shadow: 0 4px 8px rgba(0,0,0,.20); }
+.gw-card .gw-del:active { transform: scale(0.92); }
+
+/* Card entry/exit animations */
+.gw-card {
+  transition: opacity .18s ease, transform .18s ease, box-shadow .20s ease;
+}
+
+/* start state for newly-mounted cards (removed next frame via JS) */
+.gw-card.gw-card-enter {
+  opacity: 0;
+  transform: translateY(8px) scale(0.98);
+}
+
+/* animate out before removal */
+.gw-card.gw-card-removing {
+  animation: gwCardOut .18s ease forwards;
+}
+
+@keyframes gwCardOut {
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+/* brief highlight when a new card is added and scrolled into view */
+.gw-card.gw-card-pulse { animation: gwCardPulse .5s ease-out; }
+@keyframes gwCardPulse {
+  0%   { box-shadow: 0 0 0 rgba(85,37,131,0); }
+  50%  { box-shadow: 0 0 0 6px rgba(85,37,131,.20); }
+  100% { box-shadow: 0 0 0 rgba(85,37,131,0); }
+}

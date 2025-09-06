@@ -7764,13 +7764,16 @@ function readLeadNumbers() {
 
   // Prefill only strategy names; numbers = blank
   const DEFAULT_ROWS = [
-    { name: 'Hiring Children & Family',   investment: '', retained: '', deductions: '' },
-    { name: 'Professional Fees',          investment: '', retained: '', deductions: '' },
-    { name: 'Accountable Plan',           investment: '', retained: '', deductions: '' },
-    { name: 'Administrative Home Office', investment: '', retained: '', deductions: '' },
-    { name: 'Augusta Loophole',           investment: '', retained: '', deductions: '' },
-    { name: 'Disability Insurance',       investment: '', retained: '', deductions: '' },
-    { name: '412(e)(3) Plan',             investment: '', retained: '', deductions: '' },
+    { name: 'Hiring Children & Family',     investment: '', retained: '', deductions: '' },
+    { name: 'Professional Fees',            investment: '', retained: '', deductions: '' },
+    { name: 'Accountable Plan',             investment: '', retained: '', deductions: '' },
+    { name: 'Administrative Home Office',   investment: '', retained: '', deductions: '' },
+    { name: 'Augusta Loophole',             investment: '', retained: '', deductions: '' },
+    { name: 'Disability Insurance',         investment: '', retained: '', deductions: '' },
+    { name: '412(e)(3) Plan',               investment: '', retained: '', deductions: '' },
+    { name: '401(k)',                       investment: '', retained: '', deductions: '' },
+    { name: 'Charitable Foundation',        investment: '', retained: '', deductions: '' },
+    { name: 'Health Savings Account (HSA)', investment: '', retained: '', deductions: '' },
   ];
 
   function loadState() {
@@ -7839,15 +7842,24 @@ function readLeadNumbers() {
       name.addEventListener('input', () => {
         row.name = name.value; saveState(state.rows, state.rate);
       });
+
       const del = document.createElement('button');
+      del.type = 'button';
       del.className = 'gw-del';
       del.textContent = '✕';
       del.title = 'Remove';
-      del.addEventListener('click', () => {
-        state.rows.splice(idx, 1);
-        saveState(state.rows, state.rate);
-        render();
+      del.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (card.classList.contains('gw-card-removing')) return; // guard double click
+        card.classList.add('gw-card-removing');
+        card.addEventListener('animationend', () => {
+          const i = state.rows.indexOf(row);
+          if (i > -1) state.rows.splice(i, 1);
+          saveState(state.rows, state.rate);
+          render();
+        }, { once: true });
       });
+
       head.appendChild(name);
       head.appendChild(del);
       card.appendChild(head);
@@ -7888,6 +7900,14 @@ function readLeadNumbers() {
       grid.appendChild(chips);
 
       card.appendChild(grid);
+
+      card.classList.add('gw-card-enter');
+      listEl.appendChild(card);
+      requestAnimationFrame(() => {
+        // double RAF ensures styles are applied before we remove the class
+        requestAnimationFrame(() => card.classList.remove('gw-card-enter'));
+      });
+
       listEl.appendChild(card);
 
       // recompute when rate or deductions change
@@ -7910,6 +7930,15 @@ function readLeadNumbers() {
     state.rows.push({ name: 'New Strategy', investment: '', retained: '', deductions: '' });
     saveState(state.rows, state.rate);
     render();
+
+    // Bring the new card into view and briefly highlight it
+    const cards = listEl.querySelectorAll('.gw-card');
+    const last = cards[cards.length - 1];
+    if (last) {
+      last.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      last.classList.add('gw-card-pulse');
+      last.addEventListener('animationend', () => last.classList.remove('gw-card-pulse'), { once: true });
+    }
   });
 
   resetBtn.addEventListener('click', () => {
