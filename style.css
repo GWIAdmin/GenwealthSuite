@@ -669,18 +669,18 @@ body.dark-mode .gw-controls{
 
 /* Card entry/exit animations */
 .gw-card {
-  transition: opacity .18s ease, transform .18s ease, box-shadow .20s ease;
+  transition: opacity .25s ease, transform .25s ease, box-shadow .25s ease;
 }
 
 /* start state for newly-mounted cards (removed next frame via JS) */
 .gw-card.gw-card-enter {
   opacity: 0;
-  transform: translateY(8px) scale(0.98);
+  transform: translateY(8px) scale(0.58);
 }
 
 /* animate out before removal */
 .gw-card.gw-card-removing {
-  animation: gwCardOut .18s ease forwards;
+  animation: gwCardOut .25s ease forwards;
 }
 
 @keyframes gwCardOut {
