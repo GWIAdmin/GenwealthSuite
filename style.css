@@ -697,3 +697,16 @@ body.dark-mode .gw-controls{
   50%  { box-shadow: 0 0 0 6px rgba(85,37,131,.20); }
   100% { box-shadow: 0 0 0 rgba(85,37,131,0); }
 }
+
+.gw-name {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #552583;
+  border-radius: 8px;
+  font-size: 14px;
+}
+body.dark-mode .gw-name {
+  background: var(--business-entry);
+  border-color: var(--border-dark);
+  color: var(--h3-dark);
+}

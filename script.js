@@ -7828,6 +7828,83 @@ function readLeadNumbers() {
     return { wrap, input };
   }
 
+  // All possible strategies for the dropdown
+  const strategies = [
+    'Please Select',
+    'Hiring Children & Family',
+    'Professional Fees',
+    'Accountable Plan',
+    'Administrative Home Office',
+    'Home Office',
+    'Augusta Loophole',
+    'Disability Insurance',
+    '412(e)(3) Plan',
+    '401(k) Plan',
+    'Charitable Foundation',
+    'Health Savings Account (HSA)',
+    'Oil & Gas',
+    'Alternative Risk Program (ARP)',
+    'American Opportunity Credit',
+    'Asset Purchase Depreciation',
+    'Business Complex Trust',
+    'Captive Insurance',
+    'Cash Balance Plan',
+    'C-Corp to S-Corp',
+    'Charitable LLC (CLLC)',
+    'Charitable Remainder Trust (CRT)',
+    'Cost Segregation Study',
+    'Conservation Easement',
+    'Defferred Sales Trust (DST)',
+    'Employer Contribution Tax Credit',
+    'ESOP/ESOT',
+    'Family Limited Liability Company (FLLC)',
+    'Family Management Company (C-Corp)',
+    'Family Management Company (S-Corp)',
+    'Family Management Company (Spousal Partnership)',
+    'Favorable Depreciation Rules (Section 179)',
+    'FICA Tip Credit',
+    'Film Debt Financing',
+    'Freeze Transactions with GRATs & IDGTs',
+    'Healthcare Software RTU Program',
+    'Indexed Universal Life (IUL)',
+    'Installment Sales',
+    'IRC Section 168 Film Investments',
+    'IRC Section 7702 Retirement Strategy',
+    'Leveraged Asset Donation',
+    'Lifetime Learning Credit',
+    'Married Filing Jointly Status',
+    'Maximize 457(b) Contributions',
+    'Maximizing Current 401(k) Retirement Plan',
+    'Maximizing Current Retirement Plans 403(b) and 401(k)',
+    'Opportunity Zone Investment',
+    'Passive Real Estate Losses',
+    'Plug-In Electric Vehicle (EV) Credit',
+    'Private Placement Life Insurance (PPLI)',
+    'Profit-Sharing Retirement Plan',
+    'Purchase of a Primary Home',
+    'Qualified Employee Achievement Award Program (QEAAP)',
+    'Qualified Retirement Savings Credit',
+    'Qualified Small Business Stock (QSBS) Election',
+    'Real Estate Professional & Cost Segregation',
+    'Rent to Real Estate',
+    'Research & Development (R&D) Credit',
+    'Residential Clean Energy Credit',
+    'Restricted property Trust (RPT)',
+    'Revenue Stream Bifurcation',
+    'Roth Contributions vs Traditional Contributions',
+    'Schedule-C to S-Corp',
+    'Section 105 Plan',
+    'Section 168(k) Bonus Depreciation',
+    'Section 199A',
+    'Self-Employed Health Insurance Deduction',
+    'SEP IRA',
+    'Short-Term Rentals & Real Estate Professionals',
+    'Small Employer Pension Plan Startup Credit',
+    'Solar Credit',
+    'Tax Loss Harvesting',
+    'Work Opportunity Tax Credit (WOTC)'
+  ];
+
   function render() {
     listEl.innerHTML = '';
     const rate = Number(rateEl.value || 0);
@@ -7839,19 +7916,45 @@ function readLeadNumbers() {
       // head
       const head = document.createElement('div');
       head.className = 'gw-card-head';
-      const name = document.createElement('input');
+
+      const name = document.createElement('select');
       name.className = 'gw-name';
-      name.placeholder = 'Strategy name';
-      name.value = row.name;
-      name.addEventListener('input', () => {
-        row.name = name.value; saveState(state.rows, state.rate);
+
+      // Add default placeholder
+      const defaultOpt = document.createElement('option');
+      defaultOpt.value = '';
+      defaultOpt.textContent = 'Please Select';
+      defaultOpt.disabled = true;
+      defaultOpt.selected = !row.name;
+      name.appendChild(defaultOpt);
+
+      // Get all currently used strategies (excluding this row)
+      const used = state.rows.map(r => r.name).filter(n => n && n !== row.name);
+
+      // Populate dropdown from global `strategies` array
+      strategies.forEach(strat => {
+        if (!used.includes(strat)) {
+          const opt = document.createElement('option');
+          opt.value = strat;
+          opt.textContent = strat;
+          if (row.name === strat) opt.selected = true;
+          name.appendChild(opt);
+        }
       });
+
+      name.addEventListener('change', () => {
+        row.name = name.value;
+        saveState(state.rows, state.rate);
+        render(); // re-render so dropdowns update everywhere
+      });
+
 
       const del = document.createElement('button');
       del.type = 'button';
       del.className = 'gw-del';
       del.textContent = '✕';
       del.title = 'Remove';
+
       del.addEventListener('click', (e) => {
         e.preventDefault();
         if (card.classList.contains('gw-card-removing')) return; // guard double click
@@ -7987,3 +8090,5 @@ function readLeadNumbers() {
 
   render();
 })();
+
+
