@@ -8283,7 +8283,7 @@ function readLeadNumbers() {
   // ----------- Render all entities -----------
   function renderEntities() {
     entList.innerHTML = '';
-    const entities = [...listBusinessEntities(), ...listW2Entities(), ...customEntities];
+    const entities = [...customEntities, ...listW2Entities(), ...listBusinessEntities()];
     // Keep existing state objects if ids are reused; ensure a state exists for each entity
     entities.forEach(e => ensureState(e.id));
     // Mount panels
