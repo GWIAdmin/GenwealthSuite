@@ -7943,11 +7943,17 @@ function readLeadNumbers() {
       });
 
       name.addEventListener('change', () => {
-        row.name = name.value;
+        const newName = name.value;
+        // If the user switched to a different strategy, clear the money fields
+        if (row.name && row.name !== newName) {
+          row.investment = '';
+          row.retained   = '';
+          row.deductions = '';
+        }
+        row.name = newName;
         saveState(state.rows, state.rate);
-        render(); // re-render so dropdowns update everywhere
+        render(); // re-render so inputs repaint blank
       });
-
 
       const del = document.createElement('button');
       del.type = 'button';
