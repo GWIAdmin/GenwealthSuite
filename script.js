@@ -7734,40 +7734,78 @@ function readLeadNumbers() {
 // 30. Deduction Strategy Box    //
 // ------------------------------//
 (() => {
-  const listEl     = document.getElementById('gw-list');
-  const rateEl     = document.getElementById('gw-tax-rate');
-  const addBtn     = document.getElementById('gw-add-row');
-  const resetBtn   = document.getElementById('gw-reset');
-  const exportBtn  = document.getElementById('gw-export');
+  const gwRoot   = document.getElementById('gw-restructure-content');
+  const entList  = document.getElementById('gw-entities');
+  const legacyCtl= gwRoot?.querySelector('.gw-controls');
+  const legacyList = document.getElementById('gw-list');
 
-  const tSavingsEl  = document.getElementById('gw-t-savings');
-  const tFiveEl     = document.getElementById('gw-t-5yr');
-  const tInvestEl   = document.getElementById('gw-t-investment');
-  const tRetainedEl = document.getElementById('gw-t-retained');
-  const tDeductEl   = document.getElementById('gw-t-deductions');
+  if (!gwRoot || !entList) return;
 
-  if (!listEl || !rateEl) return;
+  // Hide the old one-size-fits-all controls/list
+  if (legacyCtl)  legacyCtl.style.display = 'none';
+  if (legacyList) legacyList.style.display = 'none';
 
-  const LS_ROWS = 'gw_restructure_rows_v1';
-  const LS_RATE = 'gw_restructure_rate_v1';
+  // ---- Per-entity in-memory state ----
+  // stateById[id] = { rate:number, rows:[{name,investment,retained,deductions}] }
+  const stateById = Object.create(null);
 
-  const fmt = (n) => {
-    if (n === null || n === undefined || isNaN(n)) return '';
-    const s = Math.round(Number(n));
-    const abs = Math.abs(s).toLocaleString('en-US');
-    return s < 0 ? `($${abs})` : `$${abs}`;
-  };
-  const unfmt = (s) => {
-    if (typeof s === 'number') return s;
-    if (!s) return 0;
-    s = ('' + s).trim();
-    const neg = (s.startsWith('(') && s.endsWith(')')) || s.startsWith('-');
-    const num = Number(s.replace(/[^\d.]/g, '')) || 0;
-    return neg ? -num : num;
-  };
+  // ▼ NEW: lightweight store for user-added entities (persists for the session)
+  const customEntities = [];
+  let   customEntityCounter = 1;
 
-  // Prefill only strategy names; numbers = blank
-  const DEFAULT_ROWS = [
+  // ▼ NEW: supported “synthetic” entity types shown in the picker
+  const ENTITY_TYPES = [
+    'Please Select',
+    'FMC (S-Corp)',
+    'FMC (Spousal Partnership)',
+    'FMC (C-Corp)',
+    'Charitable Foundation'
+  ];
+
+  // ▼ NEW: small add-bar UI (type select + optional name + Add button)
+  const addBar = document.createElement('div');
+  addBar.className = 'gw-controls';
+  addBar.style.marginBottom = '10px';
+  addBar.innerHTML = `
+    <label for="gw-entity-type">Entity Type</label>
+    <select id="gw-entity-type">
+      ${ENTITY_TYPES.map(t => `<option value="${t}">${t}</option>`).join('')}
+    </select>
+    <input id="gw-entity-name" type="text" placeholder="Optional custom name" />
+    <button id="gw-add-entity" type="button">Add Entity</button>
+  `;
+  // insert the add-bar just above the entities list
+  gwRoot.insertBefore(addBar, entList);
+
+  // ▼ NEW: handler to create a new custom entity
+  addBar.querySelector('#gw-add-entity').addEventListener('click', () => {
+    const type = addBar.querySelector('#gw-entity-type').value;
+    const name = (addBar.querySelector('#gw-entity-name').value || '').trim();
+    const id   = `custom-${customEntityCounter++}`;
+
+    // default title if no custom name is provided
+    const title = name ? `${name} (${type})` : `${type} #${customEntityCounter - 1}`;
+
+    customEntities.push({
+      id,
+      kind: 'custom',
+      index: id,
+      // show the chosen type in the title; the subline is blank by design
+      title,
+      sub: ''
+    });
+
+    // seed a blank state so chips/pills render immediately
+    if (!stateById[id]) {
+      stateById[id] = { rate: 0, rows: JSON.parse(JSON.stringify(DEFAULT_ROWS)) };
+    }
+
+    // clear the name box for the next one and refresh
+    addBar.querySelector('#gw-entity-name').value = '';
+    renderEntities();
+  });
+
+  const DEFAULT_ROWS = Object.freeze([
     { name: 'Hiring Children & Family',     investment: '', retained: '', deductions: '' },
     { name: 'Professional Fees',            investment: '', retained: '', deductions: '' },
     { name: 'Accountable Plan',             investment: '', retained: '', deductions: '' },
@@ -7778,58 +7816,10 @@ function readLeadNumbers() {
     { name: '401(k)',                       investment: '', retained: '', deductions: '' },
     { name: 'Charitable Foundation',        investment: '', retained: '', deductions: '' },
     { name: 'Health Savings Account (HSA)', investment: '', retained: '', deductions: '' },
-  ];
+  ]);
 
-  function loadState() {
-    return { rows: DEFAULT_ROWS, rate: 0 };
-  }
-
-  function saveState(/*rows, rate*/) {
-    // no-op: stop persisting to localStorage
-  }
-
-  let state = loadState();
-  rateEl.value = state.rate ? state.rate : '';
-
-  function totals() {
-    const rate = Number(rateEl.value || 0);
-    let tSav = 0, t5 = 0, tInv = 0, tRet = 0, tDed = 0;
-    state.rows.forEach(r => {
-      const d = r.deductions === '' ? 0 : unfmt(r.deductions);
-      const s = (d * rate) / 100;
-      tSav += s;
-      t5   += s * 5;
-      tInv += r.investment === '' ? 0 : unfmt(r.investment);
-      tRet += r.retained   === '' ? 0 : unfmt(r.retained);
-      tDed += d;
-    });
-    tSavingsEl.textContent  = fmt(tSav);
-    tFiveEl.textContent     = fmt(t5);
-    tInvestEl.textContent   = fmt(tInv);
-    tRetainedEl.textContent = fmt(tRet);
-    tDeductEl.textContent   = fmt(tDed);
-  }
-
-  function moneyField(labelText, value, onCommit) {
-    const wrap = document.createElement('label');
-    wrap.className = 'gw-field';
-    wrap.textContent = labelText + ':';
-    const input = document.createElement('input');
-    input.className = 'gw-money';
-    input.value = value === '' ? '' : fmt(value);
-    input.addEventListener('blur', () => {
-      const raw = input.value.trim();
-      if (raw === '') { onCommit(''); input.value = ''; }
-      else { const n = unfmt(raw); onCommit(n); input.value = fmt(n); }
-      saveState(state.rows, state.rate); totals();
-    });
-    input.addEventListener('input', totals);
-    wrap.appendChild(input);
-    return { wrap, input };
-  }
-
-// All possible strategies for the dropdown
-const strategies = [
+ // All possible strategies for the dropdown
+ const STRATEGIES = [
   'Please Select',
   '401(k) Plan',
   '412(e)(3) Plan',
@@ -7904,198 +7894,425 @@ const strategies = [
   'Solar Credit',
   'Tax Loss Harvesting',
   'Work Opportunity Tax Credit (WOTC)'
-];
+ ];
 
-  function render() {
-    listEl.innerHTML = '';
-    const rate = Number(rateEl.value || 0);
+  const fmtMoney = (n) => {
+    if (n === '' || n == null || isNaN(n)) return '';
+    const s = Math.round(Number(n));
+    const abs = Math.abs(s).toLocaleString('en-US');
+    return s < 0 ? `($${abs})` : `$${abs}`;
+  };
+  const unfmtMoney = (s) => {
+    if (typeof s === 'number') return s;
+    if (!s) return 0;
+    s = ('' + s).trim();
+    const neg = (s.startsWith('(') && s.endsWith(')')) || s.startsWith('-');
+    const num = Number(s.replace(/[^\d.]/g, '')) || 0;
+    return neg ? -num : num;
+  };
 
-    state.rows.forEach((row, idx) => {
-      const card = document.createElement('article');
-      card.className = 'gw-card';
+  function ensureState(id) {
+    if (!stateById[id]) {
+      // shallow clone the default row set; values stay blank
+      stateById[id] = { rate: 0, rows: JSON.parse(JSON.stringify(DEFAULT_ROWS)) };
+    }
+    return stateById[id];
+  }
 
-      // head
-      const head = document.createElement('div');
-      head.className = 'gw-card-head';
+  // ----------- Entity discovery (Business blocks + W-2 blocks) -----------
+  function listBusinessEntities() {
+    const out = [];
+    const num = parseInt(document.getElementById('numOfBusinesses')?.value || '0', 10) || 0;
+    for (let i = 1; i <= num; i++) {
+      const name = document.getElementById(`businessName_${i}`)?.value?.trim() || `Business ${i}`;
+      const type = document.getElementById(`business${i}Type`)?.value || 'Please Select';
+      const net  = document.getElementById(`business${i}Net`)?.value || '0';
+      out.push({
+        id: `biz-${i}`,
+        kind: 'business',
+        index: i,
+        title: `${name} (${type})`,
+        sub: `Net: ${net}`,
+      });
+    }
+    return out;
+  }
 
-      const name = document.createElement('select');
-      name.className = 'gw-name';
+  function listW2Entities() {
+    const blocks = Array.from(document.querySelectorAll('#w2sContainer .w2-block'));
+    return blocks.map(block => {
+      const idStr = block.id.replace('w2Block_', ''); // numeric
+      const nm = document.getElementById(`w2Name_${idStr}`)?.value?.trim();
+      const who = document.getElementById(`w2WhoseW2_${idStr}`)?.value?.trim();
+      const wage = document.getElementById(`w2Wages_${idStr}`)?.value || '$0';
+      const isClientBiz = document.getElementById(`w2IsClientBusiness_${idStr}`)?.value === 'Yes';
+      const bizName = isClientBiz ? (document.getElementById(`w2BusinessName_${idStr}`)?.value || '—') : '—';
+      const title = `W-2: ${nm || ('#' + idStr)}${who ? ` — ${who}` : ''}`;
+      const sub   = `Wages: ${wage}${isClientBiz ? ` • Business: ${bizName}` : ''}`;
+      return { id: `w2-${idStr}`, kind: 'w2', index: idStr, title, sub };
+    });
+  }
 
-      // Add default placeholder
-      const defaultOpt = document.createElement('option');
-      defaultOpt.value = '';
-      defaultOpt.textContent = 'Please Select';
-      defaultOpt.disabled = true;
-      defaultOpt.selected = !row.name;
-      name.appendChild(defaultOpt);
+  // ----------- Card factory per entity -----------
+  function mountEntityPanel(entity) {
+    const st = ensureState(entity.id);
 
-      // Get all currently used strategies (excluding this row)
-      const used = state.rows.map(r => r.name).filter(n => n && n !== row.name);
+    const wrap = document.createElement('section');
+    wrap.className = 'gw-entity';
+    wrap.dataset.entityId = entity.id;
 
-      // Populate dropdown from global `strategies` array
-      strategies.forEach(strat => {
-        if (!used.includes(strat)) {
+    // head
+    const head = document.createElement('div');
+    head.className = 'gw-entity-head';
+    head.innerHTML = `
+      <div class="gw-entity-title">${entity.title}</div>
+      <div class="gw-entity-sub">${entity.sub}</div>
+    `;
+    wrap.appendChild(head);
+
+    // body
+    const body = document.createElement('div');
+    body.className = 'gw-entity-body collapsible-content';  // animated like your other sections
+    wrap.appendChild(body);
+
+    // body content: controls + list + mini-summary
+    const controls = document.createElement('div');
+    controls.className = 'gw-controls';
+    controls.innerHTML = `
+      <label for="gw-tax-rate-${entity.id}">Tax Rate (%)</label>
+      <input id="gw-tax-rate-${entity.id}" type="number" min="0" max="100" step="0.01" placeholder="%" value="${st.rate || ''}">
+      <button id="gw-add-row-${entity.id}" type="button">Add Strategy</button>
+      <button id="gw-reset-${entity.id}" type="button">Reset</button>
+      <button id="gw-export-${entity.id}" type="button">Export CSV</button>
+    `;
+    body.appendChild(controls);
+
+    const cardList = document.createElement('div');
+    cardList.id = `gw-list-${entity.id}`;
+    cardList.className = 'gw-card-list';
+    body.appendChild(cardList);
+
+    const mini = document.createElement('div');
+    mini.className = 'gw-entity-summary';
+    mini.innerHTML = `
+      <span class="gw-chip"><strong>Savings</strong> <output id="gw-s-${entity.id}"></output></span>
+      <span class="gw-chip"><strong>5 Yr</strong> <output id="gw-5-${entity.id}"></output></span>
+      <span class="gw-chip"><strong>Investment</strong> <output id="gw-i-${entity.id}"></output></span>
+      <span class="gw-chip"><strong>Retained</strong> <output id="gw-r-${entity.id}"></output></span>
+      <span class="gw-chip"><strong>Deductions</strong> <output id="gw-d-${entity.id}"></output></span>
+    `;
+    body.appendChild(mini);
+
+    // toggle open
+    head.addEventListener('click', () => body.classList.toggle('active'));
+
+    // per-entity render + events
+    function renderCards() {
+      cardList.innerHTML = '';
+      const used = st.rows.map(r => r.name).filter(Boolean);
+
+      st.rows.forEach((row, idx) => {
+        const card = document.createElement('article');
+        card.className = 'gw-card';
+
+        // head
+        const head = document.createElement('div');
+        head.className = 'gw-card-head';
+
+        // name dropdown (unique per entity)
+        const sel = document.createElement('select');
+        sel.className = 'gw-name';
+        // build options
+        const please = document.createElement('option');
+        please.value = '';
+        please.textContent = 'Please Select';
+        please.disabled = true;
+        if (!row.name) please.selected = true;
+        sel.appendChild(please);
+
+        STRATEGIES.forEach(name => {
+          if (name === 'Please Select') return;
           const opt = document.createElement('option');
-          opt.value = strat;
-          opt.textContent = strat;
-          if (row.name === strat) opt.selected = true;
-          name.appendChild(opt);
+          opt.value = name;
+          opt.textContent = name;
+          // allow reuse inside this entity, but if you want to ban duplicates per entity, uncomment:
+          // if (used.includes(name) && name !== row.name) return;
+          if (row.name === name) opt.selected = true;
+          sel.appendChild(opt);
+        });
+
+        sel.addEventListener('change', () => {
+          const prev = row.name;
+          row.name = sel.value;
+          if (prev && prev !== row.name) {
+            // clear amounts when switching
+            row.investment = row.retained = row.deductions = '';
+          }
+          renderCards();
+          recomputeEntityTotals();
+        });
+
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'gw-del';
+        del.textContent = '✕';
+        del.title = 'Remove';
+        del.addEventListener('click', (e) => {
+          e.preventDefault();
+          st.rows.splice(idx, 1);
+          renderCards();
+          recomputeEntityTotals();
+        });
+
+        head.appendChild(sel);
+        head.appendChild(del);
+        card.appendChild(head);
+
+        // grid
+        const grid = document.createElement('div');
+        grid.className = 'gw-card-grid';
+
+        function moneyField(label, fieldKey) {
+          const wrap = document.createElement('label');
+          wrap.className = 'gw-field';
+          wrap.textContent = `${label}:`;
+
+          const input = document.createElement('input');
+          input.className = 'gw-money';
+          input.value = row[fieldKey] === '' ? '' : fmtMoney(row[fieldKey]);
+          input.addEventListener('blur', () => {
+            const raw = input.value.trim();
+            if (raw === '') {
+              row[fieldKey] = '';
+              input.value = '';
+            } else {
+              const n = unfmtMoney(raw);
+              row[fieldKey] = n;
+              input.value = fmtMoney(n);
+            }
+            recomputeEntityTotals();
+          });
+          input.addEventListener('input', recomputeEntityTotals);
+
+          wrap.appendChild(input);
+          return wrap;
         }
+
+        grid.appendChild(moneyField('Investment','investment'));
+        grid.appendChild(moneyField('Retained Assets','retained'));
+        grid.appendChild(moneyField('Deductions','deductions'));
+
+        // chip previews for this card (uses entity rate)
+        const chipWrap = document.createElement('div'); chipWrap.className = 'gw-chips';
+        const c1 = document.createElement('span'); c1.className = 'gw-chip';
+        const c2 = document.createElement('span'); c2.className = 'gw-chip';
+        const o1 = document.createElement('output');
+        const o2 = document.createElement('output');
+
+        function paintCardChips() {
+          const d = row.deductions === '' ? 0 : Number(row.deductions);
+          const s = (d * (Number(st.rate) || 0)) / 100;
+          o1.textContent = d ? fmtMoney(s) : '';
+          o2.textContent = d ? fmtMoney(s * 5) : '';
+        }
+        paintCardChips();
+
+        // update chips on blur of deductions
+        // (already wired via recomputeEntityTotals which calls paintCardChips for all rows)
+        c1.textContent = 'Savings ';
+        c1.appendChild(o1);
+        c2.textContent = '5 Yr ';
+        c2.appendChild(o2);
+        chipWrap.appendChild(c1);
+        chipWrap.appendChild(c2);
+        grid.appendChild(chipWrap);
+
+        card.appendChild(grid);
+        cardList.appendChild(card);
+      });
+    }
+
+    // controls actions
+    const rateEl = controls.querySelector(`#gw-tax-rate-${entity.id}`);
+    const addBtn = controls.querySelector(`#gw-add-row-${entity.id}`);
+    const resetBtn = controls.querySelector(`#gw-reset-${entity.id}`);
+    const exportBtn = controls.querySelector(`#gw-export-${entity.id}`);
+
+    rateEl.addEventListener('input', () => {
+      st.rate = rateEl.value === '' ? 0 : Number(rateEl.value);
+      renderCards();            // refresh per-card chips
+      recomputeEntityTotals();  // refresh entity+global pills
+    });
+
+    addBtn.addEventListener('click', () => {
+      st.rows.push({ name: 'New Strategy', investment: '', retained: '', deductions: '' });
+      renderCards();
+      recomputeEntityTotals();
+
+      // scroll new card into view
+      const last = cardList.querySelector('.gw-card:last-child');
+      if (last) {
+        last.scrollIntoView({ behavior:'smooth', block:'center' });
+        last.classList.add('gw-card-pulse');
+        last.addEventListener('animationend', () => last.classList.remove('gw-card-pulse'), { once:true });
+      }
+    });
+
+    resetBtn.addEventListener('click', () => {
+      if (!confirm('Reset this entity to default strategy names (numbers blank)?')) return;
+      st.rate = 0;
+      st.rows = JSON.parse(JSON.stringify(DEFAULT_ROWS));
+      rateEl.value = '';
+      renderCards();
+      recomputeEntityTotals();
+    });
+
+    exportBtn.addEventListener('click', () => {
+      const headers = ['Line item','Savings','5 Yr','Investment','Retained Assets','Deductions','Entity'];
+      const rows = st.rows.map(r => {
+        const d = r.deductions === '' ? '' : Number(r.deductions);
+        const s = (d === '' || !st.rate) ? '' : (d * st.rate) / 100;
+        const five = s === '' ? '' : s * 5;
+        const inv = r.investment === '' ? '' : Number(r.investment);
+        const ret = r.retained   === '' ? '' : Number(r.retained);
+        return [r.name, s, five, inv, ret, d, entity.title];
+      });
+      const totals = [
+        'Totals',
+        rows.reduce((a,b)=>a+(typeof b[1]==='number'?b[1]:0),0),
+        rows.reduce((a,b)=>a+(typeof b[2]==='number'?b[2]:0),0),
+        rows.reduce((a,b)=>a+(typeof b[3]==='number'?b[3]:0),0),
+        rows.reduce((a,b)=>a+(typeof b[4]==='number'?b[4]:0),0),
+        rows.reduce((a,b)=>a+(typeof b[5]==='number'?b[5]:0),0),
+        ''
+      ];
+      const all = [headers, ...rows, totals];
+      const csv = all.map(r => r.map(x => (x === '' ? '' : (typeof x === 'string' ? `"${x.replace(/"/g,'""')}"` : x))).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `2025_restructure_${entity.id}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // initial paint
+    renderCards();
+
+    // mount into list & return a recompute hook
+    entList.appendChild(wrap);
+
+    // recompute entity mini-pills and global bottom pills
+    function recomputeEntityTotals() {
+      let tSav=0, t5=0, tInv=0, tRet=0, tDed=0;
+      const rate = Number(st.rate) || 0;
+      st.rows.forEach(r => {
+        const d = r.deductions === '' ? 0 : Number(r.deductions);
+        const s = (d * rate)/100;
+        tSav += s; t5 += s*5;
+        tInv += r.investment === '' ? 0 : Number(r.investment);
+        tRet += r.retained   === '' ? 0 : Number(r.retained);
+        tDed += d;
       });
 
-      name.addEventListener('change', () => {
-        const newName = name.value;
-        // If the user switched to a different strategy, clear the money fields
-        if (row.name && row.name !== newName) {
-          row.investment = '';
-          row.retained   = '';
-          row.deductions = '';
-        }
-        row.name = newName;
-        saveState(state.rows, state.rate);
-        render(); // re-render so inputs repaint blank
-      });
+      // entity pills
+      body.querySelector(`#gw-s-${entity.id}`).textContent = fmtMoney(tSav);
+      body.querySelector(`#gw-5-${entity.id}`).textContent = fmtMoney(t5);
+      body.querySelector(`#gw-i-${entity.id}`).textContent = fmtMoney(tInv);
+      body.querySelector(`#gw-r-${entity.id}`).textContent = fmtMoney(tRet);
+      body.querySelector(`#gw-d-${entity.id}`).textContent = fmtMoney(tDed);
+
+      // global pills
+      recomputeGlobalTotals();
+    }
+
+    // ▼ NEW: bottom-aligned Remove button INSIDE the entity (only for custom entities)
+    if (entity.kind === 'custom') {
+      const footer = document.createElement('div');
+      footer.className = 'gw-entity-footer';
 
       const del = document.createElement('button');
       del.type = 'button';
+      del.textContent = 'Remove Entity';
       del.className = 'gw-del';
-      del.textContent = '✕';
-      del.title = 'Remove';
-
       del.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (card.classList.contains('gw-card-removing')) return; // guard double click
-        card.classList.add('gw-card-removing');
-        card.addEventListener('animationend', () => {
-          const i = state.rows.indexOf(row);
-          if (i > -1) state.rows.splice(i, 1);
-          saveState(state.rows, state.rate);
-          render();
-        }, { once: true });
+        e.stopPropagation();
+        const idx = customEntities.findIndex(c => c.id === entity.id);
+        if (idx !== -1) {
+          customEntities.splice(idx, 1);
+          delete stateById[entity.id];   // optional: drop its saved rows/rate
+          renderEntities();
+        }
       });
 
-      head.appendChild(name);
-      head.appendChild(del);
-      card.appendChild(head);
+      footer.appendChild(del);
+      body.appendChild(footer);
+    }
 
-      // grid
-      const grid = document.createElement('div');
-      grid.className = 'gw-card-grid';
-
-      // editable money fields
-      const inv = moneyField('Investment', row.investment, (v)=>{ row.investment = v; });
-      const ret = moneyField('Retained Assets', row.retained, (v)=>{ row.retained = v; });
-      const ded = moneyField('Deductions', row.deductions, (v)=>{ row.deductions = v; });
-
-      grid.appendChild(inv.wrap);
-      grid.appendChild(ret.wrap);
-      grid.appendChild(ded.wrap);
-
-      // computed chips
-      const chips = document.createElement('div'); chips.className = 'gw-chips';
-      const chipSavings = document.createElement('span'); chipSavings.className = 'gw-chip';
-      const chip5yr     = document.createElement('span'); chip5yr.className     = 'gw-chip';
-      const outSav = document.createElement('output');
-      const out5   = document.createElement('output');
-      const computeAndPaint = () => {
-        const d = row.deductions === '' ? 0 : unfmt(row.deductions);
-        const show = (rate > 0 && row.deductions !== '');
-        const s = show ? (d * rate) / 100 : null;
-        outSav.textContent = show ? fmt(s)     : '';
-        out5.textContent   = show ? fmt(s * 5) : '';
-      };
-
-      chipSavings.textContent = 'Savings ';
-      chipSavings.appendChild(outSav);
-      chip5yr.textContent = '5 Yr ';
-      chip5yr.appendChild(out5);
-      chips.appendChild(chipSavings);
-      chips.appendChild(chip5yr);
-      grid.appendChild(chips);
-
-      card.appendChild(grid);
-
-      card.classList.add('gw-card-enter');
-      listEl.appendChild(card);
-      requestAnimationFrame(() => {
-        // double RAF ensures styles are applied before we remove the class
-        requestAnimationFrame(() => card.classList.remove('gw-card-enter'));
-      });
-
-      listEl.appendChild(card);
-
-      // recompute when rate or deductions change
-      computeAndPaint();
-      ded.input.addEventListener('blur', computeAndPaint);
-    });
-
-    totals();
+    entList.appendChild(wrap);
   }
 
-  // events
-  rateEl.addEventListener('input', () => {
-    const v = rateEl.value === '' ? 0 : Number(rateEl.value);
-    state.rate = isFinite(v) ? v : 0;
-    saveState(state.rows, state.rate);
-    render();
-  });
-
-  addBtn.addEventListener('click', () => {
-    state.rows.push({ name: 'New Strategy', investment: '', retained: '', deductions: '' });
-    saveState(state.rows, state.rate);
-    render();
-
-    // Bring the new card into view and briefly highlight it
-    const cards = listEl.querySelectorAll('.gw-card');
-    const last = cards[cards.length - 1];
-    if (last) {
-      last.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      last.classList.add('gw-card-pulse');
-      last.addEventListener('animationend', () => last.classList.remove('gw-card-pulse'), { once: true });
+  // ----------- Global sum (bottom pills) -----------
+  function recomputeGlobalTotals() {
+    let T_S=0, T_5=0, T_I=0, T_R=0, T_D=0;
+    for (const id of Object.keys(stateById)) {
+      const st = stateById[id];
+      const rate = Number(st.rate) || 0;
+      st.rows.forEach(r=>{
+        const d = r.deductions === '' ? 0 : Number(r.deductions);
+        const s = (d * rate)/100;
+        T_S += s; T_5 += s*5;
+        T_I += r.investment === '' ? 0 : Number(r.investment);
+        T_R += r.retained   === '' ? 0 : Number(r.retained);
+        T_D += d;
+      });
     }
-  });
+    const s  = document.getElementById('gw-t-savings');
+    const y5 = document.getElementById('gw-t-5yr');
+    const inv= document.getElementById('gw-t-investment');
+    const ret= document.getElementById('gw-t-retained');
+    const ded= document.getElementById('gw-t-deductions');
+    if (s)   s.textContent   = fmtMoney(T_S);
+    if (y5)  y5.textContent  = fmtMoney(T_5);
+    if (inv) inv.textContent = fmtMoney(T_I);
+    if (ret) ret.textContent = fmtMoney(T_R);
+    if (ded) ded.textContent = fmtMoney(T_D);
+  }
 
-  resetBtn.addEventListener('click', () => {
-    if (!confirm('Reset to default names (numbers blank)?')) return;
-    state = { rows: JSON.parse(JSON.stringify(DEFAULT_ROWS)), rate: 0 };
-    rateEl.value = '';
-    saveState(state.rows, state.rate);
-    render();
-  });
-
-  exportBtn.addEventListener('click', () => {
-    const headers = ['Line item','Savings','5 Yr','Investment','Retained Assets','Deductions'];
-    const rate = Number(rateEl.value || 0);
-    const rows = state.rows.map(r => {
-      const d = r.deductions === '' ? '' : unfmt(r.deductions);
-      const s = (d === '' || rate === 0) ? '' : (d * rate) / 100;
-      const five = s === '' ? '' : s * 5;
-      const inv = r.investment === '' ? '' : unfmt(r.investment);
-      const ret = r.retained   === '' ? '' : unfmt(r.retained);
-      return [r.name, s, five, inv, ret, d];
+  // ----------- Render all entities -----------
+  function renderEntities() {
+    entList.innerHTML = '';
+    const entities = [...listBusinessEntities(), ...listW2Entities(), ...customEntities];
+    // Keep existing state objects if ids are reused; ensure a state exists for each entity
+    entities.forEach(e => ensureState(e.id));
+    // Mount panels
+    entities.forEach(e => {
+      const panel = mountEntityPanel(e);
+      // Start collapsed; analyst expands what they need
     });
-    const totalsRow = [
-      'Totals',
-      rows.reduce((a,b)=>a+(typeof b[1]==='number'?b[1]:0),0),
-      rows.reduce((a,b)=>a+(typeof b[2]==='number'?b[2]:0),0),
-      rows.reduce((a,b)=>a+(typeof b[3]==='number'?b[3]:0),0),
-      rows.reduce((a,b)=>a+(typeof b[4]==='number'?b[4]:0),0),
-      rows.reduce((a,b)=>a+(typeof b[5]==='number'?b[5]:0),0),
-    ];
-    const all = [headers, ...rows, totalsRow];
-    const csv = all
-      .map(r => r.map(x => x === '' ? '' : (typeof x === 'string' ? `"${x.replace(/"/g,'""')}"` : x)).join(','))
-      .join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = '2025_restructure.csv';
-    a.click();
-    URL.revokeObjectURL(url);
-  });
+    // Global bottom pills after fresh render
+    recomputeGlobalTotals();
+  }
 
-  render();
+  // Initial render
+  document.addEventListener('DOMContentLoaded', renderEntities);
+
+  // Re-render when businesses count changes
+  const numBizEl = document.getElementById('numOfBusinesses');
+  if (numBizEl) {
+    numBizEl.addEventListener('input', renderEntities);
+  }
+
+  // Re-render when W-2 list changes (we’ll emit this from add/remove)
+  document.addEventListener('gw:w2ListChanged', renderEntities);
+
+  // Also rebuild when the Restructure section is opened, ensuring it is fresh
+  const header = document.querySelector("#gw-restructure h2[data-target='gw-restructure-content']");
+  if (header) {
+    header.addEventListener('click', () => {
+      // give the CSS a tick to flip .active, then rebuild
+      setTimeout(renderEntities, 60);
+    });
+  }
 })();
-
-

@@ -458,6 +458,8 @@ body.dark-mode .res-comp-btn:hover { background-color: var(--accent); color: #55
   border-radius: 12px;
 }
 
+#gw-entity-name { height: 36px; line-height: 36px; }
+
 #gw-tax-rate {
   height: 36px;
   line-height: 36px;
@@ -473,6 +475,12 @@ body.dark-mode .res-comp-btn:hover { background-color: var(--accent); color: #55
 }
 @media (min-width: 880px) {
   .gw-card-list { grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); }
+}
+
+.gw-entity-footer {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
 }
 
 /* single card */
@@ -710,3 +718,57 @@ body.dark-mode .gw-name {
   border-color: var(--border-dark);
   color: var(--h3-dark);
 }
+
+/* === 2025 Restructure: entity-scoped panels === */
+.gw-entity {
+  background: #fff;
+  border: 4px solid #552583;
+  border-radius: 16px;
+  margin-bottom: 16px;
+  padding: 10px; /* head/body manage inner padding */
+}
+
+/* Collapse body to zero padding when closed; smaller when open */
+.gw-entity-body.collapsible-content {
+  max-height: 0;
+  overflow: hidden;
+  padding: 0 14px;                  /* was 12px 14px; zero vertical padding when closed */
+  transition: max-height .25s ease, padding .20s ease;
+}
+.gw-entity-body.collapsible-content.active {
+  max-height: 800px;                /* reduce from 2500px; just needs to exceed content */
+  padding: 8px 14px;                /* slimmer open padding */
+}
+
+/* If the panel has no cards yet, hide the empty box entirely */
+.gw-card-list:empty { display: none; }
+.gw-entity-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  cursor: pointer;
+  background: #EFEAF8;
+  border-bottom: 4px solid #552583;
+  border-top: 4px solid #552583;
+  border-right: 4px solid #552583;
+  border-left: 4px solid #552583;
+}
+.gw-entity-title { font-weight: 800; color: var(--text-light); }
+.gw-entity-sub   { font-size: .9rem; color: #666; }
+.gw-entity-body  { padding: 12px 14px; }
+.gw-entity-body.collapsible-content { /* reuse your animation */
+  max-height: 0; overflow: hidden; transition: max-height .4s ease-in-out;
+}
+.gw-entity-body.collapsible-content.active { max-height: 2500px; }
+
+.gw-entity-summary {
+  display: flex; gap: 16px; flex-wrap: wrap; margin-top: 8px;
+}
+
+/* Dark mode parity */
+body.dark-mode .gw-entity { background: var(--business-entry); border-color: var(--border-dark); }
+body.dark-mode .gw-entity-head { background: var(--section-dark); border-color: var(--border-dark); }
+body.dark-mode .gw-entity-title, body.dark-mode .gw-entity-sub { color: var(--h3-dark); }
