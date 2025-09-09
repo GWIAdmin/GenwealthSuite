@@ -7983,7 +7983,6 @@ function readLeadNumbers() {
       <input id="gw-tax-rate-${entity.id}" type="number" min="0" max="100" step="0.01" placeholder="%" value="${st.rate || ''}">
       <button id="gw-add-row-${entity.id}" type="button">Add Strategy</button>
       <button id="gw-reset-${entity.id}" type="button">Reset</button>
-      <button id="gw-export-${entity.id}" type="button">Export CSV</button>
     `;
     body.appendChild(controls);
 
@@ -8137,7 +8136,6 @@ function readLeadNumbers() {
     const rateEl = controls.querySelector(`#gw-tax-rate-${entity.id}`);
     const addBtn = controls.querySelector(`#gw-add-row-${entity.id}`);
     const resetBtn = controls.querySelector(`#gw-reset-${entity.id}`);
-    const exportBtn = controls.querySelector(`#gw-export-${entity.id}`);
 
     rateEl.addEventListener('input', () => {
       st.rate = rateEl.value === '' ? 0 : Number(rateEl.value);
@@ -8166,36 +8164,6 @@ function readLeadNumbers() {
       rateEl.value = '';
       renderCards();
       recomputeEntityTotals();
-    });
-
-    exportBtn.addEventListener('click', () => {
-      const headers = ['Line item','Savings','5 Yr','Investment','Retained Assets','Deductions','Entity'];
-      const rows = st.rows.map(r => {
-        const d = r.deductions === '' ? '' : Number(r.deductions);
-        const s = (d === '' || !st.rate) ? '' : (d * st.rate) / 100;
-        const five = s === '' ? '' : s * 5;
-        const inv = r.investment === '' ? '' : Number(r.investment);
-        const ret = r.retained   === '' ? '' : Number(r.retained);
-        return [r.name, s, five, inv, ret, d, entity.title];
-      });
-      const totals = [
-        'Totals',
-        rows.reduce((a,b)=>a+(typeof b[1]==='number'?b[1]:0),0),
-        rows.reduce((a,b)=>a+(typeof b[2]==='number'?b[2]:0),0),
-        rows.reduce((a,b)=>a+(typeof b[3]==='number'?b[3]:0),0),
-        rows.reduce((a,b)=>a+(typeof b[4]==='number'?b[4]:0),0),
-        rows.reduce((a,b)=>a+(typeof b[5]==='number'?b[5]:0),0),
-        ''
-      ];
-      const all = [headers, ...rows, totals];
-      const csv = all.map(r => r.map(x => (x === '' ? '' : (typeof x === 'string' ? `"${x.replace(/"/g,'""')}"` : x))).join(',')).join('\n');
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `2025_restructure_${entity.id}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
     });
 
     // initial paint
