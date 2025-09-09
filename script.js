@@ -8036,7 +8036,7 @@ function readLeadNumbers() {
           opt.value = name;
           opt.textContent = name;
           // allow reuse inside this entity, but if you want to ban duplicates per entity, uncomment:
-          // if (used.includes(name) && name !== row.name) return;
+          if (used.includes(name) && name !== row.name) return;
           if (row.name === name) opt.selected = true;
           sel.appendChild(opt);
         });
