@@ -7759,7 +7759,9 @@ function readLeadNumbers() {
     'FMC (S-Corp)',
     'FMC (Spousal Partnership)',
     'FMC (C-Corp)',
-    'Charitable Foundation'
+    'Charitable Foundation',
+    'Holding Company (Schedule-C)',
+    'Schedule-C to S-Corp'
   ];
 
   // ▼ NEW: small add-bar UI (type select + optional name + Add button)
@@ -7982,8 +7984,10 @@ function readLeadNumbers() {
       <label for="gw-tax-rate-${entity.id}">Tax Rate (%)</label>
       <input id="gw-tax-rate-${entity.id}" type="number" min="0" max="100" step="0.01" placeholder="%" value="${st.rate || ''}">
       <button id="gw-add-row-${entity.id}" type="button">Add Strategy</button>
-      <button id="gw-reset-${entity.id}" type="button">Reset</button>
     `;
+    // add vertical spacing
+    controls.style.marginBottom = '15px';
+    controls.style.marginTop = '10px';
     body.appendChild(controls);
 
     const cardList = document.createElement('div');
@@ -8135,7 +8139,6 @@ function readLeadNumbers() {
     // controls actions
     const rateEl = controls.querySelector(`#gw-tax-rate-${entity.id}`);
     const addBtn = controls.querySelector(`#gw-add-row-${entity.id}`);
-    const resetBtn = controls.querySelector(`#gw-reset-${entity.id}`);
 
     rateEl.addEventListener('input', () => {
       st.rate = rateEl.value === '' ? 0 : Number(rateEl.value);
@@ -8155,15 +8158,6 @@ function readLeadNumbers() {
         last.classList.add('gw-card-pulse');
         last.addEventListener('animationend', () => last.classList.remove('gw-card-pulse'), { once:true });
       }
-    });
-
-    resetBtn.addEventListener('click', () => {
-      if (!confirm('Reset this entity to default strategy names (numbers blank)?')) return;
-      st.rate = 0;
-      st.rows = JSON.parse(JSON.stringify(DEFAULT_ROWS));
-      rateEl.value = '';
-      renderCards();
-      recomputeEntityTotals();
     });
 
     // initial paint
