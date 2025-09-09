@@ -7753,6 +7753,17 @@ function readLeadNumbers() {
   const customEntities = [];
   let   customEntityCounter = 1;
 
+  // ▼ Standalone strategies (no entity required)
+  let standaloneEnabled = false;
+  function ensureStandaloneState() {
+    // Seed a blank row set for standalone (unlike entities, which start with DEFAULT_ROWS)
+    if (!stateById['standalone']) {
+      stateById['standalone'] = { rate: 0, rows: [] };
+    }
+    standaloneEnabled = true;
+    return stateById['standalone'];
+  }
+
   // ▼ NEW: supported “synthetic” entity types shown in the picker
   const ENTITY_TYPES = [
     'Please Select',
@@ -7775,6 +7786,7 @@ function readLeadNumbers() {
     </select>
     <input id="gw-entity-name" type="text" placeholder="(Optional) Enter Custom Name" />
     <button id="gw-add-entity" type="button">Add Entity</button>
+    <button id="gw-add-standalone" type="button">Add Strategy</button>
   `;
   // insert the add-bar just above the entities list
   gwRoot.insertBefore(addBar, entList);
@@ -7805,6 +7817,18 @@ function readLeadNumbers() {
     // clear the name box for the next one and refresh
     addBar.querySelector('#gw-entity-name').value = '';
     renderEntities();
+  });
+
+  // ➕ Top-level Add Strategy (standalone, no entity required)
+  addBar.querySelector('#gw-add-standalone').addEventListener('click', () => {
+    const st = ensureStandaloneState();
+    st.rows.push({ name: 'New Strategy', investment: '', retained: '', deductions: '' });
+    renderEntities();
+    // open the panel and bring the new card into view
+    const body = document.querySelector(`.gw-entity[data-entity-id="standalone"] .gw-entity-body`);
+    if (body && !body.classList.contains('active')) body.classList.add('active');
+    const last = document.querySelector('#gw-list-standalone .gw-card:last-child');
+    if (last) last.scrollIntoView({ behavior:'smooth', block:'center' });
   });
 
   const DEFAULT_ROWS = Object.freeze([
@@ -8184,7 +8208,7 @@ function readLeadNumbers() {
       st.rows.forEach((r, i) => {
         const d = r.deductions === '' ? 0 : Number(r.deductions);
         const s = (d * rate) / 100;
-        const outs = cards[i]?.querySelectorAll('.gw-card-chips output');
+        const outs = cards[i]?.querySelectorAll('.gw-chips output');
         if (outs && outs.length >= 2) {
           outs[0].textContent = d ? fmtMoney(s) : '';
           outs[1].textContent = d ? fmtMoney(s * 5) : '';
@@ -8258,14 +8282,28 @@ function readLeadNumbers() {
   // ----------- Render all entities -----------
   function renderEntities() {
     entList.innerHTML = '';
-    const entities = [...customEntities, ...listW2Entities(), ...listBusinessEntities()];
+    const entities = [];
+    // ➕ Put Standalone Strategies first if present/enabled
+    if (standaloneEnabled || (stateById['standalone'] && stateById['standalone'].rows.length)) {
+      entities.push({
+        id: 'standalone',
+        kind: 'standalone',
+        index: '',
+        title: 'Standalone Strategies',
+        sub: 'Not linked to any entity'
+      });
+    }
+    entities.push(...customEntities, ...listW2Entities(), ...listBusinessEntities());
     // Keep existing state objects if ids are reused; ensure a state exists for each entity
-    entities.forEach(e => ensureState(e.id));
-    // Mount panels
     entities.forEach(e => {
-      const panel = mountEntityPanel(e);
-      // Start collapsed; analyst expands what they need
+      if (e.id === 'standalone') {
+        ensureStandaloneState();   // keep blank rows for standalone
+      } else {
+        ensureState(e.id);
+      }
     });
+    // Mount panels
+    entities.forEach(e => { mountEntityPanel(e); });
     // Global bottom pills after fresh render
     recomputeGlobalTotals();
   }
