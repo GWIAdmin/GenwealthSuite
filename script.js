@@ -7771,7 +7771,7 @@ function readLeadNumbers() {
     <select id="gw-entity-type">
       ${ENTITY_TYPES.map(t => `<option value="${t}">${t}</option>`).join('')}
     </select>
-    <input id="gw-entity-name" type="text" placeholder="Optional custom name" />
+    <input id="gw-entity-name" type="text" placeholder="(Optional) Enter Custom Name" />
     <button id="gw-add-entity" type="button">Add Entity</button>
   `;
   // insert the add-bar just above the entities list
@@ -8090,6 +8090,7 @@ function readLeadNumbers() {
               row[fieldKey] = n;
               input.value = fmtMoney(n);
             }
+            paintCardChips();
             recomputeEntityTotals();
           });
           input.addEventListener('input', recomputeEntityTotals);
@@ -8214,6 +8215,18 @@ function readLeadNumbers() {
         tInv += r.investment === '' ? 0 : Number(r.investment);
         tRet += r.retained   === '' ? 0 : Number(r.retained);
         tDed += d;
+      });
+
+      // Repaint per-card chips (Savings, 5 Yr) so they match the entity/global math
+      const cards = cardList.querySelectorAll('.gw-card');
+      st.rows.forEach((r, i) => {
+        const d = r.deductions === '' ? 0 : Number(r.deductions);
+        const s = (d * rate) / 100;
+        const outs = cards[i]?.querySelectorAll('.gw-card-chips output');
+        if (outs && outs.length >= 2) {
+          outs[0].textContent = d ? fmtMoney(s) : '';
+          outs[1].textContent = d ? fmtMoney(s * 5) : '';
+        }
       });
 
       // entity pills
