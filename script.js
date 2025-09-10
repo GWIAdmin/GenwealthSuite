@@ -7831,18 +7831,7 @@ function readLeadNumbers() {
     if (last) last.scrollIntoView({ behavior:'smooth', block:'center' });
   });
 
-  const DEFAULT_ROWS = Object.freeze([
-    { name: 'Hiring Children & Family',     investment: '', retained: '', deductions: '' },
-    { name: 'Professional Fees',            investment: '', retained: '', deductions: '' },
-    { name: 'Accountable Plan',             investment: '', retained: '', deductions: '' },
-    { name: 'Administrative Home Office',   investment: '', retained: '', deductions: '' },
-    { name: 'Augusta Loophole',             investment: '', retained: '', deductions: '' },
-    { name: 'Disability Insurance',         investment: '', retained: '', deductions: '' },
-    { name: '412(e)(3) Plan',               investment: '', retained: '', deductions: '' },
-    { name: '401(k)',                       investment: '', retained: '', deductions: '' },
-    { name: 'Charitable Foundation',        investment: '', retained: '', deductions: '' },
-    { name: 'Health Savings Account (HSA)', investment: '', retained: '', deductions: '' },
-  ]);
+  const DEFAULT_ROWS = Object.freeze([]);
 
  // All possible strategies for the dropdown
  const STRATEGIES = [
@@ -7940,7 +7929,7 @@ function readLeadNumbers() {
   function ensureState(id) {
     if (!stateById[id]) {
       // shallow clone the default row set; values stay blank
-      stateById[id] = { rate: 0, rows: JSON.parse(JSON.stringify(DEFAULT_ROWS)) };
+      stateById[id] = { rate: 0, rows: [] };
     }
     return stateById[id];
   }
@@ -8058,7 +8047,7 @@ function readLeadNumbers() {
         sel.appendChild(please);
 
         STRATEGIES.forEach(name => {
-          if (name === 'Please Select') return;
+          // if (name === 'Please Select') return;
           const opt = document.createElement('option');
           opt.value = name;
           opt.textContent = name;
