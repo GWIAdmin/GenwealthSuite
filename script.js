@@ -539,6 +539,41 @@ function hideElement(element) {
 // 3.1. HELPER FUNCTIONS //
 //-----------------------//
 
+// —— How each strategy affects the return ——
+const STRATEGY_EFFECTS = {
+  // Entity/business expense (flows to business Net → AGI/SE tax)
+  'Accountable Plan':                      { kind: 'business_expense' },
+  'Professional Fees':                     { kind: 'business_expense' },
+  'Section 168(k) Bonus Depreciation':     { kind: 'business_expense' },
+  'Cost Segregation Study':                { kind: 'business_expense' },
+  'Real Estate Professional & Cost Segregation': { kind: 'business_expense' },
+  'Hiring Children & Family':              { kind: 'business_expense' },
+
+  // Above-the-line (Form 1040 adjustments)
+  '401(k) Plan':                           { kind: 'above_line', field: 'retirementDeduction' },
+  'Cash Balance Plan':                     { kind: 'above_line', field: 'retirementDeduction' },
+  'SEP IRA':                               { kind: 'above_line', field: 'retirementDeduction' },
+  'Section 105 Plan':                      { kind: 'above_line', field: 'medicalReimbursementPlan' },
+  'Self-Employed Health Insurance Deduction': { kind: 'above_line', field: 'SEHealthInsurance' },
+
+  // Itemized
+  'Charitable Foundation':                 { kind: 'itemized', field: 'contributions' },
+  'Charitable LLC (CLLC)':                 { kind: 'itemized', field: 'contributions' },
+  'Conservation Easement':                 { kind: 'itemized', field: 'contributions' },
+  'Purchase of a Primary Home':            { kind: 'itemized', field: 'interest' }, // mortgage interest proxy
+  'Tax Loss Harvesting':                   { kind: 'itemized', field: 'otherDeductions' }, // generic catch-all
+
+  'Research & Development (R&D) Credit':   { kind: 'credit', field: 'generalBusinessCredit' },
+  'Work Opportunity Tax Credit (WOTC)':    { kind: 'credit', field: 'generalBusinessCredit' },
+  'American Opportunity Credit':           { kind: 'credit', field: 'educationCredits' },
+  'Lifetime Learning Credit':              { kind: 'credit', field: 'educationCredits' },
+  'Residential Clean Energy Credit':       { kind: 'credit', field: 'otherCredits' },
+  'Solar Credit':                          { kind: 'credit', field: 'otherCredits' },
+  'Plug-In Electric Vehicle (EV) Credit':  { kind: 'credit', field: 'otherCredits' },
+
+  '__DEFAULT__':                           { kind: 'itemized', field: 'otherDeductions' }
+};
+
 function updateBlindOptions() {
     const filingStatus = document.getElementById('filingStatus').value;
     const blindSelect = document.getElementById('blind');
@@ -8317,4 +8352,159 @@ function readLeadNumbers() {
       setTimeout(renderEntities, 60);
     });
   }
+
+  // 1) Expose the current plan (deep copy)
+  window.gwRestructure = {
+    getPlan() { return JSON.parse(JSON.stringify(stateById)); }
+  };
+
+  // 2) Notify the app whenever restructure math changes
+  function emitRestructureUpdate() {
+    document.dispatchEvent(new CustomEvent('gw:restructureUpdated'));
+  }
+
+  // Call the notifier at the end of recomputeGlobalTotals()
+  function recomputeGlobalTotals() {
+    let T_S=0, T_5=0, T_I=0, T_R=0, T_D=0;
+    for (const id of Object.keys(stateById)) {
+      const st = stateById[id];
+      const rate = Number(st.rate) || 0;
+      st.rows.forEach(r=>{
+        const d = r.deductions === '' ? 0 : Number(r.deductions);
+        const s = (d * rate)/100;
+        T_S += s; T_5 += s*5;
+        T_I += r.investment === '' ? 0 : Number(r.investment);
+        T_R += r.retained   === '' ? 0 : Number(r.retained);
+        T_D += d;
+      });
+    }
+    const s  = document.getElementById('gw-t-savings');
+    const y5 = document.getElementById('gw-t-5yr');
+    const inv= document.getElementById('gw-t-investment');
+    const ret= document.getElementById('gw-t-retained');
+    const ded= document.getElementById('gw-t-deductions');
+    if (s)   s.textContent   = fmtMoney(T_S);
+    if (y5)  y5.textContent  = fmtMoney(T_5);
+    if (inv) inv.textContent = fmtMoney(T_I);
+    if (ret) ret.textContent = fmtMoney(T_R);
+    if (ded) ded.textContent = fmtMoney(T_D);
+
+    // NEW: tell the rest of the app that restructure inputs changed
+    emitRestructureUpdate();
+  }
+
 })();
+
+// —— Overlay helpers (non-destructive) ——
+function resxBase(el) {
+  const cur = unformatCurrency(el.value || '0');
+  const priorAdj = Number(el.dataset.resxAdj || 0);
+  const base = cur - priorAdj;            // current minus previous overlay
+  el.dataset.resxBase = base;
+  return base;
+}
+function resxResetElement(el) {
+  const base = resxBase(el);
+  el.dataset.resxAdj = 0;
+  el.value = formatCurrency(String(base));
+}
+function resxAdd(id, amount) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  // establish base first
+  const base = resxBase(el);
+  const prev = Number(el.dataset.resxAdj || 0);
+  const nextAdj = prev + Number(amount || 0);
+  el.dataset.resxAdj = nextAdj;
+  el.value = formatCurrency(String(base + nextAdj));
+}
+
+// Resolve business index by display name
+function resolveBusinessIndexByName(name) {
+  const num = parseInt(document.getElementById('numOfBusinesses')?.value || '0', 10) || 0;
+  for (let i=1;i<=num;i++) {
+    const n = document.getElementById(`businessName_${i}`)?.value?.trim() || `Business ${i}`;
+    if (n === name) return i;
+  }
+  return null;
+}
+
+function applyRestructureTo1040() {
+  // 0) Reset prior overlays on targets we manage
+  const TARGET_FIELDS = [
+    'retirementDeduction','medicalReimbursementPlan','SEHealthInsurance',
+    'contributions','interest','otherDeductions',
+    'generalBusinessCredit','otherCredits','educationCredits'
+  ];
+  TARGET_FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) resxResetElement(el);
+  });
+  // Reset overlays on all business expense inputs we may have touched
+  document.querySelectorAll("input[id^='business'][id$='Expenses']").forEach(resxResetElement);
+
+  // 1) Pull the plan
+  const plan = window.gwRestructure?.getPlan?.() || {};
+
+  // Track which businesses we changed so we can recompute their Net
+  const changedBiz = new Set();
+
+  // 2) Walk each entity + row and apply the mapped effect
+  Object.entries(plan).forEach(([entityId, st]) => {
+    (st.rows || []).forEach(row => {
+      const raw = row?.deductions;
+      const amt = Number(raw === '' ? 0 : raw);
+      if (!amt) return;
+
+      const spec = STRATEGY_EFFECTS[row.name] || STRATEGY_EFFECTS['__DEFAULT__'];
+
+      if (spec.kind === 'business_expense') {
+        let bizIndex = null;
+
+        if (entityId.startsWith('biz-')) {
+          bizIndex = parseInt(entityId.split('-')[1], 10);
+        } else if (entityId.startsWith('w2-')) {
+          const idNum = entityId.split('-')[1];
+          const isClientBiz = (document.getElementById(`w2IsClientBusiness_${idNum}`)?.value === 'Yes');
+          if (isClientBiz) {
+            const bizName = document.getElementById(`w2BusinessName_${idNum}`)?.value?.trim();
+            bizIndex = resolveBusinessIndexByName(bizName);
+          }
+        }
+
+        if (bizIndex) {
+          resxAdd(`business${bizIndex}Expenses`, amt);
+          changedBiz.add(bizIndex);
+        } else {
+          // no linked business → treat as personal itemized other deduction
+          resxAdd('otherDeductions', amt);
+        }
+      }
+
+      if (spec.kind === 'above_line' || spec.kind === 'itemized') {
+        resxAdd(spec.field, amt);
+      }
+
+      if (spec.kind === 'credit') {
+        // IMPORTANT: your total tax combiner ADDS credit fields; supply negative amount
+        resxAdd(spec.field, -amt);
+      }
+    });
+  });
+
+  // 3) Recompute business Net for each changed business
+  changedBiz.forEach(i => {
+    if (typeof updateBusinessNet === 'function') updateBusinessNet(i);
+  });
+
+  // 4) Recompute global totals
+  if (typeof recalculateTotals === 'function') recalculateTotals();
+}
+
+// Wire up on DOM ready and on every restructure change
+document.addEventListener('DOMContentLoaded', () => {
+  try { applyRestructureTo1040(); } catch (e) { console.warn(e); }
+});
+document.addEventListener('gw:restructureUpdated', () => {
+  try { applyRestructureTo1040(); } catch (e) { console.warn(e); }
+});
