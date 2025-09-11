@@ -7768,6 +7768,9 @@ function readLeadNumbers() {
 // ------------------------------//
 // 30. Deduction Strategy Box    //
 // ------------------------------//
+
+
+
 (() => {
   const gwRoot   = document.getElementById('gw-restructure-content');
   const entList  = document.getElementById('gw-entities');
@@ -8428,6 +8431,35 @@ function resolveBusinessIndexByName(name) {
   }
   return null;
 }
+
+// For the "Deductions:" field of the 2025 Restructure card, when the user clicks the "enter" button, it should blur that field.
+// Make Enter blur ONLY the "Deductions" inputs inside 2025 Restructure cards
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Enter') return;
+
+  // only care about real text inputs
+  const el = e.target;
+  if (!(el instanceof HTMLInputElement)) return;
+
+  // Is this one of the restructure "Deductions" fields?
+  // moneyField() wraps the input in <label class="gw-field">Deductions:</label>
+  const fieldLabel = el.closest('.gw-field');
+  const isRestructureDeductions =
+    fieldLabel &&
+    /(^|\s)Deductions\s*:?\s*$/i.test(
+      // take the label's text without the input's value
+      (fieldLabel.childNodes[0]?.textContent || fieldLabel.textContent || '').trim()
+    );
+
+  if (!isRestructureDeductions) return;
+
+  // Stop the global Enter-as-Tab handler on the <form id="taxForm">
+  e.preventDefault();
+  e.stopPropagation();
+
+  // Blur this input
+  el.blur();
+}, true); // <-- capture so we run before the form's keydown handler
 
 function applyRestructureTo1040() {
   // 0) Reset prior overlays on targets we manage
