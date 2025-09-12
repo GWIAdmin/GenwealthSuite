@@ -581,14 +581,13 @@ const STRATEGY_EFFECTS = {
   'Maximizing Current 401(k) Retirement Plan':            { kind: 'above_line', field: 'retirementDeduction' },
   'Maximizing Current Retirement Plans 403(b) & 401(k)':  { kind: 'above_line', field: 'retirementDeduction' },
 
-
   // Itemized
   'Charitable Foundation':                                { kind: 'itemized', field: 'contributions' },
   'Charitable LLC (CLLC)':                                { kind: 'itemized', field: 'contributions' },
   'Charitable Remainder Trust (CRT)':                     { kind: 'itemized', field: 'contributions' },
   'Conservation Easement':                                { kind: 'itemized', field: 'contributions' },
   'Leveraged Asset Donation':                             { kind: 'itemized', field: 'contributions' },
-  'Purchase of a Primary Home':                           { kind: 'itemized', field: 'interest' }, // mortgage interest proxy
+  'Purchase of a Primary Home':                           { kind: 'itemized', field: 'interest' },
   'Tax Loss Harvesting':                                  { kind: 'itemized', field: 'otherDeductions' }, // generic catch-all
 
   // Credits (directly reduce tax liability)
@@ -602,7 +601,7 @@ const STRATEGY_EFFECTS = {
   'FICA Tip Credit':                                      { kind: 'credit', field: 'otherCredits' },
   'Qualified Retirement Savings Credit':                  { kind: 'credit', field: 'otherCredits' },
   'Small Employer Pension Plan Startup Credit':           { kind: 'credit', field: 'otherCredits' },
-  
+
   '__DEFAULT__':                                          { kind: 'itemized', field: 'otherDeductions' }
 };
 
@@ -7921,7 +7920,7 @@ function readLeadNumbers() {
   'Charitable Remainder Trust (CRT)',
   'Conservation Easement',
   'Cost Segregation Study',
-  'Defferred Sales Trust (DST)',
+  'Deferred Sales Trust (DST)',
   'Disability Insurance',
   'Employer Contribution Tax Credit',
   'ESOP/ESOT',
