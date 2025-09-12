@@ -542,36 +542,68 @@ function hideElement(element) {
 // —— How each strategy affects the return ——
 const STRATEGY_EFFECTS = {
   // Entity/business expense (flows to business Net → AGI/SE tax)
-  'Accountable Plan':                      { kind: 'business_expense' },
-  'Professional Fees':                     { kind: 'business_expense' },
-  'Section 168(k) Bonus Depreciation':     { kind: 'business_expense' },
-  'Cost Segregation Study':                { kind: 'business_expense' },
-  'Real Estate Professional & Cost Segregation': { kind: 'business_expense' },
-  'Hiring Children & Family':              { kind: 'business_expense' },
+  'Accountable Plan':                                     { kind: 'business_expense' },
+  'Professional Fees':                                    { kind: 'business_expense' },
+  'Section 168(k) Bonus Depreciation':                    { kind: 'business_expense' },
+  'Cost Segregation Study':                               { kind: 'business_expense' },
+  'Real Estate Professional & Cost Segregation':          { kind: 'business_expense' },
+  'Hiring Children & Family':                             { kind: 'business_expense' },
+  '412(e)(3) Plan':                                       { kind: 'business_expense' },
+  'Administrative Home Office':                           { kind: 'business_expense' },
+  'Alternative Risk Program (ARP)':                       { kind: 'business_expense' },
+  'Asset Purchase Depreciation':                          { kind: 'business_expense' },
+  'Augusta Loophole':                                     { kind: 'business_expense' },
+  'Captive Insurance':                                    { kind: 'business_expense' },
+  'Disability Insurance':                                 { kind: 'business_expense' },
+  'Favorable Depreciation Rules (Section 179)':           { kind: 'business_expense' },
+  'Film Debt Financing':                                  { kind: 'business_expense' },
+  'Healthcare Software RTU Program':                      { kind: 'business_expense' },
+  'Healthcare Software RTU Program 3% Fee':               { kind: 'business_expense' },
+  'Home Office':                                          { kind: 'business_expense' },
+  'IRC Section 168 Film Investments':                     { kind: 'business_expense' },
+  'Oil & Gas':                                            { kind: 'business_expense' },
+  'Profit-Sharing Retirement Plan':                       { kind: 'business_expense' },
+  'Qualified Employee Achievement Awardprogram (QEAAP)':  { kind: 'business_expense' },
+  'Rent to Real Estate':                                  { kind: 'business_expense' },
+  'Restricted Property Trust (RPT)':                      { kind: 'business_expense' },
+  'Revenue Stream Bifurcation':                           { kind: 'business_expense' },
+  'Short-Term Rentals & Real Estate Professional':        { kind: 'business_expense' },
 
-  // Above-the-line (Form 1040 adjustments)
-  '401(k) Plan':                           { kind: 'above_line', field: 'retirementDeduction' },
-  'Cash Balance Plan':                     { kind: 'above_line', field: 'retirementDeduction' },
-  'SEP IRA':                               { kind: 'above_line', field: 'retirementDeduction' },
-  'Section 105 Plan':                      { kind: 'above_line', field: 'medicalReimbursementPlan' },
-  'Self-Employed Health Insurance Deduction': { kind: 'above_line', field: 'SEHealthInsurance' },
+  // Above-the-line (Form 1040 adjustments) (directly reduce AGI)
+  '401(k) Plan':                                          { kind: 'above_line', field: 'retirementDeduction' },
+  'Cash Balance Plan':                                    { kind: 'above_line', field: 'retirementDeduction' },
+  'SEP IRA':                                              { kind: 'above_line', field: 'retirementDeduction' },
+  'Section 105 Plan':                                     { kind: 'above_line', field: 'medicalReimbursementPlan' },
+  'Self-Employed Health Insurance Deduction':             { kind: 'above_line', field: 'SEHealthInsurance' },
+  'Business Complex Trust (BCT)':                         { kind: 'above_line' },
+  'Health Savings Account (HSA)':                         { kind: 'above_line', field: 'retirementDeduction' },
+  'Maximize 457(b) Contributions':                        { kind: 'above_line', field: 'retirementDeduction' },
+  'Maximizing Current 401(k) Retirement Plan':            { kind: 'above_line', field: 'retirementDeduction' },
+  'Maximizing Current Retirement Plans 403(b) & 401(k)':  { kind: 'above_line', field: 'retirementDeduction' },
+
 
   // Itemized
-  'Charitable Foundation':                 { kind: 'itemized', field: 'contributions' },
-  'Charitable LLC (CLLC)':                 { kind: 'itemized', field: 'contributions' },
-  'Conservation Easement':                 { kind: 'itemized', field: 'contributions' },
-  'Purchase of a Primary Home':            { kind: 'itemized', field: 'interest' }, // mortgage interest proxy
-  'Tax Loss Harvesting':                   { kind: 'itemized', field: 'otherDeductions' }, // generic catch-all
+  'Charitable Foundation':                                { kind: 'itemized', field: 'contributions' },
+  'Charitable LLC (CLLC)':                                { kind: 'itemized', field: 'contributions' },
+  'Charitable Remainder Trust (CRT)':                     { kind: 'itemized', field: 'contributions' },
+  'Conservation Easement':                                { kind: 'itemized', field: 'contributions' },
+  'Leveraged Asset Donation':                             { kind: 'itemized', field: 'contributions' },
+  'Purchase of a Primary Home':                           { kind: 'itemized', field: 'interest' }, // mortgage interest proxy
+  'Tax Loss Harvesting':                                  { kind: 'itemized', field: 'otherDeductions' }, // generic catch-all
 
-  'Research & Development (R&D) Credit':   { kind: 'credit', field: 'generalBusinessCredit' },
-  'Work Opportunity Tax Credit (WOTC)':    { kind: 'credit', field: 'generalBusinessCredit' },
-  'American Opportunity Credit':           { kind: 'credit', field: 'educationCredits' },
-  'Lifetime Learning Credit':              { kind: 'credit', field: 'educationCredits' },
-  'Residential Clean Energy Credit':       { kind: 'credit', field: 'otherCredits' },
-  'Solar Credit':                          { kind: 'credit', field: 'otherCredits' },
-  'Plug-In Electric Vehicle (EV) Credit':  { kind: 'credit', field: 'otherCredits' },
-
-  '__DEFAULT__':                           { kind: 'itemized', field: 'otherDeductions' }
+  // Credits (directly reduce tax liability)
+  'Research & Development (R&D) Credit':                  { kind: 'credit', field: 'generalBusinessCredit' },
+  'Work Opportunity Tax Credit (WOTC)':                   { kind: 'credit', field: 'generalBusinessCredit' },
+  'American Opportunity Credit':                          { kind: 'credit', field: 'educationCredits' },
+  'Lifetime Learning Credit':                             { kind: 'credit', field: 'educationCredits' },
+  'Residential Clean Energy Credit':                      { kind: 'credit', field: 'otherCredits' },
+  'Solar Credit':                                         { kind: 'credit', field: 'otherCredits' },
+  'Plug-In Electric Vehicle (EV) Credit':                 { kind: 'credit', field: 'otherCredits' },
+  'FICA Tip Credit':                                      { kind: 'credit', field: 'otherCredits' },
+  'Qualified Retirement Savings Credit':                  { kind: 'credit', field: 'otherCredits' },
+  'Small Employer Pension Plan Startup Credit':           { kind: 'credit', field: 'otherCredits' },
+  
+  '__DEFAULT__':                                          { kind: 'itemized', field: 'otherDeductions' }
 };
 
 function updateBlindOptions() {
@@ -7768,8 +7800,6 @@ function readLeadNumbers() {
 // ------------------------------//
 // 30. Deduction Strategy Box    //
 // ------------------------------//
-
-
 
 (() => {
   const gwRoot   = document.getElementById('gw-restructure-content');
