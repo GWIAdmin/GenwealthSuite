@@ -8030,6 +8030,177 @@ function readLeadNumbers() {
     });
   }
 
+  // ——— CONNECTIVITY HELPERS ————————————————————————————————————————
+
+  // Create a new Business block and set its type/name. Returns the new index.
+  function createBusinessOfType({ name, type }) {
+    const numEl = document.getElementById('numOfBusinesses');
+    const before = parseInt(numEl?.value || '0', 10) || 0;
+
+    // Add a business via your existing button logic (builds name+detail blocks)
+    if (typeof handleAddBusinessClick === 'function') {
+      handleAddBusinessClick();
+    } else if (numEl) {
+      // fallback
+      numEl.value = String(before + 1);
+      numEl.dispatchEvent(new Event('input'));
+    }
+
+    const idx = before + 1;
+    // Set name
+    const nameInput = document.getElementById(`businessName_${idx}`);
+    if (nameInput && name) {
+      nameInput.value = name;
+      nameInput.dispatchEvent(new Event('input')); // keep headers & dropdowns in sync
+    }
+
+    // Set type (fires owner UI, RC fields, etc.)
+    const typeSel = document.getElementById(`business${idx}Type`);
+    if (typeSel) {
+      typeSel.value = type;
+      typeSel.dispatchEvent(new Event('change')); // your handleBusinessTypeChange() path
+    }
+
+    // Bring it into view for a smooth UX
+    document.getElementById(`businessEntry_${idx}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return idx;
+  }
+
+  // Fill owner UI (S-Corp, Partnership, C-Corp) using your dynamic owner builder.
+  function configureOwners({ bizIndex, owners }) {
+    const numOwnersSel = document.getElementById(`numOwnersSelect${bizIndex}`);
+    if (!numOwnersSel) return;
+
+    numOwnersSel.value = String(owners.length);
+    numOwnersSel.dispatchEvent(new Event('change'));
+
+    owners.forEach((o, i) => {
+      const n = i + 1;
+      const nameSel = document.getElementById(`business${bizIndex}OwnerName${n}`);
+      const pctEl   = document.getElementById(`business${bizIndex}OwnerPercent${n}`);
+      if (nameSel && o.name) {
+        nameSel.value = o.name;
+        nameSel.dispatchEvent(new Event('change'));
+      }
+      if (pctEl && o.percent != null) {
+        pctEl.value = String(o.percent.toFixed ? o.percent.toFixed(6) : o.percent);
+        pctEl.dispatchEvent(new Event('input'));
+      }
+    });
+
+    // Recompute portions / disclaimers
+    if (typeof updateOwnerApportionment === 'function') updateOwnerApportionment(bizIndex);
+    if (typeof checkSCorpReasonableComp === 'function') checkSCorpReasonableComp(bizIndex);
+    if (typeof recalculateTotals === 'function') recalculateTotals();
+  }
+
+  // Read client/spouse names with safe fallbacks
+  function getClientNames() {
+    const filing = document.getElementById('filingStatus')?.value || '';
+    const client = document.getElementById('firstName')?.value?.trim() || 'Client 1';
+    const spouse = document.getElementById('spouseFirstName')?.value?.trim() || 'Client 2';
+    return { filing, client, spouse };
+  }
+
+  // List businesses by current type (e.g., 'Schedule-C', 'C-Corp')
+  function listBusinessesOfType(type) {
+    const out = [];
+    const n = parseInt(document.getElementById('numOfBusinesses')?.value || '0', 10) || 0;
+    for (let i = 1; i <= n; i++) {
+      const t = document.getElementById(`business${i}Type`)?.value || '';
+      if (t === type) {
+        const name = document.getElementById(`businessName_${i}`)?.value?.trim() || `Business ${i}`;
+        out.push({ index: i, name });
+      }
+    }
+    return out;
+  }
+
+  // Convert Schedule-C → S-Corp in place and focus RC
+  function convertScheduleCToSCorp(bizIndex) {
+    const typeSel = document.getElementById(`business${bizIndex}Type`);
+    if (!typeSel) return;
+    typeSel.value = 'S-Corp';
+    typeSel.dispatchEvent(new Event('change')); // builds owner UI
+
+    const { filing, client, spouse } = getClientNames();
+    // Default: 1 owner if Single; 2 owners 50/50 if MFJ
+    if (filing === 'Married Filing Jointly') {
+      configureOwners({ bizIndex, owners: [{ name: client, percent: 50 }, { name: spouse, percent: 50 }] });
+    } else {
+      configureOwners({ bizIndex, owners: [{ name: client, percent: 100 }] });
+    }
+
+    // Focus first RC field for analyst flow
+    document.getElementById(`business${bizIndex}OwnerComp1`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (typeof recalculateTotals === 'function') recalculateTotals();
+  }
+
+  // Convert C-Corp → S-Corp in place
+  function convertCCorpToSCorp(bizIndex) {
+    const typeSel = document.getElementById(`business${bizIndex}Type`);
+    if (!typeSel) return;
+    typeSel.value = 'S-Corp';
+    typeSel.dispatchEvent(new Event('change'));
+
+    const { filing, client, spouse } = getClientNames();
+    if (filing === 'Married Filing Jointly') {
+      configureOwners({ bizIndex, owners: [{ name: client, percent: 50 }, { name: spouse, percent: 50 }] });
+    } else {
+      configureOwners({ bizIndex, owners: [{ name: client, percent: 100 }] });
+    }
+    if (typeof recalculateTotals === 'function') recalculateTotals();
+  }
+
+  // Create a W-2 from S-Corp owner RC for each owner
+  function generateW2sFromRC(bizIndex) {
+    const numOwners = parseInt(document.getElementById(`numOwnersSelect${bizIndex}`)?.value || '0', 10) || 0;
+    const bizName = document.getElementById(`businessName_${bizIndex}`)?.value?.trim() || `Business ${bizIndex}`;
+    for (let i = 1; i <= numOwners; i++) {
+      const rc = unformatCurrency(document.getElementById(`business${bizIndex}OwnerComp${i}`)?.value || '0');
+      if (!rc || rc <= 0) continue;
+
+      if (typeof addW2Block === 'function') addW2Block();
+      // latest W-2 uses global w2Counter
+      const id = window.w2Counter;
+      // name + whose W-2
+      const nm = document.getElementById(`w2Name_${id}`); if (nm) nm.value = `${bizName} — RC`;
+      const { filing, client, spouse } = getClientNames();
+      if (filing === 'Married Filing Jointly') {
+        const ownerName = document.getElementById(`business${bizIndex}OwnerName${i}`)?.value;
+        const whose = document.getElementById(`w2WhoseW2_${id}`);
+        if (whose && (ownerName === client || ownerName === spouse)) {
+          whose.value = ownerName;
+          whose.dispatchEvent(new Event('change'));
+        }
+      }
+      // link to business and set wages
+      const isBiz = document.getElementById(`w2IsClientBusiness_${id}`);
+      if (isBiz) {
+        isBiz.value = 'Yes';
+        isBiz.dispatchEvent(new Event('change'));
+      }
+      const bizSel = document.getElementById(`w2BusinessName_${id}`);
+      if (bizSel) {
+        bizSel.value = bizName;
+        bizSel.dispatchEvent(new Event('change'));
+      }
+      const w = document.getElementById(`w2Wages_${id}`); if (w) { w.value = formatCurrency(String(rc)); w.dispatchEvent(new Event('blur')); }
+      const mw= document.getElementById(`w2MedicareWages_${id}`); if (mw) { mw.value = formatCurrency(String(rc)); mw.dispatchEvent(new Event('blur')); }
+    }
+    // Let Restructure refresh its W-2 discovery list
+    document.dispatchEvent(new CustomEvent('gw:w2ListChanged'));
+    if (typeof recalculateTotals === 'function') recalculateTotals();
+  }
+
+  // Derive a nice base name from the entity title ("My FMC (S-Corp) #2" → "My FMC")
+  function baseNameFromEntityTitle(title) {
+    return (title || '').replace(/\s*\(#?\d+\)\s*$/,'').replace(/\s*\([^)]+\)\s*$/,'').trim() || 'New Entity';
+  }
+
+  // ——— CONNECTIVITY UI INSIDE EACH CUSTOM CARD ————————————————
+
+
   // ----------- Card factory per entity -----------
   function mountEntityPanel(entity) {
     const st = ensureState(entity.id);
@@ -8298,6 +8469,180 @@ function readLeadNumbers() {
 
       footer.appendChild(del);
       body.appendChild(footer);
+    }
+
+    // — Connectivity toolbar per custom type —
+    if (entity.kind === 'custom') {
+      const toolbar = document.createElement('div');
+      toolbar.className = 'gw-controls';
+      toolbar.style.margin = '6px 0 14px';
+
+      const title = entity.title || '';
+      const bname = baseNameFromEntityTitle(title);
+      const { filing, client, spouse } = getClientNames();
+
+      function paintSelect(id, opts) {
+        const sel = document.createElement('select');
+        sel.id = id;
+        const def = document.createElement('option'); def.value=''; def.textContent='Please Select'; def.disabled = true; def.selected = true;
+        sel.appendChild(def);
+        opts.forEach(o => {
+          const op = document.createElement('option'); op.value = String(o.value); op.textContent = o.label; sel.appendChild(op);
+        });
+        return sel;
+      }
+
+      // Schedule-C → S-Corp
+      if (/Schedule-C to S-Corp/i.test(title)) {
+        toolbar.innerHTML = `<label>Choose Schedule-C to convert</label>`;
+        const picks = listBusinessesOfType('Schedule-C').map(o => ({ value:o.index, label:`${o.name} (Business ${o.index})` }));
+        const sel = paintSelect(`gw-convert-sc-${entity.id}`, picks);
+        const btn = document.createElement('button'); btn.type='button'; btn.textContent='Convert';
+        const w2 = document.createElement('button'); w2.type='button'; w2.textContent='Generate W-2s from RC';
+
+        btn.addEventListener('click', () => {
+          const idx = parseInt(sel.value || '0', 10);
+          if (!idx) return;
+          convertScheduleCToSCorp(idx);
+        });
+        w2.addEventListener('click', () => {
+          const idx = parseInt(sel.value || '0', 10);
+          if (!idx) return;
+          generateW2sFromRC(idx);
+        });
+
+        toolbar.appendChild(sel); toolbar.appendChild(btn); toolbar.appendChild(w2);
+        body.insertBefore(toolbar, cardList);
+      }
+
+      // C-Corp → S-Corp
+      if (/C-Corp to S-Corp/i.test(title)) {
+        toolbar.innerHTML = `<label>Choose C-Corp to convert</label>`;
+        const picks = listBusinessesOfType('C-Corp').map(o => ({ value:o.index, label:`${o.name} (Business ${o.index})` }));
+        const sel = paintSelect(`gw-convert-cc-${entity.id}`, picks);
+        const btn = document.createElement('button'); btn.type='button'; btn.textContent='Convert';
+        const w2 = document.createElement('button'); w2.type='button'; w2.textContent='Generate W-2s from RC';
+
+        btn.addEventListener('click', () => {
+          const idx = parseInt(sel.value || '0', 10);
+          if (!idx) return;
+          convertCCorpToSCorp(idx);
+        });
+        w2.addEventListener('click', () => {
+          const idx = parseInt(sel.value || '0', 10);
+          if (!idx) return;
+          generateW2sFromRC(idx);
+        });
+
+        toolbar.appendChild(sel); toolbar.appendChild(btn); toolbar.appendChild(w2);
+        body.insertBefore(toolbar, cardList);
+      }
+
+      // FMC (S-Corp)
+      if (/FMC \(S-Corp\)/i.test(title)) {
+        const btn = document.createElement('button'); btn.type='button'; btn.textContent='Create FMC (S-Corp)';
+        btn.addEventListener('click', () => {
+          const idx = createBusinessOfType({ name: `${bname}`, type: 'S-Corp' });
+          if (filing === 'Married Filing Jointly') {
+            configureOwners({ bizIndex: idx, owners: [{ name: client, percent: 50 }, { name: spouse, percent: 50 }] });
+          } else {
+            configureOwners({ bizIndex: idx, owners: [{ name: client, percent: 100 }] });
+          }
+        });
+        const w2 = document.createElement('button'); w2.type='button'; w2.textContent='Generate W-2s from RC';
+        w2.addEventListener('click', () => {
+          const n = parseInt(document.getElementById('numOfBusinesses')?.value || '0', 10) || 0;
+          generateW2sFromRC(n); // last created
+        });
+        toolbar.appendChild(btn); toolbar.appendChild(w2);
+        body.insertBefore(toolbar, cardList);
+      }
+
+      // FMC (Spousal Partnership)
+      if (/FMC \(Spousal Partnership\)/i.test(title)) {
+        const btn = document.createElement('button'); btn.type='button'; btn.textContent='Create FMC (Partnership)';
+        btn.addEventListener('click', () => {
+          const idx = createBusinessOfType({ name: `${bname}`, type: 'Partnership' });
+          configureOwners({ bizIndex: idx, owners: [{ name: client, percent: 50 }, { name: spouse, percent: 50 }] });
+        });
+        toolbar.appendChild(btn);
+        body.insertBefore(toolbar, cardList);
+      }
+
+      // FMC (C-Corp)
+      if (/FMC \(C-Corp\)/i.test(title)) {
+        const btn = document.createElement('button'); btn.type='button'; btn.textContent='Create FMC (C-Corp)';
+        btn.addEventListener('click', () => {
+          const idx = createBusinessOfType({ name: `${bname}`, type: 'C-Corp' });
+          // 100% client by default; your C-Corp “tax due” UI already reacts. 
+          configureOwners({ bizIndex: idx, owners: [{ name: client, percent: 100 }] });
+        });
+        const toS = document.createElement('button'); toS.type='button'; toS.textContent='Convert to S-Corp';
+        toS.addEventListener('click', () => {
+          const last = parseInt(document.getElementById('numOfBusinesses')?.value || '0', 10) || 0;
+          convertCCorpToSCorp(last);
+        });
+        toolbar.appendChild(btn); toolbar.appendChild(toS);
+        body.insertBefore(toolbar, cardList);
+      }
+
+      // Family Limited Liability Company (FLLC) → Partnership default
+      if (/Family Limited Liability Company \(FLLC\)/i.test(title)) {
+        const btn = document.createElement('button'); btn.type='button'; btn.textContent='Create FLLC (Partnership)';
+        btn.addEventListener('click', () => {
+          const idx = createBusinessOfType({ name: `${bname}`, type: 'Partnership' });
+          if (filing === 'Married Filing Jointly') {
+            configureOwners({ bizIndex: idx, owners: [{ name: client, percent: 50 }, { name: spouse, percent: 50 }] });
+          } else {
+            configureOwners({ bizIndex: idx, owners: [{ name: client, percent: 100 }, { name: 'Other', percent: 0 }] });
+          }
+        });
+        toolbar.appendChild(btn);
+        body.insertBefore(toolbar, cardList);
+      }
+
+      // Holding Company (Schedule-C)
+      if (/Holding Company \(Schedule-C\)/i.test(title)) {
+        const lbl = document.createElement('label'); lbl.textContent = 'Which client owns this Schedule-C?';
+        const sel = document.createElement('select'); sel.id = `gw-hold-owner-${entity.id}`;
+        [ 'Please Select', client, spouse ].forEach(t => { const o=document.createElement('option'); o.value=t; o.textContent=t; if(t==='Please Select'){o.disabled=true;o.selected=true;} sel.appendChild(o); });
+        const btn = document.createElement('button'); btn.type='button'; btn.textContent='Create Holding Co (Schedule-C)';
+        btn.addEventListener('click', () => {
+          const idx = createBusinessOfType({ name: `${bname}`, type: 'Schedule-C' });
+          // Show & set the built-in Schedule-C owner question
+          const q = document.getElementById(`scheduleCOwner${idx}`);
+          if (q && sel.value) {
+            q.value = sel.value;
+            q.dispatchEvent(new Event('change'));
+          }
+          if (typeof recalculateTotals === 'function') recalculateTotals();
+        });
+        toolbar.appendChild(lbl); toolbar.appendChild(sel); toolbar.appendChild(btn);
+        body.insertBefore(toolbar, cardList);
+      }
+
+      // Charitable Foundation / CRT / Charitable LLC quick-row buttons
+      if (/Charitable Foundation/i.test(title) || /Charitable Remainder Trust \(CRT\)/i.test(title) || /Charitable LLC \(CLLC\)/i.test(title)) {
+        const addRow = document.createElement('button'); addRow.type='button'; addRow.textContent='Add Charitable Gift Row';
+        addRow.addEventListener('click', () => {
+          const stEnt = ensureState(entity.id);
+          // Prelabel the row so your STRATEGY_EFFECTS routes to Schedule A ➜ Contributions
+          // (Foundation / CRT / CLLC are mapped to 'contributions')
+          const label = /Foundation/i.test(title) ? 'Charitable Foundation'
+                       : /CLLC/i.test(title)      ? 'Charitable LLC (CLLC)'
+                       : 'Charitable Remainder Trust (CRT)';
+          stEnt.rows.push({ name: label, investment: '', retained: '', deductions: '' });
+          // repaint the cards inside this entity only
+          body.querySelector(`#gw-add-row-${entity.id}`)?.click(); // ensures UI update path runs
+          // remove the extra "New Strategy" that click adds and keep just our labeled one
+          const s = ensureState(entity.id);
+          const i = s.rows.findIndex(r => r.name === 'New Strategy' && r.investment === '' && r.retained === '' && r.deductions === '');
+          if (i >= 0) s.rows.splice(i, 1);
+          document.dispatchEvent(new CustomEvent('gw:restructureUpdated'));
+        });
+        toolbar.appendChild(addRow);
+        body.insertBefore(toolbar, cardList);
+      }
     }
 
     entList.appendChild(wrap);
