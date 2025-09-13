@@ -8094,6 +8094,17 @@ function readLeadNumbers() {
     if (typeof recalculateTotals === 'function') recalculateTotals();
   }
 
+  function ownerPreset(bizIndex, kind) {
+    const { filing, client, spouse } = getClientNames();
+    if (kind === '5050' && filing === 'Married Filing Jointly') {
+      configureOwners({ bizIndex, owners: [{ name: client, percent: 50 }, { name: spouse, percent: 50 }] });
+    } else if (kind === 'spouse' && filing === 'Married Filing Jointly') {
+      configureOwners({ bizIndex, owners: [{ name: spouse, percent: 100 }] });
+    } else {
+      configureOwners({ bizIndex, owners: [{ name: client, percent: 100 }] });
+    }
+  }
+
   // Read client/spouse names with safe fallbacks
   function getClientNames() {
     const filing = document.getElementById('filingStatus')?.value || '';
@@ -8152,45 +8163,71 @@ function readLeadNumbers() {
     if (typeof recalculateTotals === 'function') recalculateTotals();
   }
 
-  // Create a W-2 from S-Corp owner RC for each owner
-  function generateW2sFromRC(bizIndex) {
-    const numOwners = parseInt(document.getElementById(`numOwnersSelect${bizIndex}`)?.value || '0', 10) || 0;
-    const bizName = document.getElementById(`businessName_${bizIndex}`)?.value?.trim() || `Business ${bizIndex}`;
-    for (let i = 1; i <= numOwners; i++) {
-      const rc = unformatCurrency(document.getElementById(`business${bizIndex}OwnerComp${i}`)?.value || '0');
-      if (!rc || rc <= 0) continue;
+  // Create or refresh W-2s from RC with options { replace:boolean, fraction:number in [0,1] }
+  function generateW2sFromRC(bizIndex, opts = {}) {
+  const { replace = false, fraction = 1 } = opts;
+  const numOwners = parseInt(document.getElementById(`numOwnersSelect${bizIndex}`)?.value || '0', 10) || 0;
+  const bizName = document.getElementById(`businessName_${bizIndex}`)?.value?.trim() || `Business ${bizIndex}`;
 
-      if (typeof addW2Block === 'function') addW2Block();
-      // latest W-2 uses global w2Counter
-      const id = window.w2Counter;
-      // name + whose W-2
-      const nm = document.getElementById(`w2Name_${id}`); if (nm) nm.value = `${bizName} — RC`;
-      const { filing, client, spouse } = getClientNames();
-      if (filing === 'Married Filing Jointly') {
-        const ownerName = document.getElementById(`business${bizIndex}OwnerName${i}`)?.value;
-        const whose = document.getElementById(`w2WhoseW2_${id}`);
-        if (whose && (ownerName === client || ownerName === spouse)) {
-          whose.value = ownerName;
-          whose.dispatchEvent(new Event('change'));
-        }
+  // Optionally remove existing “— RC” W-2s for this business to prevent double counting
+  if (replace) {
+    removeGeneratedW2sForBusiness(bizIndex, bizName);
+  }
+
+  for (let i = 1; i <= numOwners; i++) {
+    const rc = unformatCurrency(document.getElementById(`business${bizIndex}OwnerComp${i}`)?.value || '0');
+    const pay = Math.max(0, Math.round(rc * Math.max(0, Math.min(1, fraction))));
+    if (!pay) continue;
+
+    if (typeof addW2Block === 'function') addW2Block();
+    const id = window.w2Counter;
+
+    // Name the W-2 so we can detect/replace later
+    const nm = document.getElementById(`w2Name_${id}`); 
+    if (nm) nm.value = `${bizName} — RC`;
+
+    const { filing, client, spouse } = getClientNames();
+    if (filing === 'Married Filing Jointly') {
+      const ownerName = document.getElementById(`business${bizIndex}OwnerName${i}`)?.value;
+      const whose = document.getElementById(`w2WhoseW2_${id}`);
+      if (whose && (ownerName === client || ownerName === spouse)) {
+        whose.value = ownerName;
+        whose.dispatchEvent(new Event('change'));
       }
-      // link to business and set wages
-      const isBiz = document.getElementById(`w2IsClientBusiness_${id}`);
-      if (isBiz) {
-        isBiz.value = 'Yes';
-        isBiz.dispatchEvent(new Event('change'));
-      }
-      const bizSel = document.getElementById(`w2BusinessName_${id}`);
-      if (bizSel) {
-        bizSel.value = bizName;
-        bizSel.dispatchEvent(new Event('change'));
-      }
-      const w = document.getElementById(`w2Wages_${id}`); if (w) { w.value = formatCurrency(String(rc)); w.dispatchEvent(new Event('blur')); }
-      const mw= document.getElementById(`w2MedicareWages_${id}`); if (mw) { mw.value = formatCurrency(String(rc)); mw.dispatchEvent(new Event('blur')); }
     }
-    // Let Restructure refresh its W-2 discovery list
-    document.dispatchEvent(new CustomEvent('gw:w2ListChanged'));
-    if (typeof recalculateTotals === 'function') recalculateTotals();
+
+    const isBiz = document.getElementById(`w2IsClientBusiness_${id}`);
+    if (isBiz) { isBiz.value = 'Yes'; isBiz.dispatchEvent(new Event('change')); }
+
+    const bizSel = document.getElementById(`w2BusinessName_${id}`);
+    if (bizSel) { bizSel.value = bizName; bizSel.dispatchEvent(new Event('change')); }
+
+    const w  = document.getElementById(`w2Wages_${id}`);
+    const mw = document.getElementById(`w2MedicareWages_${id}`);
+    if (w)  { w.value  = formatCurrency(String(pay)); w.dispatchEvent(new Event('blur')); }
+    if (mw) { mw.value = formatCurrency(String(pay)); mw.dispatchEvent(new Event('blur')); }
+  }
+
+  // re-list, recalc, and checkpoint for undo
+  document.dispatchEvent(new CustomEvent('gw:w2ListChanged'));
+  if (typeof recalculateTotals === 'function') recalculateTotals();
+  if (typeof undoStack !== 'undefined') { try { undoStack.push(getFormSnapshot()); } catch(_){} }
+  }
+
+  // Remove W-2s that look like they were generated from RC for this business
+  function removeGeneratedW2sForBusiness(bizIndex, bizName) {
+    const blocks = Array.from(document.querySelectorAll('#w2sContainer .w2-block'));
+    blocks.forEach(block => {
+      const idStr = block.id.replace('w2Block_', '');
+      const name  = document.getElementById(`w2Name_${idStr}`)?.value || '';
+      const isBiz = document.getElementById(`w2IsClientBusiness_${idStr}`)?.value === 'Yes';
+      const bSel  = document.getElementById(`w2BusinessName_${idStr}`)?.value || '';
+      const removeBtn = block.querySelector('.remove-w2-btn');
+
+      if (isBiz && bSel === bizName && /\s—\sRC$/.test(name) && removeBtn) {
+        removeBtn.click();
+      }
+    });
   }
 
   // Derive a nice base name from the entity title ("My FMC (S-Corp) #2" → "My FMC")
@@ -8512,6 +8549,80 @@ function readLeadNumbers() {
         });
 
         toolbar.appendChild(sel); toolbar.appendChild(btn); toolbar.appendChild(w2);
+
+        // Multi-select picker (reuse the 'picks' created above for the single-select)
+        const multi = document.createElement('select');
+        multi.id = `gw-convert-sc-multi-${entity.id}`;
+        multi.multiple = true;
+        multi.size = Math.min(6, Math.max(2, picks.length));
+        picks.forEach(p => { const op=document.createElement('option'); op.value=String(p.value); op.textContent=p.label; multi.appendChild(op); });
+
+        const convertSel = document.createElement('button'); convertSel.type='button'; convertSel.textContent='Convert Selected';
+        convertSel.addEventListener('click', () => {
+          const vals = Array.from(multi.selectedOptions).map(o => parseInt(o.value,10)).filter(Boolean);
+          vals.forEach(idx => convertScheduleCToSCorp(idx));
+          if (vals.length && typeof undoStack !== 'undefined') { try { undoStack.push(getFormSnapshot()); } catch(_){} }
+        });
+
+        // Convert All
+        const convertAll = document.createElement('button'); convertAll.type='button'; convertAll.textContent='Convert All';
+        convertAll.addEventListener('click', () => {
+          listBusinessesOfType('Schedule-C').forEach(o => convertScheduleCToSCorp(o.index));
+          if (typeof undoStack !== 'undefined') { try { undoStack.push(getFormSnapshot()); } catch(_){} }
+        });
+
+        // Owner presets
+        const presets = document.createElement('div'); presets.className = 'gw-presets';
+        const p1 = document.createElement('button'); p1.type='button'; p1.textContent='Owner Presets: 100% Client';
+        const p2 = document.createElement('button'); p2.type='button'; p2.textContent='Owner Presets: 100% Spouse';
+        const p3 = document.createElement('button'); p3.type='button'; p3.textContent='Owner Presets: 50/50';
+        [p1,p2,p3].forEach(btn => btn.style.marginLeft='6px');
+
+        function applyPresetToSelection(kind) {
+          const sel = Array.from(multi.selectedOptions).map(o => parseInt(o.value,10)).filter(Boolean);
+          sel.forEach(idx => ownerPreset(idx, kind));
+          if (sel.length) recalculateTotals();
+        }
+        p1.addEventListener('click', () => applyPresetToSelection('client'));
+        p2.addEventListener('click', () => applyPresetToSelection('spouse'));
+        p3.addEventListener('click', () => applyPresetToSelection('5050'));
+
+        // Prorate month + Sync
+        const monthLab = document.createElement('label'); monthLab.textContent = 'Effective Month';
+        const monthSel = document.createElement('select'); for(let m=1;m<=12;m++){ const op=document.createElement('option'); op.value=String(m); op.textContent=String(m); monthSel.appendChild(op); }
+        const prorate = document.createElement('button'); prorate.type='button'; prorate.textContent='Prorate & Generate W-2s';
+        prorate.addEventListener('click', () => {
+          const frac = (13 - parseInt(monthSel.value||'1',10)) / 12;
+          const sel = Array.from(multi.selectedOptions).map(o => parseInt(o.value,10)).filter(Boolean);
+          sel.forEach(idx => generateW2sFromRC(idx, { replace:false, fraction:Math.max(0,Math.min(1,frac)) }));
+        });
+
+        const syncBtn = document.createElement('button'); syncBtn.type='button'; syncBtn.textContent='Sync W-2s from RC';
+        const replaceChk = document.createElement('input'); replaceChk.type='checkbox'; replaceChk.id = `gw-replace-${entity.id}`;
+        const replaceLbl = document.createElement('label'); replaceLbl.textContent = 'Replace existing'; replaceLbl.htmlFor = replaceChk.id;
+        syncBtn.addEventListener('click', () => {
+          const sel = Array.from(multi.selectedOptions).map(o => parseInt(o.value,10)).filter(Boolean);
+          sel.forEach(idx => generateW2sFromRC(idx, { replace: replaceChk.checked, fraction:1 }));
+        });
+
+        // Jump buttons (first selected)
+        const goBiz = document.createElement('button'); goBiz.type='button'; goBiz.textContent='Go to Business';
+        goBiz.addEventListener('click', () => {
+          const idx = parseInt(multi.selectedOptions?.[0]?.value || '0',10);
+          if (!idx) return;
+          document.getElementById(`businessEntry_${idx}`)?.scrollIntoView({ behavior:'smooth', block:'start' });
+        });
+
+        toolbar.appendChild(document.createElement('br'));
+        toolbar.appendChild(multi);
+        toolbar.appendChild(convertSel);
+        toolbar.appendChild(convertAll);
+        toolbar.appendChild(presets);
+        presets.appendChild(p1); presets.appendChild(p2); presets.appendChild(p3);
+        toolbar.appendChild(monthLab); toolbar.appendChild(monthSel); toolbar.appendChild(prorate);
+        toolbar.appendChild(syncBtn); toolbar.appendChild(replaceChk); toolbar.appendChild(replaceLbl);
+        toolbar.appendChild(goBiz);
+
         body.insertBefore(toolbar, cardList);
       }
 
@@ -8535,34 +8646,109 @@ function readLeadNumbers() {
         });
 
         toolbar.appendChild(sel); toolbar.appendChild(btn); toolbar.appendChild(w2);
+
+        // Owner presets for selected C-Corp
+        const presetWrap = document.createElement('span');
+        ['100% Client','100% Spouse','50/50'].forEach(label => {
+          const b=document.createElement('button'); b.type='button'; b.textContent='Owner Presets: ' + label;
+          b.style.marginLeft='6px';
+          b.addEventListener('click', () => {
+            const idx = parseInt(toolbar.querySelector(`#gw-convert-cc-${entity.id}`).value||'0',10);
+            if (!idx) return;
+            ownerPreset(idx, /Spouse/.test(label)?'spouse':/50\/50/.test(label)?'5050':'client');
+          });
+          presetWrap.appendChild(b);
+        });
+        toolbar.appendChild(presetWrap);
+      
+        // Prorate + Sync
+        const mLab = document.createElement('label'); mLab.textContent='Effective Month';
+        const mSel = document.createElement('select'); for(let m=1;m<=12;m++){const op=document.createElement('option');op.value=String(m);op.textContent=String(m);mSel.appendChild(op);}
+        const pro = document.createElement('button'); pro.type='button'; pro.textContent='Prorate & Generate W-2s';
+        pro.addEventListener('click', () => {
+          const idx = parseInt(toolbar.querySelector(`#gw-convert-cc-${entity.id}`).value||'0',10);
+          if (!idx) return;
+          const frac = (13 - parseInt(mSel.value||'1',10))/12;
+          generateW2sFromRC(idx, { replace:false, fraction:Math.max(0,Math.min(1,frac)) });
+        });
+        const sync = document.createElement('button'); sync.type='button'; sync.textContent='Sync W-2s from RC';
+        const rep = document.createElement('input'); rep.type='checkbox'; rep.id=`gw-rep-cc-${entity.id}`;
+        const repL = document.createElement('label'); repL.textContent='Replace existing'; repL.htmlFor=rep.id;
+        sync.addEventListener('click', () => {
+          const idx = parseInt(toolbar.querySelector(`#gw-convert-cc-${entity.id}`).value||'0',10);
+          if (!idx) return;
+          generateW2sFromRC(idx, { replace: rep.checked, fraction:1 });
+        });
+        toolbar.appendChild(mLab); toolbar.appendChild(mSel); toolbar.appendChild(pro);
+        toolbar.appendChild(sync); toolbar.appendChild(rep); toolbar.appendChild(repL);
+
         body.insertBefore(toolbar, cardList);
-      }
+    }
 
       // FMC (S-Corp)
       if (/FMC \(S-Corp\)/i.test(title)) {
         const btn = document.createElement('button'); btn.type='button'; btn.textContent='Create FMC (S-Corp)';
         btn.addEventListener('click', () => {
           const idx = createBusinessOfType({ name: `${bname}`, type: 'S-Corp' });
+          const stEnt = ensureState(entity.id);
+          // link this custom entity to the real business index for downstream strategy routing
+          stEnt.bizIndex = idx;
+        
+          const { filing, client, spouse } = getClientNames();
           if (filing === 'Married Filing Jointly') {
             configureOwners({ bizIndex: idx, owners: [{ name: client, percent: 50 }, { name: spouse, percent: 50 }] });
           } else {
             configureOwners({ bizIndex: idx, owners: [{ name: client, percent: 100 }] });
           }
+        
+          // Auto-add Accountable Plan row on this card (routes to business expense)
+          stEnt.rows.push({ name: 'Accountable Plan', investment: '', retained: '', deductions: '' });
+        
+          // jump into the business details
+          document.getElementById(`businessEntry_${idx}`)?.scrollIntoView({ behavior:'smooth', block:'start' });
+        
+          if (typeof undoStack !== 'undefined') { try { undoStack.push(getFormSnapshot()); } catch(_){} }
         });
-        const w2 = document.createElement('button'); w2.type='button'; w2.textContent='Generate W-2s from RC';
-        w2.addEventListener('click', () => {
-          const n = parseInt(document.getElementById('numOfBusinesses')?.value || '0', 10) || 0;
-          generateW2sFromRC(n); // last created
+
+        // Owner presets, Sync/Replace, Jump
+        const presetWrap = document.createElement('span');
+        ['100% Client','100% Spouse','50/50'].forEach(label => {
+          const b=document.createElement('button'); b.type='button'; b.textContent='Owner Presets: ' + label;
+          b.style.marginLeft='6px';
+          b.addEventListener('click', () => {
+            const last = parseInt(document.getElementById('numOfBusinesses')?.value || '0', 10) || 0;
+            if (!last) return;
+            ownerPreset(last, /Spouse/.test(label)?'spouse':/50\/50/.test(label)?'5050':'client');
+          });
+          presetWrap.appendChild(b);
         });
-        toolbar.appendChild(btn); toolbar.appendChild(w2);
+        toolbar.appendChild(presetWrap);
+
+        const sync = document.createElement('button'); sync.type='button'; sync.textContent='Sync W-2s from RC';
+        const rep  = document.createElement('input');  rep.type='checkbox'; rep.id=`gw-rep-fmc-${entity.id}`;
+        const repL = document.createElement('label');  repL.textContent='Replace existing'; repL.htmlFor=rep.id;
+        sync.addEventListener('click', () => {
+          const last = parseInt(document.getElementById('numOfBusinesses')?.value || '0', 10) || 0;
+          if (!last) return;
+          generateW2sFromRC(last, { replace: rep.checked, fraction:1 });
+        });
+        const goBiz = document.createElement('button'); goBiz.type='button'; goBiz.textContent='Go to Business';
+        goBiz.addEventListener('click', () => {
+          const last = parseInt(document.getElementById('numOfBusinesses')?.value || '0', 10) || 0;
+          if (!last) return;
+          document.getElementById(`businessEntry_${last}`)?.scrollIntoView({ behavior:'smooth', block:'start' });
+        });
+        toolbar.appendChild(sync); toolbar.appendChild(rep); toolbar.appendChild(repL); toolbar.appendChild(goBiz);
         body.insertBefore(toolbar, cardList);
       }
-
       // FMC (Spousal Partnership)
       if (/FMC \(Spousal Partnership\)/i.test(title)) {
         const btn = document.createElement('button'); btn.type='button'; btn.textContent='Create FMC (Partnership)';
         btn.addEventListener('click', () => {
           const idx = createBusinessOfType({ name: `${bname}`, type: 'Partnership' });
+          const stEnt = ensureState(entity.id);
+          stEnt.bizIndex = idx;
+          if (typeof undoStack !== 'undefined') { try { undoStack.push(getFormSnapshot()); } catch(_){} }
           configureOwners({ bizIndex: idx, owners: [{ name: client, percent: 50 }, { name: spouse, percent: 50 }] });
         });
         toolbar.appendChild(btn);
@@ -8609,6 +8795,11 @@ function readLeadNumbers() {
         const btn = document.createElement('button'); btn.type='button'; btn.textContent='Create Holding Co (Schedule-C)';
         btn.addEventListener('click', () => {
           const idx = createBusinessOfType({ name: `${bname}`, type: 'Schedule-C' });
+
+          const stEnt = ensureState(entity.id);
+          stEnt.bizIndex = idx;
+          if (typeof undoStack !== 'undefined') { try { undoStack.push(getFormSnapshot()); } catch(_){} }
+
           // Show & set the built-in Schedule-C owner question
           const q = document.getElementById(`scheduleCOwner${idx}`);
           if (q && sel.value) {
@@ -8861,7 +9052,7 @@ function applyRestructureTo1040() {
 
       if (spec.kind === 'business_expense') {
         let bizIndex = null;
-
+      
         if (entityId.startsWith('biz-')) {
           bizIndex = parseInt(entityId.split('-')[1], 10);
         } else if (entityId.startsWith('w2-')) {
@@ -8871,13 +9062,15 @@ function applyRestructureTo1040() {
             const bizName = document.getElementById(`w2BusinessName_${idNum}`)?.value?.trim();
             bizIndex = resolveBusinessIndexByName(bizName);
           }
+        } else if (st?.bizIndex) {
+          // NEW: strategies inside a custom entity card route to its linked business
+          bizIndex = st.bizIndex;
         }
-
+      
         if (bizIndex) {
           resxAdd(`business${bizIndex}Expenses`, amt);
           changedBiz.add(bizIndex);
         } else {
-          // no linked business → treat as personal itemized other deduction
           resxAdd('otherDeductions', amt);
         }
       }

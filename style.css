@@ -445,18 +445,49 @@ body.dark-mode .res-comp-btn:hover { background-color: var(--accent); color: #55
   font-size: 14px !important;
   line-height: 1 !important;
   border-radius: 8px !important;
+  white-space: nowrap; 
 }
+
+/* Small layout helpers for grouped controls */
+.gw-seg { 
+  display: inline-flex; 
+  align-items: center; 
+  gap: 6px; 
+}
+.gw-inline-label { 
+  font-weight: 600; 
+  color: var(--text-light); 
+}
+
+body.dark-mode .gw-controls{
+  background: var(--card-dark) !important;
+  border-color: var(--border-dark) !important;
+}
+
+
 
 /* toolbar + rate input */
 .gw-controls {
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;           /* allow multiple rows */
+  gap: 8px 12px;             /* tight, readable spacing */
   align-items: center;
   padding: 10px 12px;
   background: #ffffff;
   border: 2px solid var(--border-dark);
   border-radius: 12px;
 }
+
+/* Toolbar-specific input sizing */
+.gw-controls select {
+  width: auto;               /* override global select { width:100% } */
+  min-width: 220px;          /* keep “Please Select” readable */
+}
+@media (max-width: 560px) {
+  .gw-controls select { min-width: 160px; }
+}
+
+
 
 #gw-entity-name { height: 36px; line-height: 36px; }
 
