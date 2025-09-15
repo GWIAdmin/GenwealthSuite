@@ -7846,6 +7846,193 @@ function readLeadNumbers() {
     'Holding Company (Schedule-C)',
   ];
 
+  /* ────────────────────────────────────────────────────────────────────
+     ★ Restructure: Synthetic entity engine + charity caps
+     - provisions hidden Business blocks for entity types that need them
+     - maps restructure rows to those businesses (so expenses flow to Net)
+     - applies simple AGI caps for charity vehicles
+  ───────────────────────────────────────────────────────────────────── */
+
+  window.GW_VIRTUAL_BIZ_MAP = window.GW_VIRTUAL_BIZ_MAP || Object.create(null);
+
+  // blueprint: how each picker type maps to a real Business “type”
+  const SYN_ENTITY_PROFILES = {
+    'FMC (S-Corp)':                     { needsBiz: true,  bizType: 'S-Corp'       },
+    'FMC (Spousal Partnership)':        { needsBiz: true,  bizType: 'Partnership'  },
+    'FMC (C-Corp)':                     { needsBiz: true,  bizType: 'C-Corp'       },
+    'Family Limited Liability Company (FLLC)': { needsBiz: true, bizType: 'Partnership' },
+    'Holding Company (Schedule-C)':     { needsBiz: true,  bizType: 'Schedule-C'   },
+    'Schedule-C to S-Corp':             { needsBiz: true,  bizType: 'S-Corp', convertFrom: 'Schedule-C' },
+    'C-Corp to S-Corp':                 { needsBiz: true,  bizType: 'S-Corp', convertFrom: 'C-Corp' },
+    // Charity types do not create a business
+    'Charitable Foundation':            { needsBiz: false, charityKind: 'foundation30' },
+    'Charitable Remainder Trust (CRT)': { needsBiz: false, charityKind: 'foundation30' },
+    'Charitable LLC (CLLC)':            { needsBiz: false, charityKind: 'public60' }
+  };
+
+  // quick helpers
+  function fsIsMFJ() { return (document.getElementById('filingStatus')?.value || '') === 'Married Filing Jointly'; }
+  function clientFirst() { return document.getElementById('firstName')?.value?.trim() || 'Client 1'; }
+  function spouseFirst() { return document.getElementById('spouseFirstName')?.value?.trim() || 'Client 2'; }
+  function nextBusinessUniqueId() {
+    const n = parseInt(document.getElementById('numOfBusinesses')?.value || '0', 10) || 0;
+    return n; // the builder creates ids 1..n; the "new one" is n
+  }
+
+  // create a real Business block and remember its index for this entityId
+  async function provisionVirtualBusinessForEntity(entityId, pickerType, titleText) {
+    if (window.GW_VIRTUAL_BIZ_MAP[entityId]) return window.GW_VIRTUAL_BIZ_MAP[entityId];
+
+    const profile = SYN_ENTITY_PROFILES[pickerType] || {};
+    if (!profile.needsBiz) return null;
+
+    // Add one business via the existing “Add Business” flow so your
+    // createBusinessFields / stores stay consistent
+    const addBtn = document.getElementById('addBusinessBtn');
+    if (addBtn) addBtn.click(); // triggers the standard builder
+
+    // allow the DOM paint
+    setTimeout(() => {
+      // the last created business gets the next unique id
+      const bizId = nextBusinessUniqueId();
+
+      // name + type
+      const nameInput = document.getElementById(`businessName_${bizId}`);
+      if (nameInput) nameInput.value = titleText || `${pickerType} #${bizId}`;
+
+      const typeSel  = document.getElementById(`business${bizId}Type`);
+      if (typeSel) {
+        typeSel.value = profile.bizType || 'S-Corp';
+        typeSel.dispatchEvent(new Event('change')); // build owner area
+      }
+
+      // owners
+      const mfj = fsIsMFJ();
+      if (profile.bizType === 'Partnership') {
+        const ownersSel = document.getElementById(`numOwnersSelect${bizId}`);
+        if (ownersSel) {
+          ownersSel.value = mfj ? '2' : '2';
+          ownersSel.dispatchEvent(new Event('change'));
+        }
+        const o1 = document.getElementById(`business${bizId}OwnerName1`);
+        const o2 = document.getElementById(`business${bizId}OwnerName2`);
+        const p1 = document.getElementById(`business${bizId}OwnerPercent1`);
+        const p2 = document.getElementById(`business${bizId}OwnerPercent2`);
+        if (o1) o1.value = clientFirst();
+        if (o2) o2.value = mfj ? spouseFirst() : 'Other';
+        if (p1) p1.value = mfj ? '50.000000' : '100.000000';
+        if (p2) p2.value = mfj ? '50.000000' : '0.000000';
+      } else if (profile.bizType === 'S-Corp' || profile.bizType === 'C-Corp') {
+        const ownersSel = document.getElementById(`numOwnersSelect${bizId}`);
+        if (ownersSel) {
+          ownersSel.value = mfj ? '1' : '1';
+          ownersSel.dispatchEvent(new Event('change'));
+        }
+        // for single owner we set Owner 1 chooser if present
+        const o1 = document.getElementById(`business${bizId}OwnerName1`);
+        const p1 = document.getElementById(`business${bizId}OwnerPercent1`);
+        if (o1 && o1.tagName === 'SELECT') {
+          // single-owner dropdown path
+          o1.value = clientFirst();
+          o1.dispatchEvent(new Event('change'));
+        }
+        if (p1) {
+          p1.value = '100.000000';
+        }
+      } else if (profile.bizType === 'Schedule-C') {
+        // MFJ → ask which spouse owns via your built-in Schedule C owner question
+        // no action needed here—your UI will surface the chooser if MFJ
+      }
+
+      // collapse the block to keep UI tidy
+      const collapsible = document.querySelector(`#businessEntry_${bizId} .collapsible-content`);
+      if (collapsible) collapsible.classList.remove('active');
+
+      // remember mapping
+      window.GW_VIRTUAL_BIZ_MAP[entityId] = bizId;
+
+      // ensure nets recalc with a clean zero Income/Expenses baseline
+      if (typeof updateBusinessNet === 'function') updateBusinessNet(bizId);
+      if (typeof recalculateTotals === 'function') recalculateTotals();
+      
+      // NEW: refresh the Restructure panel so the new business shows up immediately
+      if (typeof renderEntities === 'function') renderEntities();
+    }, 0);
+
+    return null;
+  }
+
+  function removeVirtualBusinessForEntity(entityId) {
+    const bizId = window.GW_VIRTUAL_BIZ_MAP[entityId];
+    if (!bizId) return;
+    const entry = document.getElementById(`businessEntry_${bizId}`);
+    const nameEntry = document.getElementById(`businessNameEntry_${bizId}`);
+    if (entry) entry.remove();
+    if (nameEntry) nameEntry.remove();
+    delete window.GW_VIRTUAL_BIZ_MAP[entityId];
+
+    // normalize counter + totals
+    const numEl = document.getElementById('numOfBusinesses');
+    if (numEl) {
+      const count = document.querySelectorAll('.business-entry').length;
+      numEl.value = String(count);
+    }
+    if (typeof recalculateTotals === 'function') recalculateTotals();
+  }
+
+  // when a custom entity is created, auto-provision if needed
+  function maybeProvisionForCustomEntity(entity) {
+    // Prefer the exact picker type we stored; fall back to any (...) in the title
+    let type = entity?.pickerType || '';
+    if (!type) {
+      const m = String(entity?.title || '').match(/\(([^)]+)\)/); // tolerant: finds first (...)
+      type = m ? m[1] : '';
+    }
+    const profile = SYN_ENTITY_PROFILES[type];
+    if (profile?.needsBiz) {
+      provisionVirtualBusinessForEntity(entity.id, type, entity.title);
+    }
+  }
+
+  // simple conversions (single-source convenience)
+  function tryConvertToSCorp(convertFrom) {
+    const isFrom = (i) => (document.getElementById(`business${i}Type`)?.value || '') === convertFrom;
+    const num = parseInt(document.getElementById('numOfBusinesses')?.value || '0', 10) || 0;
+    const candidates = [];
+    for (let i=1;i<=num;i++) if (isFrom(i)) candidates.push(i);
+    if (candidates.length !== 1) {
+      alert(`Please have exactly one ${convertFrom} to convert.`);
+      return;
+    }
+    const fromId = candidates[0];
+
+    // read net, zero it, create S-Corp with that net as Income (user can adjust)
+    const netVal = unformatCurrency(document.getElementById(`business${fromId}Net`)?.value || '0');
+    // zero out original
+    const incEl = document.getElementById(`business${fromId}Income`);
+    const expEl = document.getElementById(`business${fromId}Expenses`);
+    if (incEl) incEl.value = formatCurrency('0');
+    if (expEl) expEl.value = formatCurrency('0');
+    if (typeof updateBusinessNet === 'function') updateBusinessNet(fromId);
+
+    // create target S-Corp
+    const pseudoEntity = { id: `custom-convert-${Date.now()}`, title: `Converted S-Corp` };
+    provisionVirtualBusinessForEntity(pseudoEntity.id, 'S-Corp', 'Converted S-Corp');
+
+    setTimeout(() => {
+      const newId = window.GW_VIRTUAL_BIZ_MAP[pseudoEntity.id];
+      if (!newId) return;
+      // put former net as Income
+      const inc = document.getElementById(`business${newId}Income`);
+      if (inc) {
+        inc.value = formatCurrency(String(Math.max(0, netVal)));
+        inc.dispatchEvent(new Event('blur'));
+      }
+      if (typeof recalculateTotals === 'function') recalculateTotals();
+    }, 0);
+  }
+
+
   // ▼ NEW: small add-bar UI (type select + optional name + Add button)
   const addBar = document.createElement('div');
   addBar.className = 'gw-controls';
@@ -7868,24 +8055,33 @@ function readLeadNumbers() {
     const name = (addBar.querySelector('#gw-entity-name').value || '').trim();
     const id   = `custom-${customEntityCounter++}`;
 
-    // default title if no custom name is provided
+    // Title shown on the card
     const title = name ? `${name} (${type})` : `${type} #${customEntityCounter - 1}`;
 
-    customEntities.push({
+    // Build the new entity FIRST…
+    const newEntity = {
       id,
       kind: 'custom',
       index: id,
-      // show the chosen type in the title; the subline is blank by design
       title,
-      sub: ''
-    });
+      sub: '',
+      pickerType: type
+    };
+    customEntities.push(newEntity);
 
-    // seed a blank state so chips/pills render immediately
+    // …then provision the matching hidden Business (so we hit the right entity)
+    maybeProvisionForCustomEntity(newEntity);
+
+    // Optional one-click conversions
+    if (type === 'Schedule-C to S-Corp') tryConvertToSCorp('Schedule-C');
+    if (type === 'C-Corp to S-Corp')     tryConvertToSCorp('C-Corp');
+
+    // Seed rows/rate store so pills/chips render
     if (!stateById[id]) {
       stateById[id] = { rate: 0, rows: JSON.parse(JSON.stringify(DEFAULT_ROWS)) };
     }
 
-    // clear the name box for the next one and refresh
+    // UI tidy-up
     addBar.querySelector('#gw-entity-name').value = '';
     renderEntities();
   });
@@ -8292,6 +8488,7 @@ function readLeadNumbers() {
         if (idx !== -1) {
           customEntities.splice(idx, 1);
           delete stateById[entity.id];   // optional: drop its saved rows/rate
+          removeVirtualBusinessForEntity(entity.id); 
           renderEntities();
         }
       });
@@ -8504,6 +8701,15 @@ function applyRestructureTo1040() {
 
   // Track which businesses we changed so we can recompute their Net
   const changedBiz = new Set();
+  const AGI_NUM = getFieldValue('totalAdjustedGrossIncome');
+  const charityUsed = { foundation30: 0, public60: 0 };
+  function charityCap(kind) { return kind === 'public60' ? AGI_NUM * 0.60 : AGI_NUM * 0.30; }
+  function applyCharity(kind, amount) {
+    const capLeft = Math.max(0, charityCap(kind) - charityUsed[kind]);
+    const allowed = Math.min(capLeft, amount);
+    charityUsed[kind] += allowed;
+    return { allowed, disallowed: amount - allowed };
+  }
 
   // 2) Walk each entity + row and apply the mapped effect
   Object.entries(plan).forEach(([entityId, st]) => {
@@ -8526,6 +8732,10 @@ function applyRestructureTo1040() {
             const bizName = document.getElementById(`w2BusinessName_${idNum}`)?.value?.trim();
             bizIndex = resolveBusinessIndexByName(bizName);
           }
+        } else if (entityId.startsWith('custom-')) {
+          // NEW: synthetic entity → use its virtual business if we created one
+          const mapped = window.GW_VIRTUAL_BIZ_MAP?.[entityId];
+          if (mapped) bizIndex = mapped;
         }
 
         if (bizIndex) {
@@ -8545,6 +8755,20 @@ function applyRestructureTo1040() {
         // IMPORTANT: your total tax combiner ADDS credit fields; supply negative amount
         resxAdd(spec.field, -amt);
       }
+
+      if (spec.kind === 'itemized' && ['Charitable Foundation','Charitable LLC (CLLC)','Charitable Remainder Trust (CRT)'].includes(row.name)) {
+        const kind = (row.name.indexOf('CLLC') >= 0) ? 'public60' : 'foundation30';
+        const { allowed, disallowed } = applyCharity(kind, amt);
+        if (allowed) resxAdd('contributions', allowed);
+        if (disallowed > 0) {
+          showRedDisclaimer(
+            `Charitable deduction limited by AGI cap: modeled ${formatCurrency(String(amt))}, allowed ${formatCurrency(String(allowed))}. Carryover not modeled here.`,
+            'gw-restructure-content'
+          );
+        }
+        return; // charity handled
+      }
+
     });
   });
 
