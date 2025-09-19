@@ -232,7 +232,7 @@ input:focus, select:focus, textarea:focus {
    ============================= */
 button {
   display: block; width: 100%; background-color: #552583; color: #E5E5E5;
-  padding: 12px; border: none; font-size: 1.2rem; font-weight: bold; border-radius: 40px;
+  padding: 12px; border: none; font-size: 1.2rem; font-weight: bold; border-radius: 15px;
   cursor: pointer; transition: background-color .3s ease;
 }
 button:hover { background-color: var(--accent); }
@@ -243,6 +243,24 @@ button:hover { background-color: var(--accent); }
   margin-left: 8px; margin-top: 0;
 }
 .arrow-btn:hover { background-color: var(--accent); color: #552583; }
+
+/* Make the "Remove Entity" button red */
+.gw-entity-footer .gw-del {
+  width: 350px;
+  text-align: center;
+  background-color: #ff4f4f; /* bright red */
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.3s ease;
+}
+
+.gw-entity-footer .gw-del:hover {
+  background-color: #ff0000; /* darker red on hover */
+}
 
 .add-w2-btn { background-color: #552583; color: #fff; border: none; cursor: pointer; padding: 10px 20px; font-size: 1rem; border-radius: 20px; margin-top: 15px; transition: background-color .3s ease; }
 .add-w2-btn:hover { background-color: var(--accent); color: #552583; }
@@ -480,7 +498,7 @@ body.dark-mode .res-comp-btn:hover { background-color: var(--accent); color: #55
 .gw-entity-footer {
   margin-top: 14px;
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
 }
 
 /* single card */
@@ -508,7 +526,7 @@ body.dark-mode .gw-card {
   color: #fff;
   border: none;
   border-radius: 8px;
-  padding: 6px 10px;
+  padding: 6px 20px;
   cursor: pointer;
 }
 .gw-card .gw-del:hover { background: #ff0000; }
