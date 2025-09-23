@@ -203,6 +203,33 @@ const FS_MAP = {
     };
 
 const ORDINARY_TAX_BRACKETS = BRACKETS;
+
+/**
+ * Return the current marginal ordinary income rate (percentage) for a given TI/FS/year.
+ * Uses the same bracket table that drives your ordinary tax (BRACKETS).
+ */
+function getMarginalOrdinaryRatePercent(taxableIncome, filingStatus, year) {
+  const rows = (ORDINARY_TAX_BRACKETS[year] || {})[filingStatus];
+  if (!rows || !Array.isArray(rows) || rows.length === 0) return 0;
+
+  // Find the first bracket whose threshold is >= taxableIncome
+  for (let i = 0; i < rows.length; i++) {
+    const { threshold, rate } = rows[i];
+    if (taxableIncome <= threshold) {
+      return (rate || 0) * 100; // return as percentage
+    }
+  }
+  // Fallback (shouldn’t happen due to Infinity in tables)
+  return (rows[rows.length - 1].rate || 0) * 100;
+}
+
+/** Convenience: read the current UI and compute the auto rate */
+function getCurrentAutoRatePercent() {
+  const year = parseInt(document.getElementById('year')?.value, 10) || 2025;
+  const filingStatus = document.getElementById('filingStatus')?.value || 'Single';
+  const taxableIncome = getFieldValue('taxableIncome'); // already unformats currency
+  return getMarginalOrdinaryRatePercent(taxableIncome, filingStatus, year);
+}
   
 window.addEventListener('DOMContentLoaded', async () => {
     initCollapsibles();
@@ -8499,6 +8526,14 @@ function readLeadNumbers() {
     controls.innerHTML = `
       <label for="gw-tax-rate-${entity.id}">Tax Rate (%)</label>
       <input id="gw-tax-rate-${entity.id}" type="number" min="0" max="100" step="0.01" placeholder="%" value="${st.rate || ''}">
+
+      <label class="gw-switch" style="margin-left:6px;">
+        <input id="gw-tax-auto-${entity.id}" class="gw-switch-input" type="checkbox" />
+        <span class="gw-switch-slider" aria-hidden="true"></span>
+        <span class="gw-switch-text">Auto</span>
+      </label>
+
+      <span class="gw-chip gw-chip-auto" id="gw-tax-auto-chip-${entity.id}" style="white-space:nowrap;"></span>
       <button id="gw-add-row-${entity.id}" type="button">Add Strategy</button>
     `;
     // add vertical spacing
@@ -8655,6 +8690,52 @@ function readLeadNumbers() {
     // controls actions
     const rateEl = controls.querySelector(`#gw-tax-rate-${entity.id}`);
     const addBtn = controls.querySelector(`#gw-add-row-${entity.id}`);
+
+    // Auto-rate elements
+    const autoEl = controls.querySelector(`#gw-tax-auto-${entity.id}`);
+    const autoChipEl = controls.querySelector(`#gw-tax-auto-chip-${entity.id}`);
+
+    // Set initial visibility to match the toggle
+    if (autoChipEl) {
+      if (autoEl && autoEl.checked) {
+        autoChipEl.classList.add('is-visible');
+      } else {
+        autoChipEl.classList.remove('is-visible');
+      }
+    }
+
+    /** Paint the little chip next to Auto (animated via CSS class) */
+    function paintAutoChip(ratePct) {
+      if (!autoChipEl) return;
+      if (autoEl && autoEl.checked) {
+        autoChipEl.textContent = `Auto ${Number(ratePct || 0).toFixed(2)}% (from taxable income)`;
+        autoChipEl.classList.add('is-visible');
+      } else {
+        autoChipEl.classList.remove('is-visible');
+        autoChipEl.textContent = '';
+      }
+    }
+
+    /** Apply the current auto rate into this entity’s rate input/state */
+    function applyAutoRateNow() {
+      const r = getCurrentAutoRatePercent();
+      rateEl.value = Number(r).toFixed(2);
+      st.rate = Number(r);
+      paintAutoChip(r);
+      renderCards();
+      recomputeEntityTotals();
+    }
+
+    /** Toggle handler for the Auto checkbox */
+    if (autoEl) {
+      autoEl.addEventListener('change', () => {
+        if (autoEl.checked) {
+          applyAutoRateNow();
+        } else {
+          paintAutoChip(null); // clear chip
+        }
+      });
+    }
 
     rateEl.addEventListener('input', () => {
       st.rate = rateEl.value === '' ? 0 : Number(rateEl.value);
@@ -8891,6 +8972,56 @@ function readLeadNumbers() {
     emitRestructureUpdate();
   }
 
+  // === Global auto-rate refresh: when TI, FS, or Year changes, update all Auto-checked entities ===
+  (function wireGlobalAutoRateRefresh() {
+    (function wireGlobalAutoRateRefresh() {
+      const drivers = [
+        { id: 'taxableIncome', evt: 'input' },
+        { id: 'filingStatus',  evt: 'change' },
+        { id: 'year',          evt: 'change' },
+      ];
+    
+      // Re-entrancy guard to prevent nested refresh loops
+      let _autoRefreshInProgress = false;
+    
+      function refreshAllAutoEntities() {
+          if (_autoRefreshInProgress) return;
+          _autoRefreshInProgress = true;
+          try {
+            const r = getCurrentAutoRatePercent();
+            // For every mounted entity card, if Auto is checked, apply the new rate
+            document.querySelectorAll('.gw-entity').forEach(sec => {
+              const entityId = sec.dataset.entityId;
+              if (!entityId) return;
+              const auto = sec.querySelector(`#gw-tax-auto-${entityId}`);
+              const rateEl = sec.querySelector(`#gw-tax-rate-${entityId}`);
+              const chipEl = sec.querySelector(`#gw-tax-auto-chip-${entityId}`);
+              if (!auto || !rateEl) return;
+              if (auto.checked) {
+                rateEl.value = Number(r).toFixed(2);
+                if (stateById[entityId]) stateById[entityId].rate = Number(r);
+                if (chipEl) {
+                  chipEl.textContent = `Auto ${Number(r).toFixed(2)}% (from taxable income)`;
+                  chipEl.classList.add('is-visible');
+                }
+                rateEl.dispatchEvent(new Event('input', { bubbles: true }));
+              }
+            });
+          } finally {
+            _autoRefreshInProgress = false;
+          }
+        }
+      
+        drivers.forEach(({ id, evt }) => {
+          const el = document.getElementById(id);
+          if (el && !el.dataset.gwAutoBound) {
+            el.addEventListener(evt, refreshAllAutoEntities);
+            el.dataset.gwAutoBound = '1';
+          }
+        });
+      
+      })();
+
 })();
 
 // —— Overlay helpers (non-destructive) ——
@@ -9036,3 +9167,4 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('gw:restructureUpdated', () => {
   try { applyRestructureTo1040(); } catch (e) { console.warn(e); }
 });
+})();

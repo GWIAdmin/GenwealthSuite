@@ -559,6 +559,117 @@ body.dark-mode .gw-card {
   justify-content: flex-start !important;
 }
 
+/* Smooth in/out for the Auto chip (no abrupt shift) */
+.gw-chip {
+  display: inline-block;
+  white-space: nowrap;
+  overflow: hidden;
+  opacity: 0;          /* hidden by default */
+  max-width: 0;        /* collapse width when hidden */
+  margin-left: 0;      /* no gap when hidden */
+  transition:
+    opacity 180ms ease,
+    max-width 220ms ease,
+    margin-left 180ms ease;
+}
+
+/* Visible state: expand + fade in */
+.gw-chip.is-visible {
+  opacity: 1;
+  max-width: 360px;    /* large enough for full label */
+  margin-left: 6px;    /* your chip gap when shown */
+}
+
+/* Only hide empty chips when NOT visible */
+.gw-chip:not(.is-visible):empty {
+  display: none;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+/* ====== Auto toggle (accessible checkbox styled as a switch) ====== */
+
+.gw-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  vertical-align: middle;
+}
+
+.gw-switch-input {
+  /* Keep the real checkbox focusable and interactive, but visually hidden */
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  border: 0;
+  padding: 0;
+}
+
+/* The visual track */
+.gw-switch-slider {
+  position: relative;
+  display: inline-block;
+  width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  background: #d1d5db;            /* neutral track */
+  transition: background-color 160ms ease, box-shadow 160ms ease;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);
+}
+
+/* The thumb */
+.gw-switch-slider::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  transition: transform 160ms ease;
+}
+
+/* Checked state */
+.gw-switch-input:checked + .gw-switch-slider {
+  background: #2563eb;           /* primary track when on */
+}
+
+.gw-switch-input:checked + .gw-switch-slider::before {
+  transform: translateX(18px);   /* 42 - 24 = 18 */
+}
+
+/* Focus-visible ring for keyboard users */
+.gw-switch-input:focus-visible + .gw-switch-slider {
+  box-shadow:
+    0 0 0 1px #fff,
+    0 0 0 3px rgba(37,99,235,0.6);
+}
+
+/* Disabled state (if you ever disable it) */
+.gw-switch-input:disabled + .gw-switch-slider {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.gw-switch-text {
+  line-height: 1;
+}
+
+/* Optional: better spacing before the chip */
+#restructure .gw-chip {
+  margin-left: 6px;
+}
+
 /* ===================================================================
    Chips & Pills — harmonized with root variables (light + dark parity)
    =================================================================== */
@@ -809,3 +920,33 @@ body.dark-mode .gw-entity-subheader {
 body.dark-mode .gw-entity { background: var(--business-entry); border-color: var(--border-dark); }
 body.dark-mode .gw-entity-head { background: var(--section-dark); border-color: var(--border-dark); }
 body.dark-mode .gw-entity-title, body.dark-mode .gw-entity-sub { color: var(--h3-dark); }
+
+/* === Smooth show/hide for the Auto-rate chip (scoped) ===
+   Note: .gw-chip later has global padding/border/max-width overrides.
+   We out-specify those here so this chip animates cleanly. */
+
+/* Hidden (off) state — occupies zero width */
+.gw-controls .gw-chip.gw-chip-auto {
+  opacity: 0;
+  max-width: 0 !important;      /* defeat global max-width: none */
+  margin-left: 0;
+  padding-left: 0 !important;    /* defeat global padding */
+  padding-right: 0 !important;
+  border-width: 0 !important;    /* defeat global 2px border */
+  overflow: hidden;
+  transition:
+    opacity 700ms ease,
+    max-width 600ms ease,
+    margin-left 700ms ease,
+    padding 700ms ease,
+    border-width 700ms ease;
+}
+
+/* Visible (on) state — expand & fade with real chip chrome */
+.gw-controls .gw-chip.gw-chip-auto.is-visible {
+  opacity: 1;
+  max-width: 420px !important;   /* big enough for full label */
+  margin-left: 6px;
+  padding: 8px 12px !important;  /* restore chip padding */
+  border-width: 2px !important;  /* restore chip border */
+}
