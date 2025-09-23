@@ -249,16 +249,35 @@ function initCollapsibles() {
     const content = document.getElementById(header.dataset.target);
     if (!content) return;
 
-    // Ensure the animatable class exists on the target
     content.classList.add('collapsible-content');
-    content.classList.remove('active');       // start collapsed
+    content.classList.remove('active'); // start collapsed
+    content.style.maxHeight = '0px';
+    content.style.overflow = 'hidden';
 
     header.style.cursor = 'pointer';
     header.addEventListener('click', () => {
-      content.classList.toggle('active');     // <-- animates via CSS max-height
+      const isOpen = content.classList.toggle('active');
+      if (isOpen) {
+        // expand to natural height, then let it breathe
+        content.style.maxHeight = content.scrollHeight + 'px';
+        // after the transition, let it auto-size if inner content grows
+        content.addEventListener('transitionend', function toAuto(e) {
+          if (e.propertyName === 'max-height' && content.classList.contains('active')) {
+            content.style.maxHeight = 'none';
+          }
+          content.removeEventListener('transitionend', toAuto);
+        });
+      } else {
+        // when collapsing, set back to pixel height first for a smooth close
+        content.style.maxHeight = content.scrollHeight + 'px';
+        // force reflow, then go to 0
+        void content.offsetHeight;
+        content.style.maxHeight = '0px';
+      }
     });
   });
 }
+
 
 function initUI() {
   // Back‑to‑top button
@@ -687,7 +706,35 @@ function expandParents(element) {
       parent = parent.parentElement;
     }
 }
- 
+ // GLOBAL: programmatically remove a Business by its permanent uniqueId
+window.removeBusinessByIndex = function removeBusinessByIndex(removedUniqueId) {
+  // Remove the corresponding “Business Name” block if present
+  const nameBlock = document.getElementById(`businessNameEntry_${removedUniqueId}`);
+  if (nameBlock) nameBlock.remove();
+
+  // Remove the detail block
+  const businessDiv = document.getElementById(`businessEntry_${removedUniqueId}`);
+  if (businessDiv) businessDiv.remove();
+
+  // Update the count shown in #numOfBusinesses
+  const currentBlocks = document.querySelectorAll('.business-entry');
+  const numEl = document.getElementById('numOfBusinesses');
+  if (numEl) {
+    numEl.value = currentBlocks.length;
+    // Let everything that listens to #numOfBusinesses re-render
+    numEl.dispatchEvent(new Event('input'));   // refreshes 2025 Restructure lists/cards
+  }
+
+  // Keep W-2 "Select Business" dropdowns accurate
+  if (typeof updateAllW2BusinessDropdowns === 'function') {
+    updateAllW2BusinessDropdowns();
+  }
+
+  // Refresh headers and totals
+  updateAllBusinessHeaders();
+  recalculateTotals();
+};
+
 // Helper: Given a businessIndex and ownerIndex, find the first W‑2 block
 // that contributed wage to that owner. (It checks the global w2WageMap.)
 function scrollToW2Block(businessIndex, ownerIndex) {
@@ -2606,28 +2653,8 @@ function createBusinessFields(container, uniqueId) {
     removeBtn.classList.add('remove-business-btn'); // or reuse 'remove-w2-btn'
 
     removeBtn.addEventListener('click', function() {
-        // Get the unique ID of the business being removed.
-        const removedUniqueId = businessDiv.dataset.uniqueId;
-     
-        // (Optional) Remove the corresponding business-name block if you have one.
-        const nameBlock = document.getElementById(`businessNameEntry_${removedUniqueId}`);
-        if (nameBlock) {
-            nameBlock.remove();
-        }
-     
-        // Remove the detail block.
-        businessDiv.remove();
-     
-        // Update the "numOfBusinesses" field to reflect the remaining count.
-        const currentBlocks = document.querySelectorAll('.business-entry');
-        document.getElementById('numOfBusinesses').value = currentBlocks.length;
-     
-        // Instead of reindexing (which would change permanent IDs), simply update all headers.
-        updateAllBusinessHeaders();
-     
-        recalculateTotals();
-    });
-    
+      window.removeBusinessByIndex(businessDiv.dataset.uniqueId);
+    }); 
 
     collapsibleContent.appendChild(removeBtn);
 
@@ -4214,6 +4241,193 @@ function updateNetInvestmentTax() {
   document.getElementById('netInvestmentTax').value = formatCurrency(String(niit));
 }
 
+function addNewSCorpBusinessWithName(baseName) {
+  // Increment count to create a fresh block, then configure it.
+  const nEl = document.getElementById('numOfBusinesses');
+  let n = parseInt(nEl.value || '0', 10) || 0;
+  nEl.value = ++n;
+  nEl.dispatchEvent(new Event('input'));    // builds the new block
+
+  const idx = n; // new business index
+  const nameField = document.getElementById(`businessName_${idx}`);
+  const typeField = document.getElementById(`business${idx}Type`);
+  // Name: reuse + append "(S-Corp)" if the old one didn't already end that way
+  const newName = /\(S-?Corp\)$/i.test(baseName) ? baseName : `${baseName} (S-Corp)`;
+  if (nameField) { nameField.value = newName; nameField.dispatchEvent(new Event('input')); }
+  if (typeField)  { typeField.value = 'S-Corp'; typeField.dispatchEvent(new Event('change')); }
+
+  return { idx, newName };
+}
+
+function getScheduleCOwner(srcIdx) {
+  const filing = document.getElementById('filingStatus')?.value;
+  const client = document.getElementById('firstName')?.value?.trim() || 'Client 1';
+  const spouse = document.getElementById('spouseFirstName')?.value?.trim() || 'Client 2';
+  if (filing === 'Married Filing Jointly') {
+    const sel = document.getElementById(`scheduleCOwner${srcIdx}`);
+    const who = sel?.value || client;
+    return { owners: [{ name: who, pct: 100 }] };
+  }
+  return { owners: [{ name: client, pct: 100 }] };
+}
+
+function getCCorpOwners(srcIdx) {
+  const owners = [];
+  const numOwnersSel = document.getElementById(`numOwnersSelect${srcIdx}`);
+  const k = parseInt(numOwnersSel?.value || '0', 10) || 0;
+  for (let i = 1; i <= k; i++) {
+    const nEl = document.getElementById(`business${srcIdx}OwnerName${i}`);
+    const pEl = document.getElementById(`business${srcIdx}OwnerPercent${i}`);
+    if (!nEl || !pEl) continue;
+    const name = (nEl.value || '').trim();
+    const pct  = parseFloat((pEl.value || '0').trim()) || 0;
+    if (name && pct > 0) owners.push({ name, pct });
+  }
+  return { owners };
+}
+
+function setSCorpOwners(destIdx, owners) {
+  const filing = document.getElementById('filingStatus')?.value;
+  const numOwnersSel = document.getElementById(`numOwnersSelect${destIdx}`);
+  // Ensure allowed owner count for S-Corp:
+  // MFJ allows 1–3 in your UI; others 1–2
+  const count = Math.min(owners.length || 1, filing === 'Married Filing Jointly' ? 3 : 2);
+  if (numOwnersSel) {
+    numOwnersSel.value = String(count);
+    numOwnersSel.dispatchEvent(new Event('change'));
+  }
+  for (let i = 1; i <= count; i++) {
+    const o = owners[i - 1] || owners[0]; // duplicate first if fewer provided
+    const nEl = document.getElementById(`business${destIdx}OwnerName${i}`);
+    const pEl = document.getElementById(`business${destIdx}OwnerPercent${i}`);
+    if (nEl) { nEl.value = o.name; nEl.dispatchEvent(new Event('change')); }
+    if (pEl) { pEl.value = (o.pct ?? (100 / count)).toFixed(6); pEl.dispatchEvent(new Event('input')); }
+  }
+  // Recompute apportionment / disclaimers
+  updateOwnerApportionment(destIdx);
+  validateTotalOwnership(destIdx, count);
+}
+
+function createOwnerW2ForBusiness(ownerName, businessName) {
+  // ➊ Seed a preset so the block is born with the right answers
+  window._w2Preset = {
+    whose: ownerName,
+    isClientBusiness: 'Yes',
+    businessName: businessName
+  };
+
+  // ➋ Create the block
+  addW2Block();
+
+  // ➌ Fallback direct-set (safe even with the preset)
+  const w2Id = window.w2Counter;
+  const w2Name     = document.getElementById(`w2Name_${w2Id}`);
+  const w2Whose    = document.getElementById(`w2WhoseW2_${w2Id}`);
+  const w2IsBiz    = document.getElementById(`w2IsClientBusiness_${w2Id}`);
+  const w2BizGroup = document.getElementById(`w2BusinessName_${w2Id}`);
+
+  if (w2Name) { w2Name.value = businessName; w2Name.dispatchEvent(new Event('blur')); }
+  if (w2Whose) { w2Whose.value = ownerName; w2Whose.dispatchEvent(new Event('change')); }
+  if (w2IsBiz) { w2IsBiz.value = 'Yes'; w2IsBiz.dispatchEvent(new Event('change')); }
+  if (w2BizGroup) {
+    populateBusinessNameDropdown(w2BizGroup);
+    ensureBusinessSelected(w2BizGroup, businessName);
+  }
+
+  if (typeof window.updateW2Mapping === 'function') window.updateW2Mapping();
+  document.dispatchEvent(new CustomEvent('gw:w2ListChanged'));
+  recalculateTotals();
+
+    // 🔁 FINAL LOCK-IN: after any other listeners (like #numOfBusinesses “input”) run,
+  // re-assert the Business Name and mapping. This guarantees the selection sticks.
+  setTimeout(() => {
+    const sel = document.getElementById(`w2BusinessName_${w2Id}`);
+    if (sel) {
+      ensureBusinessSelected(sel, businessName);
+      if (typeof window.updateW2Mapping === 'function') {
+        window.updateW2Mapping(`w2Block_${w2Id}`);
+      }
+    }
+  }, 0);
+
+  return w2Id; // ← let callers know which W-2 we just created
+}
+
+function convertScheduleCToSCorp(srcIdx) {
+  const nameEl = document.getElementById(`businessName_${srcIdx}`);
+  const typeEl = document.getElementById(`business${srcIdx}Type`);
+  const baseName = nameEl?.value?.trim() || `Business ${srcIdx}`;
+
+  // Schedule-C owner → owners[]
+  const { owners } = getScheduleCOwner(srcIdx);
+
+  // Capture current Income/Expenses (so we can reformat/rewrite cleanly)
+  const srcIncome = unformatCurrency(document.getElementById(`business${srcIdx}Income`)?.value || '0');
+  const srcExp    = unformatCurrency(document.getElementById(`business${srcIdx}Expenses`)?.value || '0');
+
+  // Rename → “(S-Corp)” and flip type
+  const newName = /\(S-?Corp\)$/i.test(baseName) ? baseName : `${baseName} (S-Corp)`;
+  if (nameEl)  { nameEl.value = newName; nameEl.dispatchEvent(new Event('input')); }
+  if (typeEl)  { typeEl.value = 'S-Corp'; typeEl.dispatchEvent(new Event('change')); }
+
+  // Owners
+  setSCorpOwners(srcIdx, owners);
+
+  // Re-write Income/Expenses to trigger your formatters + net chain
+  const incEl = document.getElementById(`business${srcIdx}Income`);
+  const expEl = document.getElementById(`business${srcIdx}Expenses`);
+  if (incEl) { incEl.value = formatCurrency(String(srcIncome)); incEl.dispatchEvent(new Event('blur')); }
+  if (expEl) { expEl.value = formatCurrency(String(srcExp));    expEl.dispatchEvent(new Event('blur')); }
+
+  // Owner W-2s (pre-answered Yes + business name attached)
+  owners.forEach(o => createOwnerW2ForBusiness(o.name, newName));
+
+  // Recalc + refresh 2025 Restructure
+  updateBusinessNet(srcIdx);
+  recalculateTotals();
+  document.getElementById('numOfBusinesses')?.dispatchEvent(new Event('input')); // refresh lists/cards
+  document.dispatchEvent(new CustomEvent('gw:restructureUpdated'));
+
+  alert(`Converted "${baseName}" to S-Corp in place. Income/Expenses preserved; owner W-2s created and attached.`);
+}
+
+function convertCCorpToSCorp(srcIdx) {
+  const nameEl = document.getElementById(`businessName_${srcIdx}`);
+  const typeEl = document.getElementById(`business${srcIdx}Type`);
+  const baseName = nameEl?.value?.trim() || `Business ${srcIdx}`;
+
+  const { owners } = getCCorpOwners(srcIdx);
+  if (!owners.length) { alert('No owners found on the C-Corp. Please enter owners first, then convert.'); return; }
+
+  // Preserve numbers
+  const srcIncome = unformatCurrency(document.getElementById(`business${srcIdx}Income`)?.value || '0');
+  const srcExp    = unformatCurrency(document.getElementById(`business${srcIdx}Expenses`)?.value || '0');
+
+  // Flip to S-Corp and rename
+  const newName = /\(S-?Corp\)$/i.test(baseName) ? baseName : `${baseName} (S-Corp)`;
+  if (nameEl)  { nameEl.value = newName; nameEl.dispatchEvent(new Event('input')); }
+  if (typeEl)  { typeEl.value = 'S-Corp'; typeEl.dispatchEvent(new Event('change')); }
+
+  // Owners carry forward
+  setSCorpOwners(srcIdx, owners);
+
+  // Re-apply numbers to trigger your blur/format logic
+  const incEl = document.getElementById(`business${srcIdx}Income`);
+  const expEl = document.getElementById(`business${srcIdx}Expenses`);
+  if (incEl) { incEl.value = formatCurrency(String(srcIncome)); incEl.dispatchEvent(new Event('blur')); }
+  if (expEl) { expEl.value = formatCurrency(String(srcExp));    expEl.dispatchEvent(new Event('blur')); }
+
+  // Owner W-2s (pre-answered Yes + business name attached)
+  owners.forEach(o => createOwnerW2ForBusiness(o.name, newName));
+
+  updateBusinessNet(srcIdx);
+  recalculateTotals();
+  document.getElementById('numOfBusinesses')?.dispatchEvent(new Event('input'));
+  document.dispatchEvent(new CustomEvent('gw:restructureUpdated'));
+
+  alert(`Converted "${baseName}" (C-Corp) to S-Corp in place. Owners, amounts, and W-2s updated.`);
+}
+
 //---------------------------------------------------//
 // 11. REAL-TIME CALCULATIONS FOR INCOME/ADJUSTMENTS //
 //---------------------------------------------------//
@@ -5191,6 +5405,14 @@ function updateAllW2BusinessDropdowns() {
     });
 }
 
+function ensureBusinessSelected(dropdown, businessName) {
+  if (!dropdown) return;
+  populateBusinessNameDropdown(dropdown); // repaints options from current businesses
+  const match = Array.from(dropdown.options).find(o => o.value === businessName);
+  if (match) dropdown.value = businessName;
+  dropdown.dispatchEvent(new Event('change'));
+}
+
 function populateBusinessNameDropdown(dropdown) {
     // Remember the current selected value.
     const currentValue = dropdown.value;
@@ -5234,6 +5456,7 @@ function addW2Block() {
     }
 
     w2Counter++;
+    const id = w2Counter; 
     // Create container for one W-2 block
     const w2Block = document.createElement('div');
     w2Block.classList.add('w2-block');
@@ -5249,6 +5472,12 @@ function addW2Block() {
     const collapsibleContent = document.createElement('div');
     collapsibleContent.classList.add('collapsible-content', 'active');
     w2Block.appendChild(collapsibleContent);
+
+    // declare first so early change events never hit TDZ
+    let whoseW2Select = null;
+    let isClientBusinessSelect, businessNameSelect;
+    let wagesInput, ssWagesInput, medicareWagesInput;
+    let stateTaxSelect;
 
     // --- W-2 Name ---
     const nameGroup = document.createElement('div');
@@ -5283,9 +5512,6 @@ function addW2Block() {
     // Update header when name input loses focus
     nameInput.addEventListener('blur', updateHeader);
 
-    // Declare dropdown variable so it can be used in updateHeader
-    let whoseW2Select = null;
-
     // If filing status is "Married Filing Jointly", add the dropdown for "Whose W-2 is this?"
     if (document.getElementById('filingStatus').value === 'Married Filing Jointly') {
         const whoseW2Group = document.createElement('div');
@@ -5296,7 +5522,7 @@ function addW2Block() {
         whoseW2Label.textContent = 'Whose W-2 is this?:';
         whoseW2Group.appendChild(whoseW2Label);
 
-        const whoseW2Select = document.createElement('select');
+        whoseW2Select = document.createElement('select');
         whoseW2Select.id = 'w2WhoseW2_' + w2Counter;
         whoseW2Select.name = 'w2WhoseW2_' + w2Counter;
         whoseW2Select.required = true;
@@ -5332,7 +5558,7 @@ function addW2Block() {
         whoseW2Select.addEventListener('change', updateHeader);
         
         whoseW2Select.addEventListener('change', () => {
-        updateW2Mapping();
+        updateW2MappingLocal();
         recalculateTotals();
         });
     }
@@ -5345,7 +5571,7 @@ function addW2Block() {
     isClientBusinessLabel.textContent = 'Is This W-2 Compensation from Client\'s Business?';
     isClientBusinessGroup.appendChild(isClientBusinessLabel);
 
-    const isClientBusinessSelect = document.createElement('select');
+    isClientBusinessSelect = document.createElement('select');
     isClientBusinessSelect.id = 'w2IsClientBusiness_' + w2Counter;
     isClientBusinessSelect.name = 'w2IsClientBusiness_' + w2Counter;
     isClientBusinessSelect.required = true;
@@ -5371,7 +5597,7 @@ function addW2Block() {
 
         // Add this to the section where you handle the "Is This W-2 Compensation from Client's Business?" field
         isClientBusinessSelect.addEventListener('change', function () {
-            updateW2Mapping();  // Recalculate W-2 mapping, including unemployment tax, based on the selected value
+            updateW2MappingLocal();  // Recalculate W-2 mapping, including unemployment tax, based on the selected value
             recalculateTotals(); // Update totals after recalculation
         });
 
@@ -5384,13 +5610,15 @@ function addW2Block() {
     businessNameLabel.textContent = 'Please Select Business Name:';
     businessNameGroup.appendChild(businessNameLabel);
 
-    const businessNameSelect = document.createElement('select');
+    businessNameSelect = document.createElement('select');
     businessNameSelect.id = 'w2BusinessName_' + w2Counter;
     businessNameSelect.name = 'w2BusinessName_' + w2Counter;
     businessNameGroup.appendChild(businessNameSelect);
     collapsibleContent.appendChild(businessNameGroup);
 
     isClientBusinessSelect.addEventListener('change', function() {
+      updateW2MappingLocal(); 
+      recalculateTotals();
         if (this.value === 'Yes') {
             businessNameGroup.style.display = 'block';
             populateBusinessNameDropdown(businessNameSelect);
@@ -5398,6 +5626,35 @@ function addW2Block() {
             businessNameGroup.style.display = 'none';
         }
     });
+
+    // === Apply optional creation-time preset (if provided) ===
+    if (window._w2Preset && typeof window._w2Preset === 'object') {
+      const p = window._w2Preset;
+      // Pre-answer "Whose W-2?" (MFJ)
+      if (whoseW2Select && p.whose) {
+        whoseW2Select.value = p.whose;
+        whoseW2Select.dispatchEvent(new Event('change'));
+      }
+      // Pre-answer "Is this W-2 from client's business?" → Yes
+      if (p.isClientBusiness === 'Yes') {
+        isClientBusinessSelect.value = 'Yes';
+        isClientBusinessSelect.dispatchEvent(new Event('change')); // reveals business dropdown
+        // Attach business name
+        if (p.businessName) {
+          populateBusinessNameDropdown(businessNameSelect);
+          ensureBusinessSelected(businessNameSelect, p.businessName);
+          // Re-assert after other on-change work finishes
+          setTimeout(() => {
+            ensureBusinessSelected(businessNameSelect, p.businessName);
+            if (typeof window.updateW2Mapping === 'function') {
+              window.updateW2Mapping(w2Block.id);
+            }
+          }, 0);
+        }
+      }
+      // Clear preset after use
+      delete window._w2Preset;
+    }
 
     document.getElementById('numOfBusinesses').addEventListener('input', function() {
         updateAllW2BusinessDropdowns();
@@ -5410,7 +5667,8 @@ function addW2Block() {
     wagesLabel.setAttribute('for', 'w2Wages_' + w2Counter);
     wagesLabel.textContent = 'Wages, Salaries, Tips, and Other Compensation:';
     wagesGroup.appendChild(wagesLabel);
-    const wagesInput = document.createElement('input');
+
+    wagesInput = document.createElement('input');
     wagesInput.type = 'text';
     wagesInput.id = 'w2Wages_' + w2Counter;
     wagesInput.name = 'w2Wages_' + w2Counter;
@@ -5423,86 +5681,97 @@ function addW2Block() {
         let value = unformatCurrency(wagesInput.value || '0');
         if (value < 0) { value = 0; }
         wagesInput.value = formatCurrency(String(value));
-        updateW2Mapping();
+        updateW2MappingLocal();
     });
 
      // Also update mapping when the business name dropdown changes
-     businessNameSelect.addEventListener('change', updateW2Mapping);
-     isClientBusinessSelect.addEventListener('change', updateW2Mapping);
+     businessNameSelect.addEventListener('change', updateW2MappingLocal);
+     isClientBusinessSelect.addEventListener('change', updateW2MappingLocal);
 
      // This function checks that both a positive wage and a valid business selection exist
      // before storing the mapping.
-     function updateW2Mapping() {
 
-        const isClientBus = document.getElementById('w2IsClientBusiness_' + w2Counter).value;
-        const isBusinessRelated = (isClientBus === 'Yes');
-        
-        let wageVal = unformatCurrency(wagesInput.value || '0');
+      function updateW2MappingLocal(targetId) {
+        // If a target is provided by recalculateTotals(), only run for that block
+        if (targetId && targetId !== w2Block.id) return;
+
+        // Not ready yet? (during initial construction / preset dispatch)
+        if (!wagesInput || !isClientBusinessSelect || !ssWagesInput ||
+            !medicareWagesInput || !businessNameSelect || !stateTaxSelect) {
+          return;
+        }
+
+        // Use local element refs — never the global w2Counter
+        const isBusinessRelated = (isClientBusinessSelect.value === 'Yes');
+
+        let wageVal          = unformatCurrency(wagesInput.value || '0');
         let medicareWagesVal = unformatCurrency(medicareWagesInput.value || '0');
-        let finalWage = (medicareWagesVal > 0) ? medicareWagesVal : wageVal;
-        let ssWagesVal = unformatCurrency(ssWagesInput.value || '0');
-        let finalSSWage = (ssWagesVal > 0) ? ssWagesVal : wageVal;
+        let finalWage        = (medicareWagesVal > 0) ? medicareWagesVal : wageVal;
+
+        let ssWagesVal       = unformatCurrency(ssWagesInput.value || '0');
+        let finalSSWage      = (ssWagesVal > 0) ? ssWagesVal : wageVal;
 
         if (finalWage <= 0) {
-            delete w2WageMap[w2Block.id];
-            return;
+          delete w2WageMap[w2Block.id];
+          return;
         }
-        
-        // Build or update the mapping object
-        let mapping = {
-            wage: wageVal,
-            medicareWages: medicareWagesVal,
-            socialSecurityWages: finalSSWage,
-            isBusinessRelated: isBusinessRelated,
-            futaValue: 0,
-            unemploymentTax: 0
+      
+        const mapping = {
+          wage: wageVal,
+          medicareWages: medicareWagesVal,
+          socialSecurityWages: finalSSWage,
+          isBusinessRelated,
+          futaValue: 0,
+          unemploymentTax: 0
         };
-        if (isBusinessRelated) {
-            const stateTaxSelect = document.getElementById('w2StateUnemploymentTax_' + w2Counter);
-            // FUTA: calculate and assign
-            mapping.futaValue = calculateFUTA(finalWage, stateTaxSelect.value);
-        
-            // Unemployment 2022-2025: calculate and assign
-            const taxYear = document.getElementById('year').value;
-            const stateAbbrev = document.getElementById('state').value;
-            const stateTaxKey = getStateTaxKey(stateAbbrev);
-            mapping.unemploymentTax = calculateUnemploymentTax(taxYear, stateTaxKey, finalWage, "Yes");
-        }
-        // ── Determine whose W-2 this is (only if MFJ and a valid selection) ──
+      
+        // Whose W-2 (MFJ only)
         const client1 = document.getElementById('firstName').value.trim() || 'Client 1';
         const client2 = document.getElementById('spouseFirstName').value.trim() || 'Client 2';
         let who = client1;
-        if (document.getElementById('filingStatus').value === 'Married Filing Jointly') {
-          const sel = document.getElementById('w2WhoseW2_' + w2Counter).value.trim();
+        if (document.getElementById('filingStatus').value === 'Married Filing Jointly' && whoseW2Select) {
+          const sel = (whoseW2Select.value || '').trim();
           if (sel === client1 || sel === client2) who = sel;
         }
         mapping.client = who;
-
+      
         if (isBusinessRelated) {
-            let businessName = businessNameSelect.value.trim();
-            if (businessName === '' && businessNameSelect.options.length > 1) {
-                businessName = businessNameSelect.options[1].value;
-                businessNameSelect.value = businessName;
-            }
-            let numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
-            let businessIndex = null;
-            for (let i = 1; i <= numBusinesses; i++) {
-                let currentBizName = document.getElementById(`businessName_${i}`)?.value.trim() || `Business ${i}`;
-                if (currentBizName === businessName) {
-                    businessIndex = i;
-                    break;
-                }
-            }
-            mapping.businessIndex = businessIndex;
-        } else {
-            mapping.businessIndex = null;
-        }
+          mapping.futaValue = Number(calculateFUTA(finalWage, stateTaxSelect.value)) || 0;
 
+          const taxYear = document.getElementById('year').value;
+          const stateAbbrev = document.getElementById('state').value;
+          const stateTaxKey = getStateTaxKey(stateAbbrev);
+          mapping.unemploymentTax = Number(
+            calculateUnemploymentTax(taxYear, stateTaxKey, finalWage, 'Yes')
+          ) || 0;
+        
+          // Resolve selected business → index
+          let businessName = (businessNameSelect.value || '').trim();
+          if (!businessName && businessNameSelect.options.length > 1) {
+            businessName = businessNameSelect.options[1].value;
+            businessNameSelect.value = businessName;
+          }
+          const numBusinesses = parseInt(document.getElementById('numOfBusinesses').value, 10) || 0;
+          let businessIndex = null;
+          for (let i = 1; i <= numBusinesses; i++) {
+            const currentBizName = document.getElementById(`businessName_${i}`)?.value.trim() || `Business ${i}`;
+            if (currentBizName === businessName) { businessIndex = i; break; }
+          }
+          mapping.businessIndex = businessIndex;
+        } else {
+          mapping.businessIndex = null;
+        }
+      
         w2WageMap[w2Block.id] = mapping;
         recalculateTotals();
-    }
+      }
 
-    window.updateW2Mapping = updateW2Mapping;
+      // Expose a GLOBAL wrapper that works with both patterns:
+      //  • updateW2Mapping()             → updates this block
+      //  • updateW2Mapping('w2Block_3')  → updates only block #3
+      window.updateW2Mapping = function (maybeBlockId) {
+        updateW2MappingLocal(maybeBlockId);
+      };
 
     // --- Federal Income Tax Withheld ---
     const federalTaxGroup = document.createElement('div');
@@ -5527,7 +5796,7 @@ function addW2Block() {
     ssWagesLabel.textContent = 'Social Security Wages:';
     ssWagesGroup.appendChild(ssWagesLabel);
 
-    const ssWagesInput = document.createElement('input');
+    ssWagesInput = document.createElement('input');
     ssWagesInput.type = 'text';
     ssWagesInput.id = 'w2SSWages_' + w2Counter;
     ssWagesInput.name = 'w2SSWages_' + w2Counter;
@@ -5539,7 +5808,7 @@ function addW2Block() {
     ssWagesInput.addEventListener('blur', function () {
     let ssVal = unformatCurrency(ssWagesInput.value || '0');
     ssWagesInput.value = (ssVal > 0) ? formatCurrency(String(ssVal)) : '';
-    updateW2Mapping();
+    updateW2MappingLocal();
     recalculateTotals();
     });
 
@@ -5550,6 +5819,7 @@ function addW2Block() {
     SSTaxLabel.setAttribute('for', 'w2SocialSecurityTaxWithheld_' + w2Counter);
     SSTaxLabel.textContent = 'Social Security Tax Withheld:';
     SSTaxGroup.appendChild(SSTaxLabel);
+
     const SSTaxInput = document.createElement('input');
     SSTaxInput.type = 'text';
     SSTaxInput.id = 'w2SocialSecurityTaxWithheld_' + w2Counter;
@@ -5565,7 +5835,8 @@ function addW2Block() {
     medicareWagesLabel.setAttribute('for', 'w2MedicareWages_' + w2Counter);
     medicareWagesLabel.textContent = 'Medicare Wages and Tips:';
     medicareWagesGroup.appendChild(medicareWagesLabel);
-    const medicareWagesInput = document.createElement('input');
+
+    medicareWagesInput = document.createElement('input');
     medicareWagesInput.type = 'text';
     medicareWagesInput.id = 'w2MedicareWages_' + w2Counter;
     medicareWagesInput.name = 'w2MedicareWages_' + w2Counter;
@@ -5577,7 +5848,7 @@ function addW2Block() {
     medicareWagesInput.addEventListener('blur', function () {
         let medicareVal = unformatCurrency(medicareWagesInput.value || '0');
         medicareWagesInput.value = (medicareVal > 0) ? formatCurrency(String(medicareVal)) : ''; 
-        updateW2Mapping();
+        updateW2MappingLocal();
         recalculateTotals();
     });
 
@@ -5585,7 +5856,7 @@ function addW2Block() {
     wagesInput.addEventListener('blur', function () {
         let wageVal = unformatCurrency(wagesInput.value || '0');
         wagesInput.value = (wageVal > 0) ? formatCurrency(String(wageVal)) : ''; 
-        updateW2Mapping();
+        updateW2MappingLocal();
     });
 
     // --- Medicare Tax Withheld ---
@@ -5611,7 +5882,7 @@ function addW2Block() {
     stateTaxLabel.textContent = 'Has the Employer paid State Unemployment Tax?';
     stateTaxGroup.appendChild(stateTaxLabel);
 
-    const stateTaxSelect = document.createElement('select');
+    stateTaxSelect = document.createElement('select');
     stateTaxSelect.id = 'w2StateUnemploymentTax_' + w2Counter;
     stateTaxSelect.name = 'w2StateUnemploymentTax_' + w2Counter;
     stateTaxSelect.required = true;
@@ -5633,7 +5904,7 @@ function addW2Block() {
 
        // Add an event listener for the dropdown to change the FUTA rate
        stateTaxSelect.addEventListener('change', function() {
-        updateW2Mapping();  // Recalculate W-2 mapping, including unemployment tax
+        updateW2MappingLocal(); // Recalculate W-2 mapping, including unemployment tax
         recalculateTotals(); // Update totals after recalculation
     });
 
@@ -5800,6 +6071,8 @@ function addW2Block() {
         }
         // Remove the W-2 block from the DOM
         w2Block.remove();
+
+        document.dispatchEvent(new CustomEvent('gw:w2ListChanged')); 
         // Recalculate totals so that the removal is reflected (including Reasonable Compensation)
         recalculateTotals();
     });
@@ -5807,6 +6080,7 @@ function addW2Block() {
     collapsibleContent.appendChild(removeBtn);
 
     document.getElementById('w2sContainer').appendChild(w2Block);
+    document.dispatchEvent(new CustomEvent('gw:w2ListChanged'));
 
     w2Block.querySelectorAll('.currency-field').forEach((field) => {
           field.addEventListener('blur', function() {
@@ -6510,8 +6784,8 @@ function updateStaticUnemploymentFields() {
       if (w2WageMap.hasOwnProperty(key)) {
         let mapping = w2WageMap[key];
         if (mapping.isBusinessRelated) {
-          totalFUTA += mapping.futaValue || 0;
-          totalUnemployment += mapping.unemploymentTax ?? 0;
+          totalFUTA += Number(mapping.futaValue) || 0;
+          totalUnemployment += Number(mapping.unemploymentTax) || 0;
         }
       }
     }
@@ -7861,6 +8135,53 @@ function readLeadNumbers() {
   `;
   // insert the add-bar just above the entities list
   gwRoot.insertBefore(addBar, entList);
+
+  // === Entity Conversions (Schedule C → S-Corp, C-Corp → S-Corp) ===
+  const convBar = document.createElement('div');
+  convBar.className = 'gw-controls';
+  convBar.style.marginTop = '10px';
+  convBar.innerHTML = `
+    <strong style="margin-right:8px;">Entity Conversions</strong>
+    <select id="gw-convert-kind" title="Choose a conversion">
+      <option value="">Please Select</option>
+      <option value="SC_to_SCorp">Schedule C → S-Corp</option>
+      <option value="CC_to_SCorp">C-Corp → S-Corp</option>
+    </select>
+    <select id="gw-convert-source" title="Pick the source business">
+      <option value="">Select Source Business</option>
+    </select>
+    <button id="gw-convert-do" type="button">Convert</button>
+  `;
+  gwRoot.insertBefore(convBar, entList);
+
+  function refreshConvertSourceList() {
+    const kind = convBar.querySelector('#gw-convert-kind').value;
+    const pick = convBar.querySelector('#gw-convert-source');
+    pick.innerHTML = `<option value="">Select Source Business</option>`;
+
+    const n = parseInt(document.getElementById('numOfBusinesses')?.value || '0', 10) || 0;
+    for (let i = 1; i <= n; i++) {
+      const t = document.getElementById(`business${i}Type`)?.value || 'Please Select';
+      const ok = (kind === 'SC_to_SCorp' && t === 'Schedule-C') || (kind === 'CC_to_SCorp' && t === 'C-Corp');
+      if (!ok) continue;
+      const name = document.getElementById(`businessName_${i}`)?.value?.trim() || `Business ${i}`;
+      const opt = document.createElement('option');
+      opt.value = String(i);
+      opt.textContent = `${name} (${t})`;
+      pick.appendChild(opt);
+    }
+  }
+  convBar.querySelector('#gw-convert-kind').addEventListener('change', refreshConvertSourceList);
+  document.getElementById('numOfBusinesses').addEventListener('input', refreshConvertSourceList);
+
+  convBar.querySelector('#gw-convert-do').addEventListener('click', () => {
+    const kind = convBar.querySelector('#gw-convert-kind').value;
+    const src  = parseInt(convBar.querySelector('#gw-convert-source').value, 10);
+    if (!kind || !src) { alert('Select a conversion type and a source business.'); return; }
+    if (kind === 'SC_to_SCorp') convertScheduleCToSCorp(src);
+    if (kind === 'CC_to_SCorp') convertCCorpToSCorp(src);
+  });
+
 
   // ▼ NEW: handler to create a new custom entity
   addBar.querySelector('#gw-add-entity').addEventListener('click', () => {
