@@ -8179,31 +8179,148 @@ function readLeadNumbers() {
     if (kind === 'CC_to_SCorp') convertCCorpToSCorp(src);
   });
 
+  // Returns {client, spouse, filing} names for convenience
+  function _gwNames() {
+    const filing = document.getElementById('filingStatus')?.value || 'Single';
+    const client = document.getElementById('firstName')?.value?.trim() || 'Client 1';
+    const spouse = document.getElementById('spouseFirstName')?.value?.trim() || 'Client 2';
+    return { client, spouse, filing };
+  }
+
+  // Create a new Business block at the end and set its type; returns numeric index
+  // Returns a Promise that resolves with the new idx AFTER name/type are applied.
+  function _gwAddBusinessOfTypeAsync(type, displayName) {
+    const nEl = document.getElementById('numOfBusinesses');
+    let n = parseInt(nEl.value || '0', 10) || 0;
+    nEl.value = ++n;
+    nEl.dispatchEvent(new Event('input')); // mounts the new block
+    const idx = n;
+
+    return new Promise(resolve => {
+      const applyWhenReady = () => {
+        const nameEl = document.getElementById(`businessName_${idx}`);
+        const typeEl = document.getElementById(`business${idx}Type`);
+        if (!nameEl || !typeEl) return requestAnimationFrame(applyWhenReady);
+
+        if (displayName) {
+          nameEl.value = displayName;
+          nameEl.dispatchEvent(new Event('input'));
+        }
+        typeEl.value = type;
+        typeEl.dispatchEvent(new Event('change'));
+        resolve(idx);
+      };
+      requestAnimationFrame(applyWhenReady);
+    });
+  }
+
+  const REAL_ENTITY_CHOICES = new Set([
+  'FMC (S-Corp)',
+  'FMC (Spousal Partnership)',
+  'FMC (C-Corp)',
+  'Holding Company (Schedule-C)'
+  ]);
 
   // ▼ NEW: handler to create a new custom entity
-  addBar.querySelector('#gw-add-entity').addEventListener('click', () => {
-    const type = addBar.querySelector('#gw-entity-type').value;
-    const name = (addBar.querySelector('#gw-entity-name').value || '').trim();
-    const id   = `custom-${customEntityCounter++}`;
-
-    // Title shown on the card
-    const title = name ? `${name} (${type})` : `${type} #${customEntityCounter - 1}`;
-
-  customEntities.push({
-      id,
-      kind: 'custom',
-      index: id,
-      title,
-      sub: ''
-    });
-
-    if (!stateById[id]) {
-      stateById[id] = { rate: 0, rows: JSON.parse(JSON.stringify(DEFAULT_ROWS)) };
+  addBar.querySelector('#gw-add-entity').addEventListener('click', async () => {
+    const typeSel = addBar.querySelector('#gw-entity-type');
+    const nameInp = addBar.querySelector('#gw-entity-name');
+    const choice  = (typeSel.value || '').trim();
+    const customName = (nameInp.value || '').trim();
+    const { client, spouse, filing } = _gwNames();
+  
+    // Only add a "custom card" for non-real choices (as you already gated earlier)
+    if (!REAL_ENTITY_CHOICES.has(choice)) {
+      const id = `custom-${customEntityCounter++}`;
+      const title = customName ? `${customName} (${choice})` : `${choice} #${customEntityCounter - 1}`;
+      customEntities.push({ id, kind: 'custom', index: id, title, sub: '' });
+      if (!stateById[id]) stateById[id] = { rate: 0, rows: JSON.parse(JSON.stringify(DEFAULT_ROWS)) };
+      renderEntities();
     }
-
-    // Clear the name box for the next one and refresh
-    addBar.querySelector('#gw-entity-name').value = '';
-    renderEntities();
+    nameInp.value = '';
+  
+    // Helper to re-render after async field application & any owner edits
+    const refreshRestructureUI = (idx) => {
+      updateOwnerApportionment?.(idx);
+      validateTotalOwnership?.(idx, parseInt(document.getElementById(`numOwnersSelect${idx}`)?.value || '0', 10) || 0);
+      updateBusinessNet?.(idx);
+      renderEntities?.();           // <-- this is the piece you were missing
+      recalculateTotals?.();
+      document.dispatchEvent(new CustomEvent('gw:restructureUpdated'));
+    };
+  
+    // FMC (S-Corp)
+    if (choice === 'FMC (S-Corp)') {
+      const idx = await _gwAddBusinessOfTypeAsync('S-Corp', customName || 'FMC S-Corp');
+      const owners = (filing === 'Married Filing Jointly')
+        ? [{ name: client, pct: 50 }, { name: spouse, pct: 50 }]
+        : [{ name: client, pct: 100 }];
+      setSCorpOwners?.(idx, owners);
+      owners.forEach(o => createOwnerW2ForBusiness?.(o.name, document.getElementById(`businessName_${idx}`)?.value));
+      updateAllBusinessOwnerResCom?.();
+      refreshRestructureUI(idx);
+      return;
+    }
+  
+    // FMC (Spousal Partnership)
+    if (choice === 'FMC (Spousal Partnership)') {
+      const idx = await _gwAddBusinessOfTypeAsync('Partnership', customName || 'FMC Spousal Partnership');
+      const ownersSel = document.getElementById(`numOwnersSelect${idx}`);
+      if (ownersSel) { ownersSel.value = '2'; ownersSel.dispatchEvent(new Event('change')); }
+      const name1 = document.getElementById(`business${idx}OwnerName1`);
+      const name2 = document.getElementById(`business${idx}OwnerName2`);
+      const pct1  = document.getElementById(`business${idx}OwnerPercent1`);
+      const pct2  = document.getElementById(`business${idx}OwnerPercent2`);
+      if (name1) { name1.value = client; name1.dispatchEvent(new Event('change')); }
+      if (name2) { name2.value = spouse; name2.dispatchEvent(new Event('change')); }
+      if (pct1)  { pct1.value = '50.000000'; pct1.dispatchEvent(new Event('input')); }
+      if (pct2)  { pct2.value = '50.000000'; pct2.dispatchEvent(new Event('input')); }
+      refreshRestructureUI(idx);
+      return;
+    }
+  
+    // FMC (C-Corp)
+    if (choice === 'FMC (C-Corp)') {
+      const idx = await _gwAddBusinessOfTypeAsync('C-Corp', customName || 'FMC C-Corp');
+      const ownersSel = document.getElementById(`numOwnersSelect${idx}`);
+      if (filing === 'Married Filing Jointly') {
+        if (ownersSel) { ownersSel.value = '2'; ownersSel.dispatchEvent(new Event('change')); }
+        const n1 = document.getElementById(`business${idx}OwnerName1`);
+        const n2 = document.getElementById(`business${idx}OwnerName2`);
+        const p1 = document.getElementById(`business${idx}OwnerPercent1`);
+        const p2 = document.getElementById(`business${idx}OwnerPercent2`);
+        if (n1) { n1.value = client; n1.dispatchEvent(new Event('change')); }
+        if (n2) { n2.value = spouse; n2.dispatchEvent(new Event('change')); }
+        if (p1) { p1.value = '50.000000'; p1.dispatchEvent(new Event('input')); }
+        if (p2) { p2.value = '50.000000'; p2.dispatchEvent(new Event('input')); }
+      } else {
+        if (ownersSel) { ownersSel.value = '1'; ownersSel.dispatchEvent(new Event('change')); }
+        const n1 = document.getElementById(`business${idx}OwnerName1`);
+        const p1 = document.getElementById(`business${idx}OwnerPercent1`);
+        if (n1) { n1.value = client; n1.dispatchEvent(new Event('change')); }
+        if (p1) { p1.value = '100.000000'; p1.dispatchEvent(new Event('input')); }
+      }
+      showCcorpTaxDue?.(idx); // 21% client's portion
+      refreshRestructureUI(idx);
+      return;
+    }
+  
+    // Holding Company (Schedule-C)
+    if (choice === 'Holding Company (Schedule-C)') {
+      const idx = await _gwAddBusinessOfTypeAsync('Schedule-C', customName || 'Holding Company (Schedule-C)');
+      if (filing === 'Married Filing Jointly') {
+        // Ensure prompt mounts after type is applied
+        requestAnimationFrame(() => {
+          addScheduleCQuestion?.(idx);
+          const sel = document.getElementById(`scheduleCOwner${idx}`);
+          if (sel) { sel.value = client; sel.dispatchEvent(new Event('change')); }
+          refreshRestructureUI(idx);
+        });
+      } else {
+        refreshRestructureUI(idx);
+      }
+      return;
+    }
   });
 
   // ➕ Top-level Add Strategy (standalone, no entity required)
