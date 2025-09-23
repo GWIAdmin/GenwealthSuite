@@ -745,6 +745,25 @@ body.dark-mode .gw-name {
   margin-bottom: 16px;
   padding: 10px; /* head/body manage inner padding */
 }
+/* 2025 Restructure: group subheaders inside the entity list */
+.gw-entity-subheader {
+  margin: 12px 0 8px;
+  padding: 8px 12px;
+  font-weight: 800;
+  font-size: 0.95rem;
+  letter-spacing: .3px;
+  /* Center it */
+  text-align: center;
+  color: var(--text-light);
+  background: #cab9ff;
+  border: 4px solid #552583;
+  border-radius: 12px;
+}
+body.dark-mode .gw-entity-subheader {
+  color: var(--h3-dark);
+  background: #38135f;
+  border-color: var(--border-dark);
+}
 
 /* Collapse body to zero padding when closed; smaller when open */
 .gw-entity-body.collapsible-content {

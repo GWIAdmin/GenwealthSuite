@@ -8138,7 +8138,7 @@ function readLeadNumbers() {
   convBar.className = 'gw-controls';
   convBar.style.marginTop = '10px';
   convBar.innerHTML = `
-    <strong style="margin-right:8px;">Entity Conversions</strong>
+    <label style="margin-right:8px;">Entity Conversions</label>
     <select id="gw-convert-kind" title="Choose a conversion">
       <option value="">Please Select</option>
       <option value="SC_to_SCorp">Schedule C → S-Corp</option>
@@ -8228,7 +8228,7 @@ function readLeadNumbers() {
     const choice  = (typeSel.value || '').trim();
     const customName = (nameInp.value || '').trim();
     const { client, spouse, filing } = _gwNames();
-  
+
     // Only add a "custom card" for non-real choices (as you already gated earlier)
     if (!REAL_ENTITY_CHOICES.has(choice)) {
       const id = `custom-${customEntityCounter++}`;
@@ -8238,7 +8238,7 @@ function readLeadNumbers() {
       renderEntities();
     }
     nameInp.value = '';
-  
+
     // Helper to re-render after async field application & any owner edits
     const refreshRestructureUI = (idx) => {
       updateOwnerApportionment?.(idx);
@@ -8248,7 +8248,7 @@ function readLeadNumbers() {
       recalculateTotals?.();
       document.dispatchEvent(new CustomEvent('gw:restructureUpdated'));
     };
-  
+
     // FMC (S-Corp)
     if (choice === 'FMC (S-Corp)') {
       const idx = await _gwAddBusinessOfTypeAsync('S-Corp', customName || 'FMC S-Corp');
@@ -8261,7 +8261,7 @@ function readLeadNumbers() {
       refreshRestructureUI(idx);
       return;
     }
-  
+
     // FMC (Spousal Partnership)
     if (choice === 'FMC (Spousal Partnership)') {
       const idx = await _gwAddBusinessOfTypeAsync('Partnership', customName || 'FMC Spousal Partnership');
@@ -8278,7 +8278,7 @@ function readLeadNumbers() {
       refreshRestructureUI(idx);
       return;
     }
-  
+
     // FMC (C-Corp)
     if (choice === 'FMC (C-Corp)') {
       const idx = await _gwAddBusinessOfTypeAsync('C-Corp', customName || 'FMC C-Corp');
@@ -8304,7 +8304,7 @@ function readLeadNumbers() {
       refreshRestructureUI(idx);
       return;
     }
-  
+
     // Holding Company (Schedule-C)
     if (choice === 'Holding Company (Schedule-C)') {
       const idx = await _gwAddBusinessOfTypeAsync('Schedule-C', customName || 'Holding Company (Schedule-C)');
@@ -8466,6 +8466,14 @@ function readLeadNumbers() {
   // ----------- Card factory per entity -----------
   function mountEntityPanel(entity) {
     const st = ensureState(entity.id);
+
+    if (entity.kind === 'header') {
+      const h = document.createElement('div');
+      h.className = 'gw-entity-subheader';
+      h.textContent = entity.title;
+      entList.appendChild(h);
+      return; // ← nothing else to mount
+    }
 
     const wrap = document.createElement('section');
     wrap.className = 'gw-entity';
@@ -8766,8 +8774,21 @@ function readLeadNumbers() {
   // ----------- Render all entities -----------
   function renderEntities() {
     entList.innerHTML = '';
+
+    // Build raw lists
+    const w2s       = listW2Entities();          // W-2 cards
+    const bizAll    = listBusinessEntities();    // All Business cards
+    const customs   = [...customEntities];       // Your custom/standalone cards
+
+    // Heuristic to detect FMC/Holding Company business blocks:
+    // (we named them “FMC …” or “Holding Company (Schedule-C)” when created)
+    const isFmcLike = (title) => /^\s*FMC\b/i.test(title) || /Holding Company/i.test(title);
+
+    const fmcBiz    = bizAll.filter(b => isFmcLike(b.title));
+    const regBiz    = bizAll.filter(b => !isFmcLike(b.title));
+
+    // Keep Standalone (if present) first, as before
     const entities = [];
-    // ➕ Put Standalone Strategies first if present/enabled
     if (standaloneEnabled || (stateById['standalone'] && stateById['standalone'].rows.length)) {
       entities.push({
         id: 'standalone',
@@ -8777,18 +8798,35 @@ function readLeadNumbers() {
         sub: 'Not linked to any entity'
       });
     }
-    entities.push(...customEntities, ...listW2Entities(), ...listBusinessEntities());
-    // Keep existing state objects if ids are reused; ensure a state exists for each entity
+
+    // Append any “custom” cards (charitable, CRT, etc.) — unchanged
+    entities.push(...customs);
+
+    // Grouped order with headers:
+    if (w2s.length) {
+      entities.push({ id: 'hdr-w2', kind: 'header', title: 'W-2s' }); // center it
+      entities.push(...w2s);
+    }
+    if (fmcBiz.length) {
+      entities.push({ id: 'hdr-fmc', kind: 'header', title: 'FMCs & Holding Company' });
+      entities.push(...fmcBiz);
+    }
+    if (regBiz.length) {
+      entities.push({ id: 'hdr-biz', kind: 'header', title: 'Other Businesses' });
+      entities.push(...regBiz);
+    }
+
+    // Make sure each entity has state
     entities.forEach(e => {
-      if (e.id === 'standalone') {
-        ensureStandaloneState();   // keep blank rows for standalone
-      } else {
-        ensureState(e.id);
-      }
+      if (e.kind === 'header') return;
+      if (e.id === 'standalone') { ensureStandaloneState(); }
+      else { ensureState(e.id); }
     });
-    // Mount panels
-    entities.forEach(e => { mountEntityPanel(e); });
-    // Global bottom pills after fresh render
+
+    // Mount in order
+    entities.forEach(e => mountEntityPanel(e));
+
+    // Recalc global pills
     recomputeGlobalTotals();
   }
 
