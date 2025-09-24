@@ -8974,55 +8974,52 @@ function readLeadNumbers() {
 
   // === Global auto-rate refresh: when TI, FS, or Year changes, update all Auto-checked entities ===
   (function wireGlobalAutoRateRefresh() {
-    (function wireGlobalAutoRateRefresh() {
-      const drivers = [
-        { id: 'taxableIncome', evt: 'input' },
-        { id: 'filingStatus',  evt: 'change' },
-        { id: 'year',          evt: 'change' },
-      ];
-    
-      // Re-entrancy guard to prevent nested refresh loops
-      let _autoRefreshInProgress = false;
-    
-      function refreshAllAutoEntities() {
-          if (_autoRefreshInProgress) return;
-          _autoRefreshInProgress = true;
-          try {
-            const r = getCurrentAutoRatePercent();
-            // For every mounted entity card, if Auto is checked, apply the new rate
-            document.querySelectorAll('.gw-entity').forEach(sec => {
-              const entityId = sec.dataset.entityId;
-              if (!entityId) return;
-              const auto = sec.querySelector(`#gw-tax-auto-${entityId}`);
-              const rateEl = sec.querySelector(`#gw-tax-rate-${entityId}`);
-              const chipEl = sec.querySelector(`#gw-tax-auto-chip-${entityId}`);
-              if (!auto || !rateEl) return;
-              if (auto.checked) {
-                rateEl.value = Number(r).toFixed(2);
-                if (stateById[entityId]) stateById[entityId].rate = Number(r);
-                if (chipEl) {
-                  chipEl.textContent = `Auto ${Number(r).toFixed(2)}% (from taxable income)`;
-                  chipEl.classList.add('is-visible');
-                }
-                rateEl.dispatchEvent(new Event('input', { bubbles: true }));
+    const drivers = [
+      { id: 'taxableIncome', evt: 'input' },
+      { id: 'filingStatus',  evt: 'change' },
+      { id: 'year',          evt: 'change' },
+    ];
+  
+    // Re-entrancy guard to prevent nested refresh loops
+    let _autoRefreshInProgress = false;
+  
+    function refreshAllAutoEntities() {
+        if (_autoRefreshInProgress) return;
+        _autoRefreshInProgress = true;
+        try {
+          const r = getCurrentAutoRatePercent();
+          // For every mounted entity card, if Auto is checked, apply the new rate
+          document.querySelectorAll('.gw-entity').forEach(sec => {
+            const entityId = sec.dataset.entityId;
+            if (!entityId) return;
+            const auto = sec.querySelector(`#gw-tax-auto-${entityId}`);
+            const rateEl = sec.querySelector(`#gw-tax-rate-${entityId}`);
+            const chipEl = sec.querySelector(`#gw-tax-auto-chip-${entityId}`);
+            if (!auto || !rateEl) return;
+            if (auto.checked) {
+              rateEl.value = Number(r).toFixed(2);
+              if (stateById[entityId]) stateById[entityId].rate = Number(r);
+              if (chipEl) {
+                chipEl.textContent = `Auto ${Number(r).toFixed(2)}% (from taxable income)`;
+                chipEl.classList.add('is-visible');
               }
-            });
-          } finally {
-            _autoRefreshInProgress = false;
-          }
+              rateEl.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+          });
+        } finally {
+          _autoRefreshInProgress = false;
         }
+      }
+    
+      drivers.forEach(({ id, evt }) => {
+        const el = document.getElementById(id);
+        if (el && !el.dataset.gwAutoBound) {
+          el.addEventListener(evt, refreshAllAutoEntities);
+          el.dataset.gwAutoBound = '1';
+        }
+      });
       
-        drivers.forEach(({ id, evt }) => {
-          const el = document.getElementById(id);
-          if (el && !el.dataset.gwAutoBound) {
-            el.addEventListener(evt, refreshAllAutoEntities);
-            el.dataset.gwAutoBound = '1';
-          }
-        });
-      
-      })();
-
-})();
+  })();
 
 // —— Overlay helpers (non-destructive) ——
 function resxBase(el) {
