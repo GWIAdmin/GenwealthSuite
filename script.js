@@ -305,6 +305,47 @@ function initCollapsibles() {
   });
 }
 
+// Smooth open/close with post-transition auto-height.
+// Safe for dynamic blocks (W-2, Schedule-E, Business cards, etc.)
+function openCollapsibleAuto(contentEl) {
+  if (!contentEl) return;
+  contentEl.classList.add('active');
+  // Start at current content height, then let it breathe.
+  contentEl.style.maxHeight = contentEl.scrollHeight + 'px';
+  const toAuto = (e) => {
+    if (e.propertyName === 'max-height' && contentEl.classList.contains('active')) {
+      contentEl.style.maxHeight = 'none'; // true auto-height going forward
+      contentEl.removeEventListener('transitionend', toAuto);
+    }
+  };
+  contentEl.addEventListener('transitionend', toAuto);
+}
+
+function closeCollapsibleAuto(contentEl) {
+  if (!contentEl) return;
+  // From auto -> compute pixel height -> then animate down to 0
+  if (getComputedStyle(contentEl).maxHeight === 'none') {
+    contentEl.style.maxHeight = contentEl.scrollHeight + 'px';
+    // force reflow so next line transitions
+    void contentEl.offsetHeight;
+  }
+  contentEl.classList.remove('active');
+  contentEl.style.maxHeight = '0px';
+}
+
+// Optional: if inner content changes while open, keep the container tall enough.
+// Attach once per block when you build it.
+function attachAutoGrow(contentEl) {
+  if (!contentEl) return;
+  // Update height while animating (only if we’re still using pixel heights)
+  const ro = new ResizeObserver(() => {
+    if (!contentEl.classList.contains('active')) return;
+    if (getComputedStyle(contentEl).maxHeight !== 'none') {
+      contentEl.style.maxHeight = contentEl.scrollHeight + 'px';
+    }
+  });
+  ro.observe(contentEl);
+}
 
 function initUI() {
   // Back‑to‑top button
@@ -2201,6 +2242,7 @@ document.getElementById('spouseLastName').addEventListener('blur', function() {
 
 let businessNameStore = {};
 let businessDetailStore = {};
+let scheduleENameStore = {};
 
 document.getElementById('numOfBusinesses').addEventListener('input', function() {
     // 1. Save existing data
@@ -2669,9 +2711,17 @@ function createBusinessFields(container, uniqueId) {
 
 
     // Toggle the business details when the header is clicked.
-    header.addEventListener('click', function() {
-        collapsibleContent.classList.toggle('active');
+    header.addEventListener('click', () => {
+      if (collapsibleContent.classList.contains('active')) {
+        closeCollapsibleAuto(collapsibleContent);
+      } else {
+        openCollapsibleAuto(collapsibleContent);
+      }
     });
+    attachAutoGrow(collapsibleContent);
+    // Optionally start open with real auto-height
+    openCollapsibleAuto(collapsibleContent);
+
 
     // Add a "Remove this business?" button at the bottom
     const removeBtn = document.createElement('button');
@@ -4157,45 +4207,101 @@ function updateAllBusinessOwnerResCom() {
 //---------------------------------------------------//
 
 document.getElementById('numScheduleEs').addEventListener('input', function() {
+    // 1) Save existing names before rebuild
+    document.querySelectorAll(".schedule-e-entry input[id^='scheduleE'][id$='Name']").forEach(inp => {
+        if (inp.id) scheduleENameStore[inp.id] = inp.value;
+    });
+
     const eCount = parseInt(this.value, 10);
     const container = document.getElementById('scheduleEsContainer');
     container.innerHTML = '';
+
+    // 2) Rebuild
     if (!isNaN(eCount) && eCount > 0) {
         for (let i = 1; i <= eCount; i++) {
             createScheduleEFields(container, i);
         }
     }
+
+    // 3) Repopulate names
+    Object.keys(scheduleENameStore).forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.value = scheduleENameStore[id];
+            el.dispatchEvent(new Event('input')); // refresh heading text
+        }
+    });
 });
 
 function createScheduleEFields(container, index) {
-    const scheduleEDiv = document.createElement('div');
-    scheduleEDiv.classList.add('schedule-e-entry');
+  const scheduleEDiv = document.createElement('div');
+  scheduleEDiv.classList.add('schedule-e-entry');
 
-    const heading = document.createElement('h3');
-    heading.textContent = `Schedule-E ${index}`;
-    scheduleEDiv.appendChild(heading);
+  // Header (click to expand/collapse)
+  const heading = document.createElement('h3');
+  heading.textContent = `Schedule-E ${index}`;
+  heading.style.cursor = 'pointer';
+  scheduleEDiv.appendChild(heading);
 
-    createLabelAndCurrencyField(scheduleEDiv, `scheduleE${index}Income`, `Schedule E-${index} Income:`);
-    createLabelAndCurrencyField(scheduleEDiv, `scheduleE${index}Expenses`, `Schedule E-${index} Expenses:`);
-    createLabelAndTextField(scheduleEDiv, `scheduleE${index}Net`, `Schedule E-${index} Net (Income - Expenses):`);
+  // Collapsible body wrapper (start open; remove "active" to start closed)
+  const body = document.createElement('div');
+  body.classList.add('collapsible-content', 'active');
+  scheduleEDiv.appendChild(body);
 
-    container.appendChild(scheduleEDiv);
+  // --- Name field (inside the collapsible body, above Income/Expenses)
+  const nameLabel = document.createElement('label');
+  nameLabel.setAttribute('for', `scheduleE${index}Name`);
+  nameLabel.textContent = `Schedule E-${index} Name:`;
+  body.appendChild(nameLabel);
 
-    const netField = document.getElementById(`scheduleE${index}Net`);
-    netField.readOnly = true;
+  const nameInput = document.createElement('input');
+  nameInput.type = 'text';
+  nameInput.id = `scheduleE${index}Name`;
+  nameInput.name = `scheduleE${index}Name`;
+  nameInput.placeholder = 'e.g., 3711 Long Beach Blvd';
+  body.appendChild(nameInput);
 
-    const incomeField = document.getElementById(`scheduleE${index}Income`);
-    const expensesField = document.getElementById(`scheduleE${index}Expenses`);
+  // Keep header live-updated as user types; persist for rebuilds
+  nameInput.addEventListener('input', () => {
+    const nm = nameInput.value.trim();
+    heading.textContent = nm ? `Schedule-E — ${nm}` : `Schedule-E ${index}`;
+    if (window.scheduleENameStore) {
+      window.scheduleENameStore[nameInput.id] = nameInput.value;
+    }
+  });
 
-    incomeField.addEventListener('blur', function() {
-        updateScheduleENet(index);
-        recalculateTotals();
-    });
+  // --- Existing fields (inside the collapsible body)
+  createLabelAndCurrencyField(body, `scheduleE${index}Income`,   `Schedule E-${index} Income:`);
+  createLabelAndCurrencyField(body, `scheduleE${index}Expenses`, `Schedule E-${index} Expenses:`);
+  createLabelAndTextField     (body, `scheduleE${index}Net`,     `Schedule E-${index} Net (Income - Expenses):`);
 
-    expensesField.addEventListener('blur', function() {
-        updateScheduleENet(index);
-        recalculateTotals();
-    });
+  container.appendChild(scheduleEDiv);
+
+  // Readonly net
+  const netField = document.getElementById(`scheduleE${index}Net`);
+  if (netField) netField.readOnly = true;
+
+  // Recalc hooks
+  const incomeField   = document.getElementById(`scheduleE${index}Income`);
+  const expensesField = document.getElementById(`scheduleE${index}Expenses`);
+  if (incomeField) {
+    incomeField.addEventListener('blur', () => { updateScheduleENet(index); recalculateTotals(); });
+  }
+  if (expensesField) {
+    expensesField.addEventListener('blur', () => { updateScheduleENet(index); recalculateTotals(); });
+  }
+
+  // Toggle open/closed on header click (same pattern as W-2 blocks)
+  heading.addEventListener('click', () => {
+    if (body.classList.contains('active')) {
+      closeCollapsibleAuto(body);
+    } else {
+      openCollapsibleAuto(body);
+    }
+  });
+  attachAutoGrow(body);
+  openCollapsibleAuto(body);
+
 }
 
 function updateScheduleENet(index) {
@@ -6116,22 +6222,16 @@ function addW2Block() {
           });
       });
 
-    // Add an event listener to toggle the collapsible content
     header.addEventListener('click', () => {
-        collapsibleContent.classList.toggle('active');
+      if (collapsibleContent.classList.contains('active')) {
+        closeCollapsibleAuto(collapsibleContent);
+      } else {
+        openCollapsibleAuto(collapsibleContent);
+      }
     });
+    attachAutoGrow(collapsibleContent);
+    openCollapsibleAuto(collapsibleContent);
 }
-
-document.addEventListener('DOMContentLoaded', function () {
-  const toggleHead = document.querySelector('#specialGains h2');
-  const content = document.getElementById('specialGainsContainer');
-
-  if (toggleHead && content) {
-    toggleHead.addEventListener('click', () => {
-      content.classList.toggle('active');
-    });
-  }
-});
 
 // re-calculate deductions whenever age-65 or blind counts change
 document.getElementById('olderthan65').addEventListener('change', recalculateDeductions);
