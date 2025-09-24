@@ -4268,6 +4268,7 @@ function createScheduleEFields(container, index) {
     if (window.scheduleENameStore) {
       window.scheduleENameStore[nameInput.id] = nameInput.value;
     }
+    document.dispatchEvent(new CustomEvent('gw:scheduleEListChanged'));
   });
 
   // --- Existing fields (inside the collapsible body)
@@ -4304,11 +4305,17 @@ function createScheduleEFields(container, index) {
 
 }
 
-function updateScheduleENet(index) {
+function updateScheduleENet(index, opts = {}) {
+    const silent = opts.silent === true;
+
     const incomeVal = unformatCurrency(document.getElementById(`scheduleE${index}Income`).value || '0');
     const expensesVal = unformatCurrency(document.getElementById(`scheduleE${index}Expenses`).value || '0');
     const netVal = incomeVal - expensesVal;
     document.getElementById(`scheduleE${index}Net`).value = formatCurrency(netVal.toString());
+
+    if (!silent) {
+      document.dispatchEvent(new CustomEvent('gw:scheduleEListChanged'));
+    }
 }
 
 function calcAutoUnrecaptured1250() {
@@ -8590,6 +8597,24 @@ function readLeadNumbers() {
     });
   }
 
+  function listScheduleEEntities() {
+    const out = [];
+    const eCount = parseInt(document.getElementById('numScheduleEs')?.value || '0', 10) || 0;
+
+    for (let i = 1; i <= eCount; i++) {
+      const name = document.getElementById(`scheduleE${i}Name`)?.value?.trim() || `Property ${i}`;
+      const net  = document.getElementById(`scheduleE${i}Net`)?.value || '$0';
+      out.push({
+        id:    `sche-${i}`,
+        kind:  'scheduleE',
+        index: i,
+        title: `Schedule E: ${name}`,
+        sub:   `Net: ${net}`,
+      });
+    }
+    return out;
+  }
+
   // ----------- Card factory per entity -----------
   function mountEntityPanel(entity) {
     const st = ensureState(entity.id);
@@ -8960,6 +8985,7 @@ function readLeadNumbers() {
     const w2s       = listW2Entities();          // W-2 cards
     const bizAll    = listBusinessEntities();    // All Business cards
     const customs   = [...customEntities];       // Your custom/standalone cards
+    const schE = listScheduleEEntities();   // ← Schedule-E list
 
     // Heuristic to detect FMC/Holding Company business blocks:
     // (we named them “FMC …” or “Holding Company (Schedule-C)” when created)
@@ -8997,6 +9023,11 @@ function readLeadNumbers() {
       entities.push(...regBiz);
     }
 
+    if (schE.length) {
+      entities.push({ id: 'hdr-sche', kind: 'header', title: 'Schedule E' });
+      entities.push(...schE);
+    }
+
     // Make sure each entity has state
     entities.forEach(e => {
       if (e.kind === 'header') return;
@@ -9018,7 +9049,11 @@ function readLeadNumbers() {
   const numBizEl = document.getElementById('numOfBusinesses');
   if (numBizEl) {
     numBizEl.addEventListener('input', renderEntities);
+    document.getElementById('numScheduleEs').addEventListener('input', renderEntities);
   }
+
+  // Refresh entity list when Schedule-E name/net changes
+  document.addEventListener('gw:scheduleEListChanged', renderEntities);
 
   // Re-render when W-2 list changes (we’ll emit this from add/remove)
   document.addEventListener('gw:w2ListChanged', renderEntities);
@@ -9203,6 +9238,7 @@ function applyRestructureTo1040() {
 
   // Track which businesses we changed so we can recompute their Net
   const changedBiz = new Set();
+  const changedScheE = new Set();
 
   // 2) Walk each entity + row and apply the mapped effect
   Object.entries(plan).forEach(([entityId, st]) => {
@@ -9215,7 +9251,7 @@ function applyRestructureTo1040() {
 
       if (spec.kind === 'business_expense') {
         let bizIndex = null;
-
+      
         if (entityId.startsWith('biz-')) {
           bizIndex = parseInt(entityId.split('-')[1], 10);
         } else if (entityId.startsWith('w2-')) {
@@ -9226,22 +9262,28 @@ function applyRestructureTo1040() {
             bizIndex = resolveBusinessIndexByName(bizName);
           }
         }
-
+      
+        let scheIndex = null;
+        if (entityId.startsWith('sche-')) {
+          scheIndex = parseInt(entityId.split('-')[1], 10);
+        }
+      
         if (bizIndex) {
           resxAdd(`business${bizIndex}Expenses`, amt);
           changedBiz.add(bizIndex);
+        } else if (scheIndex) {
+          resxAdd(`scheduleE${scheIndex}Expenses`, amt);
+          changedScheE.add(scheIndex);
         } else {
-          // no linked business → treat as personal itemized other deduction
           resxAdd('otherDeductions', amt);
         }
-      }
+      } // ← CLOSES the business_expense block
 
       if (spec.kind === 'above_line' || spec.kind === 'itemized') {
         resxAdd(spec.field, amt);
       }
 
       if (spec.kind === 'credit') {
-        // IMPORTANT: your total tax combiner ADDS credit fields; supply negative amount
         resxAdd(spec.field, -amt);
       }
 
@@ -9251,6 +9293,11 @@ function applyRestructureTo1040() {
   // 3) Recompute business Net for each changed business
   changedBiz.forEach(i => {
     if (typeof updateBusinessNet === 'function') updateBusinessNet(i);
+  });
+
+  // 3b) Recompute Schedule-E Net for each changed property (no events to avoid loops)
+  changedScheE.forEach(i => {
+    if (typeof updateScheduleENet === 'function') updateScheduleENet(i, { silent: true });
   });
 
   // 4) Recompute global totals
