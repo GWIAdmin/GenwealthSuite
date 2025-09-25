@@ -655,9 +655,10 @@ const STRATEGY_EFFECTS = {
   'Restricted Property Trust (RPT)':                      { kind: 'business_expense' },
   'Revenue Stream Bifurcation':                           { kind: 'business_expense' },
   'Short-Term Rentals & Real Estate Professional':        { kind: 'business_expense' },
+  '401(k) Plan':                                          { kind: 'business_expense' },
+  'Roth Contributions vs Traditional Contributions':      { kind: 'business_expense' },
 
   // Above-the-line (Form 1040 adjustments) (directly reduce AGI)
-  '401(k) Plan':                                          { kind: 'above_line', field: 'retirementDeduction' },
   'Cash Balance Plan':                                    { kind: 'above_line', field: 'retirementDeduction' },
   'SEP IRA':                                              { kind: 'above_line', field: 'retirementDeduction' },
   'Section 105 Plan':                                     { kind: 'above_line', field: 'medicalReimbursementPlan' },
