@@ -9326,7 +9326,7 @@ document.addEventListener('gw:restructureUpdated', () => {
   const ADJ_SOURCES = [
     { key:'manual',        label:'Manual Entry' },
     { key:'rateDiff',      label:'Change in Tax Rate (Auto vs Plan)' },
-    { key:'employerDed',   label:'Deductible Payroll (Employer FICA × marginal rate)' },
+    { key:'employerDed',   label:'Deductible Payroll (Employer FICA × Marginal Rate)' },
     { key:'employeeFICA',  label:'Payroll (Employee FICA)' },
     { key:'addlMed',       label:'Change in Additional Medicare Tax' },
     { key:'niit',          label:'Net Investment Tax' },
