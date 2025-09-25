@@ -61,6 +61,7 @@
         <a href="#stateTaxableIncome">State Taxable Income</a>
         <a href="#totalTaxSection">Total Tax</a>
         <a href="#gw-restructure">2025 Restructure</a>
+        <a href="#adjustment-summary">Strategic Adjustment Summary</a>
         <a href="#submitButton">Submit</a>
       </div>
     </div>
@@ -824,6 +825,48 @@
           </div>
         </div>
 
+      </section>
+
+      <!-- Strategic Adjustment Summary -->
+      <section id="adjustment-summary">
+        <h2 data-target="adj-summary-content">Strategic Adjustment Summary</h2>
+      
+        <div id="adj-summary-content">
+        
+          <!-- Controls (pills left, buttons right) -->
+          <div class="adj-controls">
+            <div class="adj-controls-left">
+              <span class="gw-pill"><strong>Unadjusted Restructure Savings</strong> <output id="adj-unadjusted">$0</output></span>
+              <span class="gw-pill"><strong>Auto Marginal Rate</strong> <output id="adj-auto-rate">0%</output></span>
+            </div>
+          
+            <div class="adj-controls-right">
+              <button type="button" id="adj-add-row">Add New Row</button>
+              <button type="button" id="adj-reset-rows">Reset to Template</button>
+            </div>
+          
+            <span class="adj-hint">Tip: Select a “Source” to auto-pull the amount; choose “Manual Entry” for custom values.</span>
+          </div>
+        
+          <!-- Lines table -->
+          <div class="adj-table" role="table" aria-label="Strategic Adjustment Summary lines">
+            <div class="adj-row adj-header" role="row">
+              <div class="adj-cell w-desc" role="columnheader">Description</div>
+              <div class="adj-cell w-source" role="columnheader">Source</div>
+              <div class="adj-cell w-amount" role="columnheader">Amount</div>
+              <div class="adj-cell w-del" role="columnheader"></div>
+            </div>
+            <div id="adj-rows" role="rowgroup"></div>
+          </div>
+        
+          <!-- Totals -->
+          <div class="adj-pillbar">
+            <span class="gw-pill"><strong>Sum of Adjustments</strong> <output id="adj-sum">$0</output></span>
+            <span class="gw-pill"><strong>Adjusted Total Savings</strong> <output id="adj-total">$0</output></span>
+            <span class="gw-pill"><strong>Adjusted 5-Year</strong> <output id="adj-total-5">$0</output></span>
+          </div>
+
+        </div>
       </section>
 
       <!-- Submit Button -->

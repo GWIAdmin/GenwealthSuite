@@ -9313,3 +9313,239 @@ document.addEventListener('gw:restructureUpdated', () => {
   try { applyRestructureTo1040(); } catch (e) { console.warn(e); }
 });
 })();
+
+// ---------------------------------//
+// 31. Strategic Adjustment Summary //
+// ---------------------------------//
+
+(function initAdjustmentSummaryModule(){
+  const rowsHost   = document.getElementById('adj-rows');
+  if (!rowsHost) return; // section not present
+
+  // Sources the analyst can choose from.
+  const ADJ_SOURCES = [
+    { key:'manual',        label:'Manual Entry' },
+    { key:'rateDiff',      label:'Change in Tax Rate (Auto vs Plan)' },
+    { key:'employerDed',   label:'Deductible Payroll (Employer FICA × marginal rate)' },
+    { key:'employeeFICA',  label:'Payroll (Employee FICA)' },
+    { key:'addlMed',       label:'Change in Additional Medicare Tax' },
+    { key:'niit',          label:'Net Investment Tax' },
+    { key:'seTax',         label:'Self-Employment Tax' },
+    { key:'stateManual',   label:'State Taxes (Manual)' }
+  ];
+
+  // Default template (matches your Excel headings, but fully editable)
+  const TEMPLATE = [
+    { desc:'Change in Tax Rate',             source:'rateDiff',     amount:0 },
+    { desc:'Deductible Payroll',             source:'employerDed',  amount:0 },
+    { desc:'Change in Additional Medicare',  source:'addlMed',      amount:0 },
+    { desc:'Net Investment Tax',             source:'niit',         amount:0 },
+    { desc:'Payroll',                        source:'employeeFICA', amount:0 },
+    { desc:'State Taxes',                    source:'stateManual',  amount:0 }
+  ];
+
+  const state = { rows: JSON.parse(JSON.stringify(TEMPLATE)) };
+
+  // === Helpers ===
+
+  function planFromUI(){
+    try { return window.gwRestructure?.getPlan() || {}; }
+    catch { return {}; }
+  }
+
+  function planSavings(planObj){
+    // Savings = Σ(deduction × entityRate%)
+    let sum = 0;
+    if (!planObj) planObj = planFromUI();
+    Object.values(planObj).forEach(ent => {
+      const rate = Number(ent?.rate || 0); // percent
+      (ent?.rows || []).forEach(r => {
+        const d = Number(r?.deductions || 0);
+        if (d) sum += d * (rate / 100);
+      });
+    });
+    return Math.round(sum);
+  }
+
+  function autoRateSavings(planObj){
+    const autoPct = Number(getCurrentAutoRatePercent() || 0);
+    let sum = 0;
+    if (!planObj) planObj = planFromUI();
+    Object.values(planObj).forEach(ent => {
+      (ent?.rows || []).forEach(r => {
+        const d = Number(r?.deductions || 0);
+        if (d) sum += d * (autoPct / 100);
+      });
+    });
+    return Math.round(sum);
+  }
+
+  // Read underlying fields safely
+  const gv = id => {
+    const el = document.getElementById(id);
+    return el ? unformatCurrency(el.value || '0') : 0;
+  };
+
+  // Compute an auto amount for a given row
+  function autoAmount(row){
+    const plan = planFromUI();
+    switch(row.source){
+      case 'rateDiff': {
+        const diff = autoRateSavings(plan) - planSavings(plan);
+        return diff; // positive = increase to savings; negative = decrease
+      }
+      case 'employerDed': {
+        // Employer FICA is deductible at ordinary rates
+        const employer = gv('employerTaxes');
+        const pct = Number(getCurrentAutoRatePercent() || 0) / 100;
+        return Math.round(employer * pct);
+      }
+      case 'employeeFICA': {
+        // Employee FICA reduces net cash; treat as a reduction to savings
+        return -Math.round(gv('employeeTaxes'));
+      }
+      case 'addlMed': {
+        // Additional Medicare tax increases tax; reduce savings
+        return -Math.round(gv('additionalMedicareTax'));
+      }
+      case 'niit': {
+        // NIIT increases tax; reduce savings
+        return -Math.round(gv('netInvestmentTax'));
+      }
+      case 'seTax': {
+        // SE tax increases tax; reduce savings
+        return -Math.round(gv('selfEmploymentTax'));
+      }
+      case 'stateManual': // intentional fallthrough
+      case 'manual':
+      default:
+        return Number(row.amount || 0);
+    }
+  }
+
+  // Render one row
+  function renderRow(row, idx){
+    const wrap = document.createElement('div');
+    wrap.className = 'adj-row';
+    wrap.dataset.idx = String(idx);
+
+    // Description
+    const c1 = document.createElement('div'); c1.className = 'adj-cell w-desc';
+    const desc = document.createElement('input');
+    desc.type = 'text'; desc.value = row.desc || '';
+    desc.placeholder = 'e.g., Change in State Tax';
+    desc.addEventListener('input', () => row.desc = desc.value);
+    c1.appendChild(desc);
+
+    // Source selector
+    const c2 = document.createElement('div'); c2.className = 'adj-cell w-source';
+    const src = document.createElement('select');
+    ADJ_SOURCES.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.key; opt.textContent = s.label;
+      if (s.key === row.source) opt.selected = true;
+      src.appendChild(opt);
+    });
+    src.addEventListener('change', () => { row.source = src.value; recalc(); paint(); });
+    c2.appendChild(src);
+
+    // Amount (currency)
+    const c3 = document.createElement('div'); c3.className = 'adj-cell w-amount';
+    const amt = document.createElement('input');
+    amt.type = 'text'; amt.className = 'adj-money';
+    const isManual = (row.source === 'manual' || row.source === 'stateManual');
+    if (isManual) {
+      amt.value = row.amount ? formatCurrency(String(row.amount)) : '';
+      amt.readOnly = false;
+      amt.addEventListener('blur', () => {
+        row.amount = unformatCurrency(amt.value || '0');
+        amt.value = row.amount ? formatCurrency(String(row.amount)) : '';
+        recalc();
+      });
+    } else {
+      amt.readOnly = true;
+      amt.value = formatCurrency(String(autoAmount(row)));
+    }
+    c3.appendChild(amt);
+
+    // Delete
+    const c4 = document.createElement('div'); c4.className = 'adj-cell w-del';
+    const del = document.createElement('button'); del.type = 'button'; del.className = 'del-btn'; del.textContent = '✕';
+    del.addEventListener('click', () => { state.rows.splice(idx,1); paint(); recalc(); });
+    c4.appendChild(del);
+
+    wrap.appendChild(c1); wrap.appendChild(c2); wrap.appendChild(c3); wrap.appendChild(c4);
+    return wrap;
+  }
+
+  function paint(){
+    rowsHost.innerHTML = '';
+    state.rows.forEach((r,i) => rowsHost.appendChild(renderRow(r,i)));
+  }
+
+  // Totals + narrative
+  function recalc(){
+    const plan = planFromUI();
+    const unadj = planSavings(plan);
+    const autoPct = Number(getCurrentAutoRatePercent() || 0);
+
+    // totals
+    let sumAdj = 0;
+    state.rows.forEach(r => { sumAdj += autoAmount(r); });
+    const adjusted = unadj + sumAdj;
+    const adjusted5 = adjusted * 5;
+
+    // write chips
+    const outUn = document.getElementById('adj-unadjusted');
+    const outRt = document.getElementById('adj-auto-rate');
+    const outSa = document.getElementById('adj-sum');
+    const outAt = document.getElementById('adj-total');
+    const outA5 = document.getElementById('adj-total-5');
+    if (outUn) outUn.textContent = formatCurrency(String(unadj));
+    if (outRt) outRt.textContent = `${autoPct.toFixed(2)}%`;
+    if (outSa) outSa.textContent = formatCurrency(String(sumAdj));
+    if (outAt) outAt.textContent = formatCurrency(String(adjusted));
+    if (outA5) outA5.textContent = formatCurrency(String(adjusted5));
+
+  }
+
+  function uniqueStrategyList(){
+    const names = new Set();
+    const plan = planFromUI();
+    Object.values(plan).forEach(ent => {
+      (ent?.rows || []).forEach(r => {
+        const nm = (r?.name || '').trim();
+        if (nm && nm.toLowerCase() !== 'new strategy') names.add(nm);
+      });
+    });
+    return Array.from(names);
+  }
+
+  // Wire controls
+  document.getElementById('adj-add-row')?.addEventListener('click', () => {
+    state.rows.push({ desc:'', source:'manual', amount:0 });
+    paint(); recalc();
+  });
+  document.getElementById('adj-reset-rows')?.addEventListener('click', () => {
+    state.rows = JSON.parse(JSON.stringify(TEMPLATE));
+    paint(); recalc();
+  });
+
+  // Live recalculation when drivers change
+  const driverIds = [
+    'employeeTaxes','employerTaxes','additionalMedicareTax','netInvestmentTax',
+    'selfEmploymentTax','totalStateTax','taxableIncome','year','filingStatus'
+  ];
+  driverIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const evt = el.tagName === 'SELECT' ? 'change' : 'input';
+    el.addEventListener(evt, recalc);
+  });
+
+  // Also refresh whenever the Restructure module updates its plan
+  document.addEventListener('gw:restructureUpdated', () => { paint(); recalc(); });
+
+  // First render
+  paint(); recalc();
+})();
