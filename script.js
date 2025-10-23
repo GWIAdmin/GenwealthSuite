@@ -8246,6 +8246,7 @@ function readLeadNumbers() {
     'FMC (S-Corp)',
     'FMC (Spousal Partnership)',
     'FMC (C-Corp)',
+    'FMC (Single-Member LLC)',
     'Charitable Foundation',
     'Charitable Remainder Trust (CRT)', 
     'Charitable LLC (CLLC)',
@@ -9042,6 +9043,71 @@ function readLeadNumbers() {
     // Recalc global pills
     recomputeGlobalTotals();
   }
+
+// ===================== TRUE TAX SAVINGS CALCULATION ===================== //
+// This mirrors the Excel reconciliation formula to calculate NET savings
+// instead of just "paper deductions × tax rate". NOT FINISHED!!!
+
+function computeTrueRestructureSavings() {
+  // --- Grab BEFORE restructure totals ---
+  const baseTaxableIncome   = getFieldValue('taxableIncome');
+  const baseTotalTax        = getFieldValue('totalTax');           // Fed + State + Payroll
+  const baseFedTax          = getFieldValue('tax');
+  const baseStateTax        = getFieldValue('totalStateTax');
+  const baseEmployeeTaxes   = getFieldValue('employeeTaxes');
+  const baseEmployerTaxes   = getFieldValue('employerTaxes');
+  const baseAddlMedicare    = getFieldValue('additionalMedicareTax');
+  const baseNIIT            = getFieldValue('netInvestmentTax');
+  const baseSETax           = getFieldValue('selfEmploymentTax');
+  const baseOtherTaxes      = getFieldValue('otherTaxes');
+  const baseHalfSE          = getFieldValue('halfSETax');
+
+  // --- Force totals to recalc with restructure strategies applied ---
+  recalculateTotals();
+  updateTotalTax();
+
+  // --- Grab AFTER restructure totals ---
+  const newTaxableIncome    = getFieldValue('taxableIncome');
+  const newTotalTax         = getFieldValue('totalTax');
+  const newFedTax           = getFieldValue('tax');
+  const newStateTax         = getFieldValue('totalStateTax');
+  const newEmployeeTaxes    = getFieldValue('employeeTaxes');
+  const newEmployerTaxes    = getFieldValue('employerTaxes');
+  const newAddlMedicare     = getFieldValue('additionalMedicareTax');
+  const newNIIT             = getFieldValue('netInvestmentTax');
+  const newSETax            = getFieldValue('selfEmploymentTax');
+  const newOtherTaxes       = getFieldValue('otherTaxes');
+  const newHalfSE           = getFieldValue('halfSETax');
+
+  // --- Differences (C - F style like your Excel formula) ---
+  const deltaTaxableIncome  = newTaxableIncome - baseTaxableIncome;
+  const deltaTotalTax       = newTotalTax - baseTotalTax;
+  const deltaFedTax         = newFedTax - baseFedTax;
+  const deltaStateTax       = newStateTax - baseStateTax;
+  const deltaEmployeeTaxes  = newEmployeeTaxes - baseEmployeeTaxes;
+  const deltaEmployerTaxes  = newEmployerTaxes - baseEmployerTaxes;
+  const deltaAddlMedicare   = newAddlMedicare - baseAddlMedicare;
+  const deltaNIIT           = newNIIT - baseNIIT;
+  const deltaSETax          = newSETax - baseSETax;
+  const deltaOtherTaxes     = newOtherTaxes - baseOtherTaxes;
+  const deltaHalfSE         = newHalfSE - baseHalfSE;
+
+  // --- NET EFFECT = total old tax - total new tax ---
+  const netSavings = baseTotalTax - newTotalTax;
+
+  // --- Write to the pills in the 2025 Restructure box ---
+  const outEl = document.getElementById('gw-t-savings');
+  if (outEl) outEl.textContent = formatCurrency(String(netSavings));
+
+  // Optionally adjust the 5-year pill too
+  const out5 = document.getElementById('gw-t-5yr');
+  if (out5) out5.textContent = formatCurrency(String(netSavings * 5));
+
+  return netSavings;
+}
+
+// Hook this into existing restructure recalculation
+document.addEventListener('gw:restructureUpdated', computeTrueRestructureSavings);
 
   // Initial render
   document.addEventListener('DOMContentLoaded', renderEntities);
