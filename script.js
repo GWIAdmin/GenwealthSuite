@@ -664,8 +664,8 @@ const STRATEGY_EFFECTS = {
   'Purchase of a Vehicle':                                { kind: 'business_expense' },
 
   // Above-the-line (Form 1040 adjustments) (directly reduce AGI)
-  'Solo 401(k) Plan - Client 1':                          { kind: 'business_expense' },
-  'Solo 401(k) Plan - Client 2':                          { kind: 'business_expense' },
+  'Solo 401(k) Plan - Client 1':                          { kind: 'above_line', field: 'retirementDeduction' },
+  'Solo 401(k) Plan - Client 2':                          { kind: 'above_line', field: 'retirementDeduction' },
   'Cash Balance Plan':                                    { kind: 'above_line', field: 'retirementDeduction' },
   'SEP IRA':                                              { kind: 'above_line', field: 'retirementDeduction' },
   'Section 105 Plan':                                     { kind: 'above_line', field: 'medicalReimbursementPlan' },
@@ -8483,10 +8483,10 @@ function readLeadNumbers() {
   'Please Select',
   'Traditional 401(k) Plan - Client 1',
   'Traditional 401(k) Plan - Client 2',
-  'Solo 401k Plan - Client 1',
-  'Solo 401k Plan - Client 2',
-  'Self-Directed 401k Plan - Client 1',
-  'Self-Directed 401k Plan - Client 2',
+  'Solo 401(k) Plan - Client 1',
+  'Solo 401(k) Plan - Client 2',
+  'Self-Directed 401(k) Plan - Client 1',
+  'Self-Directed 401(k) Plan - Client 2',
   '412(e)(3) Plan',
   'Accountable Plan',
   'Administrative Home Office',
@@ -8976,13 +8976,11 @@ function readLeadNumbers() {
         T_D += d;
       });
     }
-    const s  = document.getElementById('gw-t-savings');
-    const y5 = document.getElementById('gw-t-5yr');
+
     const inv= document.getElementById('gw-t-investment');
     const ret= document.getElementById('gw-t-retained');
     const ded= document.getElementById('gw-t-deductions');
-    if (s)   s.textContent   = fmtMoney(T_S);
-    if (y5)  y5.textContent  = fmtMoney(T_5);
+
     if (inv) inv.textContent = fmtMoney(T_I);
     if (ret) ret.textContent = fmtMoney(T_R);
     if (ded) ded.textContent = fmtMoney(T_D);
@@ -9057,61 +9055,75 @@ function readLeadNumbers() {
 // This mirrors the Excel reconciliation formula to calculate NET savings
 // instead of just "paper deductions × tax rate". NOT FINISHED!!!
 
-function computeTrueRestructureSavings() {
-  // --- Grab BEFORE restructure totals ---
-  const baseTaxableIncome   = getFieldValue('taxableIncome');
-  const baseTotalTax        = getFieldValue('totalTax');           // Fed + State + Payroll
-  const baseFedTax          = getFieldValue('tax');
-  const baseStateTax        = getFieldValue('totalStateTax');
-  const baseEmployeeTaxes   = getFieldValue('employeeTaxes');
-  const baseEmployerTaxes   = getFieldValue('employerTaxes');
-  const baseAddlMedicare    = getFieldValue('additionalMedicareTax');
-  const baseNIIT            = getFieldValue('netInvestmentTax');
-  const baseSETax           = getFieldValue('selfEmploymentTax');
-  const baseOtherTaxes      = getFieldValue('otherTaxes');
-  const baseHalfSE          = getFieldValue('halfSETax');
+// ===================== TRUE TAX SAVINGS CALCULATION (FINAL) ===================== //
+// This version performs a live “before vs after” 1040 recomputation to yield
+// real net tax savings rather than paper (Deduction × Rate) estimates.
 
-  // --- Force totals to recalc with restructure strategies applied ---
+function computeTrueRestructureSavings() {
+  console.group('🧾 TRUE TAX SAVINGS CALCULATION');
+
+  // A) BASELINE — clear overlays first so "base" is truly pre-plan
+  clearRestructureOverlays();
   recalculateTotals();
   updateTotalTax();
+  const base = {
+    taxableIncome:   getFieldValue('taxableIncome'),
+    totalTax:        getFieldValue('totalTax'),
+    federalTax:      getFieldValue('tax'),
+    stateTax:        getFieldValue('totalStateTax'),
+    employeeFICA:    getFieldValue('employeeTaxes'),
+    employerFICA:    getFieldValue('employerTaxes'),
+    niit:            getFieldValue('netInvestmentTax'),
+    seTax:           getFieldValue('selfEmploymentTax'),
+  };
 
-  // --- Grab AFTER restructure totals ---
-  const newTaxableIncome    = getFieldValue('taxableIncome');
-  const newTotalTax         = getFieldValue('totalTax');
-  const newFedTax           = getFieldValue('tax');
-  const newStateTax         = getFieldValue('totalStateTax');
-  const newEmployeeTaxes    = getFieldValue('employeeTaxes');
-  const newEmployerTaxes    = getFieldValue('employerTaxes');
-  const newAddlMedicare     = getFieldValue('additionalMedicareTax');
-  const newNIIT             = getFieldValue('netInvestmentTax');
-  const newSETax            = getFieldValue('selfEmploymentTax');
-  const newOtherTaxes       = getFieldValue('otherTaxes');
-  const newHalfSE           = getFieldValue('halfSETax');
+  // B) AFTER — apply plan, then recompute
+  try {
+    applyRestructureTo1040();   // this also clears + applies overlays
+    recalculateTotals();
+    updateTotalTax();
+  } catch (err) {
+    console.warn('Restructure overlay failed:', err);
+  }
 
-  // --- Differences (C - F style like your Excel formula) ---
-  const deltaTaxableIncome  = newTaxableIncome - baseTaxableIncome;
-  const deltaTotalTax       = newTotalTax - baseTotalTax;
-  const deltaFedTax         = newFedTax - baseFedTax;
-  const deltaStateTax       = newStateTax - baseStateTax;
-  const deltaEmployeeTaxes  = newEmployeeTaxes - baseEmployeeTaxes;
-  const deltaEmployerTaxes  = newEmployerTaxes - baseEmployerTaxes;
-  const deltaAddlMedicare   = newAddlMedicare - baseAddlMedicare;
-  const deltaNIIT           = newNIIT - baseNIIT;
-  const deltaSETax          = newSETax - baseSETax;
-  const deltaOtherTaxes     = newOtherTaxes - baseOtherTaxes;
-  const deltaHalfSE         = newHalfSE - baseHalfSE;
+  const after = {
+    taxableIncome:   getFieldValue('taxableIncome'),
+    totalTax:        getFieldValue('totalTax'),
+    federalTax:      getFieldValue('tax'),
+    stateTax:        getFieldValue('totalStateTax'),
+    employeeFICA:    getFieldValue('employeeTaxes'),
+    employerFICA:    getFieldValue('employerTaxes'),
+    niit:            getFieldValue('netInvestmentTax'),
+    seTax:           getFieldValue('selfEmploymentTax'),
+  };
 
-  // --- NET EFFECT = total old tax - total new tax ---
-  const netSavings = baseTotalTax - newTotalTax;
+  // C) Delta
+  const breakdown = {
+    federal:  base.federalTax - after.federalTax,
+    state:    base.stateTax - after.stateTax,
+    payroll:  (base.employeeFICA + base.employerFICA) -
+              (after.employeeFICA + after.employerFICA),
+    niit:     base.niit - after.niit,
+    seTax:    base.seTax - after.seTax,
+  };
 
-  // --- Write to the pills in the 2025 Restructure box ---
-  const outEl = document.getElementById('gw-t-savings');
-  if (outEl) outEl.textContent = formatCurrency(String(netSavings));
+  const netSavings = base.totalTax - after.totalTax;
+  const fiveYear   = netSavings * 5;
 
-  // Optionally adjust the 5-year pill too
-  const out5 = document.getElementById('gw-t-5yr');
-  if (out5) out5.textContent = formatCurrency(String(netSavings * 5));
+  // D) Paint the TRUE pills (let this own the two savings pills)
+  const fmt = v => formatCurrency(String(Math.round(v)));
+  const s  = document.getElementById('gw-t-savings');
+  const y5 = document.getElementById('gw-t-5yr');
+  if (s)  s.textContent  = fmt(netSavings);
+  if (y5) y5.textContent = fmt(fiveYear);
+  if (s) {
+    s.title = `Federal: ${fmt(breakdown.federal)} | State: ${fmt(breakdown.state)} | `
+            + `Payroll: ${fmt(breakdown.payroll)} | NIIT: ${fmt(breakdown.niit)} | `
+            + `SE: ${fmt(breakdown.seTax)}`;
+  }
 
+  console.table({ base, after, breakdown, netSavings });
+  console.groupEnd();
   return netSavings;
 }
 
@@ -9153,6 +9165,15 @@ document.addEventListener('gw:restructureUpdated', computeTrueRestructureSavings
     document.dispatchEvent(new CustomEvent('gw:restructureUpdated'));
   }
 
+  // 🔄 Re-run full 1040 computation whenever restructure data changes
+  document.addEventListener('gw:restructureUpdated', () => {
+    try {
+      computeTrueRestructureSavings();
+    } catch (e) {
+      console.warn('True tax savings update failed:', e);
+    }
+  });
+
   // Call the notifier at the end of recomputeGlobalTotals()
   function recomputeGlobalTotals() {
     let T_S=0, T_5=0, T_I=0, T_R=0, T_D=0;
@@ -9168,13 +9189,11 @@ document.addEventListener('gw:restructureUpdated', computeTrueRestructureSavings
         T_D += d;
       });
     }
-    const s  = document.getElementById('gw-t-savings');
-    const y5 = document.getElementById('gw-t-5yr');
+
     const inv= document.getElementById('gw-t-investment');
     const ret= document.getElementById('gw-t-retained');
     const ded= document.getElementById('gw-t-deductions');
-    if (s)   s.textContent   = fmtMoney(T_S);
-    if (y5)  y5.textContent  = fmtMoney(T_5);
+
     if (inv) inv.textContent = fmtMoney(T_I);
     if (ret) ret.textContent = fmtMoney(T_R);
     if (ded) ded.textContent = fmtMoney(T_D);
@@ -9254,6 +9273,26 @@ function resxAdd(id, amount) {
   const nextAdj = prev + Number(amount || 0);
   el.dataset.resxAdj = nextAdj;
   el.value = formatCurrency(String(base + nextAdj));
+}
+
+// Clears all restructure overlays WITHOUT applying any strategy amounts.
+// Used to capture a clean "baseline" snapshot.
+function clearRestructureOverlays() {
+  const TARGET_FIELDS = [
+    'retirementDeduction','medicalReimbursementPlan','SEHealthInsurance',
+    'contributions','interest','otherDeductions',
+    'generalBusinessCredit','otherCredits','educationCredits'
+  ];
+  TARGET_FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) resxResetElement(el);
+  });
+
+  // Business expenses you may have touched
+  document.querySelectorAll("input[id^='business'][id$='Expenses']").forEach(resxResetElement);
+
+  // Schedule E expenses you may have touched
+  document.querySelectorAll("input[id^='scheduleE'][id$='Expenses']").forEach(resxResetElement);
 }
 
 // Resolve business index by display name
@@ -9382,9 +9421,6 @@ function applyRestructureTo1040() {
 
 // Wire up on DOM ready and on every restructure change
 document.addEventListener('DOMContentLoaded', () => {
-  try { applyRestructureTo1040(); } catch (e) { console.warn(e); }
-});
-document.addEventListener('gw:restructureUpdated', () => {
   try { applyRestructureTo1040(); } catch (e) { console.warn(e); }
 });
 })();
