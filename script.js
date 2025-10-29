@@ -9075,6 +9075,7 @@ function computeTrueRestructureSavings() {
     employerFICA:    getFieldValue('employerTaxes'),
     niit:            getFieldValue('netInvestmentTax'),
     seTax:           getFieldValue('selfEmploymentTax'),
+    addlMed:         getFieldValue('additionalMedicareTax'),
   };
 
   // B) AFTER — apply plan, then recompute
@@ -9095,6 +9096,7 @@ function computeTrueRestructureSavings() {
     employerFICA:    getFieldValue('employerTaxes'),
     niit:            getFieldValue('netInvestmentTax'),
     seTax:           getFieldValue('selfEmploymentTax'),
+    addlMed:         getFieldValue('additionalMedicareTax'),
   };
 
   // C) Delta
@@ -9109,6 +9111,40 @@ function computeTrueRestructureSavings() {
 
   const netSavings = base.totalTax - after.totalTax;
   const fiveYear   = netSavings * 5;
+
+ // ✅ Publish the precise component deltas for the Summary to use
+ window._gwTrueDelta = {
+   netSavings,
+   federal:        breakdown.federal,
+   state:          breakdown.state,
+   employeeFICA:   base.employeeFICA  - after.employeeFICA,
+   employerFICA:   base.employerFICA  - after.employerFICA,
+   niit:           base.niit          - after.niit,
+   seTax:          base.seTax         - after.seTax,
+   addlMed:        base.addlMed       - after.addlMed
+ };
+
+ // Also publish the two paper baselines used by the Summary bridge
+ try {
+   const plan = window.gwRestructure?.getPlan?.();
+   const planPaper = (function planSavings(p){
+     let sum = 0;
+     Object.values(p||{}).forEach(ent => {
+       const rate = Number(ent?.rate || 0);
+       (ent?.rows||[]).forEach(r => { const d=Number(r?.deductions||0); if(d) sum += d*(rate/100); });
+     });
+     return Math.round(sum);
+   })(plan);
+   const autoPct = Number(getCurrentAutoRatePercent() || 0);
+   const autoPaper = (function autoRateSavings(p, pct){
+     let sum = 0;
+     Object.values(p||{}).forEach(ent => {
+       (ent?.rows||[]).forEach(r => { const d=Number(r?.deductions||0); if(d) sum += d*(pct/100); });
+     });
+     return Math.round(sum);
+   })(plan, autoPct);
+   window._gwPaper = { plan: planPaper, auto: autoPaper, autoPct };
+ } catch {}
 
   // D) Paint the TRUE pills (let this own the two savings pills)
   const fmt = v => formatCurrency(String(Math.round(v)));
@@ -9597,28 +9633,57 @@ document.addEventListener('DOMContentLoaded', () => {
   // Totals + narrative
   function recalc(){
     const plan = planFromUI();
-    const unadj = planSavings(plan);
-    const autoPct = Number(getCurrentAutoRatePercent() || 0);
 
-    // totals
-    let sumAdj = 0;
-    state.rows.forEach(r => { sumAdj += autoAmount(r); });
-    const adjusted = unadj + sumAdj;
-    const adjusted5 = adjusted * 5;
-
-    // write chips
-    const outUn = document.getElementById('adj-unadjusted');
-    const outRt = document.getElementById('adj-auto-rate');
-    const outSa = document.getElementById('adj-sum');
-    const outAt = document.getElementById('adj-total');
-    const outA5 = document.getElementById('adj-total-5');
-    if (outUn) outUn.textContent = formatCurrency(String(unadj));
-    if (outRt) outRt.textContent = `${autoPct.toFixed(2)}%`;
-    if (outSa) outSa.textContent = formatCurrency(String(sumAdj));
-    if (outAt) outAt.textContent = formatCurrency(String(adjusted));
-    if (outA5) outA5.textContent = formatCurrency(String(adjusted5));
-
-  }
+    // 1) Paper baselines
+    const unadj   = (window._gwPaper?.plan != null) ? window._gwPaper.plan : planSavings(plan);
+    const autoPct = (window._gwPaper?.autoPct != null) ? window._gwPaper.autoPct : Number(getCurrentAutoRatePercent() || 0);
+    const paperAuto = (window._gwPaper?.auto != null)
+      ? window._gwPaper.auto
+      : (function(p, pct){ let s=0; Object.values(p||{}).forEach(e=>{(e?.rows||[]).forEach(r=>{const d=+r?.deductions||0; if(d) s+= d*(pct/100);});}); return Math.round(s); })(plan, autoPct);
+    
+    // 2) If we have TRUE deltas, overwrite the row math with precise numbers
+    const td = window._gwTrueDelta || null;
+    if (td) {
+      state.rows.forEach(r => {
+        switch (r.source) {
+          case 'rateDiff':     r.amount = paperAuto - unadj; break;
+          case 'employeeFICA': r.amount = td.employeeFICA;   break;
+          case 'employerDed':  r.amount = td.employerFICA;   break;  // use exact ER-FICA delta
+          case 'addlMed':      r.amount = td.addlMed;        break;
+          case 'niit':         r.amount = td.niit;           break;
+          case 'seTax':        r.amount = td.seTax;          break;
+          case 'stateManual':  r.amount = td.state;          break;
+          case 'manual':       /* leave analyst entry */     break;
+            default:             /* leave as-is or 0 */        break;
+          }
+        });
+      }
+    
+      // 3) Sum adjustments (after any overwrite)
+      let sumAdj = 0;
+      state.rows.forEach(r => { sumAdj += (Number(r.amount) || 0); });
+    
+      // 4) Adjusted totals (should now equal TRUE savings)
+      const adjusted  = unadj + sumAdj;
+      const adjusted5 = adjusted * 5;
+    
+      // 5) Write the chips
+      const outUn = document.getElementById('adj-unadjusted');
+      const outRt = document.getElementById('adj-auto-rate');
+      const outSa = document.getElementById('adj-sum');
+      const outAt = document.getElementById('adj-total');
+      const outA5 = document.getElementById('adj-total-5');
+      if (outUn) outUn.textContent = formatCurrency(String(unadj));
+      if (outRt) outRt.textContent = `${autoPct.toFixed(2)}%`;
+      if (outSa) outSa.textContent = formatCurrency(String(sumAdj));
+      if (outAt) outAt.textContent = formatCurrency(String(adjusted));
+      if (outA5) outA5.textContent = formatCurrency(String(adjusted5));
+    
+      // 6) Optional: show a tiny residual row if rounding leaves $±1
+      if (td && Math.abs((td.netSavings) - adjusted) <= 1) {
+        // close enough; no action. If you want, you can add/refresh a "Rounding" row here.
+      }
+    }
 
   function uniqueStrategyList(){
     const names = new Set();
