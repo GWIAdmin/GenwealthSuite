@@ -199,6 +199,53 @@ const FS_MAP = {
             { threshold: 751600, rate: 0.35 },
             { threshold: Infinity, rate: 0.37 }
         ]
+      },
+      2026: {
+        "Single": [
+          { threshold: 12400, rate: 0.10 },
+          { threshold: 50400, rate: 0.12 },
+          { threshold: 105700, rate: 0.22 },
+          { threshold: 201775, rate: 0.24 },
+          { threshold: 256225, rate: 0.32 },
+          { threshold: 640600, rate: 0.35 },
+          { threshold: Infinity, rate: 0.37 }
+        ],
+        "Married Filing Jointly": [
+          { threshold: 24800, rate: 0.10 },
+          { threshold: 100800, rate: 0.12 },
+          { threshold: 211400, rate: 0.22 },
+          { threshold: 403550, rate: 0.24 },
+          { threshold: 512450, rate: 0.32 },
+          { threshold: 768700, rate: 0.35 },
+          { threshold: Infinity, rate: 0.37 }
+        ],
+        "Married Filing Separately": [
+            { threshold: 12400, rate: 0.10 },
+            { threshold: 50400, rate: 0.12 },
+            { threshold: 105700, rate: 0.22 },
+            { threshold: 201775, rate: 0.24 },
+            { threshold: 256225, rate: 0.32 },
+            { threshold: 384350, rate: 0.35 },
+            { threshold: Infinity, rate: 0.37 }
+        ],
+        "Head of Household": [
+          { threshold: 17700, rate: 0.10 },
+          { threshold: 67450, rate: 0.12 },
+          { threshold: 105700, rate: 0.22 },
+          { threshold: 201750, rate: 0.24 },
+          { threshold: 256200, rate: 0.32 },
+          { threshold: 640600, rate: 0.35 },
+          { threshold: Infinity, rate: 0.37 }
+        ],
+        "Qualifying Widow(er)": [
+            { threshold: 24800, rate: 0.10 },
+            { threshold: 100800, rate: 0.12 },
+            { threshold: 211400, rate: 0.22 },
+            { threshold: 403550, rate: 0.24 },
+            { threshold: 512450, rate: 0.32 },
+            { threshold: 768700, rate: 0.35 },
+            { threshold: Infinity, rate: 0.37 }
+        ]
       }
     };
 
@@ -247,7 +294,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
     // ─── NOW wire up your live‑update mapping ───
-    mappings
+    (Array.isArray(window.mappings) ? window.mappings : [])
       .filter(m => m.type === 'write')
       .forEach(({ id }) => {
         const el = document.getElementById(id);
@@ -350,12 +397,14 @@ function attachAutoGrow(contentEl) {
 function initUI() {
   // Back‑to‑top button
   const backBtn = document.getElementById('backToTopBtn');
-  backBtn.addEventListener('click', () =>
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  );
-  window.addEventListener('scroll', () => {
-    backBtn.style.display = window.pageYOffset > 200 ? 'block' : 'none';
-  });
+  if (backBtn) {
+    backBtn.addEventListener('click', () =>
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    );
+    window.addEventListener('scroll', () => {
+      backBtn.style.display = window.pageYOffset > 200 ? 'block' : 'none';
+    });
+  }
 
   // Dark‑mode toggle
   const dmToggle = document.getElementById('darkModeToggle');
@@ -446,7 +495,9 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
   }
 
   const writes = [];
-  (mappingsTotal || []).forEach(m => {
+  // AFTER  — read from window to avoid TDZ
+  (Array.isArray(window.mappingsTotal) ? window.mappingsTotal : []).forEach(m => {
+
     if (m.type !== 'write') return;
     const el = document.getElementById(m.id);
     if (!el) return;
@@ -473,6 +524,16 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
 
     writes.push({ cell: m.cell, value: raw });
   });
+
+  // Don’t hit the API with an empty writes[]
+  if (!Array.isArray(writes) || writes.length === 0) {
+    const resultsDiv = document.getElementById('results');
+    if (resultsDiv) {
+      resultsDiv.classList.remove('hidden');
+      resultsDiv.innerHTML = '<p class="red-disclaimer">Nothing to save. Please enter data before submitting.</p>';
+    }
+    return;
+  }
 
   // Resolve year and analysis label
   const yearSel = document.getElementById('year');
@@ -502,12 +563,280 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
     resultsDiv.innerHTML =
       `<p><strong>Saved:</strong> wrote ${analysisType} ${year} into column <b>${info.column}</b> on <b>${info.worksheet}</b> of <code>${info.filePath}</code> (header row 24).` +
       ` Change inputs and submit again for a new year/type to fill the next column.</p>`;
+
+    // === NEW: persist run for preview (exact payload) ===
+    persistExcelRun({
+      writes,
+      analysisType,
+      year,
+      server: { column: info.column, worksheet: info.worksheet, filePath: info.filePath }
+    });
+    // ================================================
+
   } catch (err) {
     console.error(err);
     resultsDiv.innerHTML = `<p class="red-disclaimer">Excel save failed: ${err.message || err}</p>`;
   }
 
 });
+
+// ================== Excel Preview (modal) ==================
+(function () {
+  const RUNS = []; // volatile, dies on refresh
+
+  function normalizeType(x) {
+  const s = String(x || '').trim().toLowerCase();
+  if (s === 'actual') return 'Actual';
+  if (s === 'draft') return 'Draft';
+  if (s === 'mock') return 'Mock';
+  if (s === 'plan restructure' || s === 'plan_restructure' || s === 'restructure') return 'Restructure';
+  if (s === 'tsai') return 'TSAI';
+  return x || '';
+  }
+
+  /** Safe accessors (avoid TDZ) */
+  function getMappingsTotal() { return Array.isArray(window.mappingsTotal) ? window.mappingsTotal : []; }
+  function asCellToId() {
+    const map = {};
+    const add = (arr) => {
+      (Array.isArray(arr) ? arr : []).forEach(m => {
+        if (!m || !m.cell) return;
+        // accept both write and read so preview can paint computed fields
+        if (m.type === 'write' || m.type === 'read') {
+          map[m.cell] = m.id;
+        }
+      });
+    };
+    add(window.mappingsTotal);
+    add(window.mappings); // include the state block mappings
+    return map;
+  }
+
+  const ROW_GROUPS = [
+    { title: 'Incomes', rows: [
+      { id: 'totalOfAllIncome', label: 'Total Income' }
+    ]},
+    { title: 'Adjusted Gross Income', rows: [
+      { id: 'totalAdjustedGrossIncome', label: 'Total Adjusted Gross Income' }
+    ]},
+    { title: 'Deductions', rows: [
+      { id: 'standardOrItemizedDeduction', label: 'Standard or Itemized Deductions' },
+      { id: 'totalDeductions',             label: 'Total Deductions' }
+    ]},
+    { title: 'Tax & Credits', rows: [
+      { id: 'taxableIncome',     label: 'Taxable Income' },
+      { id: 'tax',               label: 'Tax' },
+      { id: 'totalFederalTax',   label: 'Total Tax' } // federal in this band to match sheet
+    ]},
+    { title: 'Payments', rows: [
+      { id: 'estimatedRefundOverpayment', label: 'Overpayment' },
+      { id: 'estimatedRefundOverpayment', label: 'Estimated Refund' },   // same field, alt label for visual parity
+      { id: 'estimatedBalanceDue',        label: 'Estimated Balance Due' }
+    ]},
+    { title: 'Employer/Employee Taxes', rows: [
+      { id: 'employeeTaxes', label: 'Employee Taxes' },
+      { id: 'employerTaxes', label: 'Employer Taxes' }
+    ]},
+    { title: 'State: [Selected]', rows: [
+      { id: 'stateTaxableIncomeInput',        label: 'Taxable Income' },
+      { id: 'stateTaxesDue',                  label: 'Tax' },
+      { id: 'totalStateTax',                  label: 'Other Taxes' }, // acts as “Total State Tax”
+      { id: 'stateWithholdings',              label: 'Withholdings' },
+      { id: 'statePaymentsAndCredits',        label: 'Payments and Credits' },
+      { id: 'stateInterest',                  label: 'Interest' },
+      { id: 'statePenalty',                   label: 'Penalty' },
+      { id: 'stateEstimatedRefundOverpayment',label: 'Estimated Total Refunds' },
+      { id: 'stateEstimatedBalanceDue',       label: 'Estimated Balance Due' },
+      { id: 'totalTax',                       label: 'Total Tax' } // grand total (federal + state + payroll) already computed
+    ]},
+    { title: 'Summary', rows: [
+      // purely presentational; maps to your already-computed total
+      { id: 'totalTax', label: 'Total Estimated Difference in Federal & State Taxes Saved' }
+    ]}
+  ];
+
+  /** Lookup by id for labels (easy when mapping writes → values) */
+  const LABEL_BY_ID = (() => {
+    const m = {};
+    ROW_GROUPS.forEach(g => g.rows.forEach(r => { m[r.id] = r.label; }));
+    return m;
+  })();
+
+  /** Currency-ish display for numbers; keep strings as-is */
+  function displayFor(label, val) {
+    if (typeof val === 'number') return formatCurrency(String(val)); // uses your existing helper
+    return String(val ?? '');
+  }
+
+  /** Persist a run exactly as sent */
+  window.persistExcelRun = function persistExcelRun({ writes, analysisType, year, server }) {
+    try {
+      const cellToId = asCellToId();
+      const values = {};
+      (writes || []).forEach(w => {
+        const id = cellToId[w.cell] || w.cell;
+        let label = LABEL_BY_ID[id];
+        if (!label && /^B([1-9]|1[0-9])$/.test(w.cell)) {
+          const cellMap = { B1: 'Year', B2: 'Filing Status', B3: 'State', B4: 'Resident in State' };
+          label = cellMap[w.cell] || w.cell;
+        }
+        values[id] = { label: label || id, display: displayFor(label, w.value), raw: w.value, cell: w.cell };
+      });
+
+      // Ensure every row in the preview has something if it exists on the page
+      ROW_GROUPS.forEach(group => {
+        group.rows.forEach(({ id, label }) => {
+          if (!values[id]) {
+            const el = document.getElementById(id);
+            if (el && typeof el.value !== 'undefined') {
+              const rawNum = (function () {
+                // reuse your unformatter if present; else basic numeric scrub
+                try { return typeof unformatCurrency === 'function'
+                          ? unformatCurrency(el.value || '0')
+                          : Number(String(el.value || '0').replace(/[^0-9.-]/g,'')) || 0;
+                } catch { return 0; }
+              })();
+              values[id] = {
+                label: label || id,
+                display: displayFor(label, rawNum || el.value || ''),
+                raw: rawNum || el.value || '',
+                cell: null
+              };
+            }
+          }
+        });
+      });
+
+      const meta = {
+        analysisType: normalizeType(analysisType),
+        year,
+        column: server?.column || '',
+        worksheet: server?.worksheet || '',
+        filePath: server?.filePath || '',
+        createdAt: new Date().toISOString()
+      };
+
+      RUNS.push({ meta, values }); // memory only
+    } catch (e) {
+      console.warn('[Preview] persist failed:', e);
+    }
+  };
+
+  /** Build and show the preview modal */
+  function openPreview() {
+    const modal = document.getElementById('gwExcelPreview');
+    const grid  = document.getElementById('gwPreviewGrid');
+    const empty = document.getElementById('gwPreviewEmpty');
+    if (!modal || !grid || !empty) return;
+
+    const runs = RUNS;            // <-- memory only
+    grid.innerHTML = '';
+
+    if (!runs.length) {
+      empty.classList.remove('hidden');
+      showModal(modal, true);
+      return;
+    }
+
+    const latest    = runs[runs.length - 1];
+    const filePath  = latest?.meta?.filePath || '';
+    const worksheet = latest?.meta?.worksheet || '';
+
+    const ORDER = ['Actual', 'Draft', 'Mock', 'Restructure', 'TSAI'];
+
+    // Normalize and keep the latest per type for the same workbook/worksheet
+    const sameSheet = runs
+      .filter(r => r?.meta?.filePath === filePath && r?.meta?.worksheet === worksheet)
+      .map(r => ({ ...r, meta: { ...r.meta, analysisType: normalizeType(r?.meta?.analysisType) }}));
+
+    const latestByType = {};
+    sameSheet.forEach(r => { latestByType[r.meta.analysisType] = r; });
+
+    // Always render five headers; blank columns if not yet saved
+    const fallbackYear = latest?.meta?.year || '';
+    const contextCol = ORDER.map(type =>
+      latestByType[type] || { meta: { analysisType: type, year: fallbackYear, column: '', worksheet, filePath }, values: {} }
+    );
+
+    empty.classList.add('hidden');
+
+    // --- build THEAD as before ---
+    const thead = document.createElement('thead');
+    const hrow  = document.createElement('tr');
+    const th0 = document.createElement('th'); th0.textContent = 'Row'; th0.className = 'col-label';
+    hrow.appendChild(th0);
+    contextCol.forEach(run => {
+      const th = document.createElement('th');
+      const col = run.meta?.column ? ` • Col ${run.meta.column}` : '';
+      th.textContent = `${run.meta?.analysisType || ''} ${run.meta?.year || ''}${col}`.trim();
+      hrow.appendChild(th);
+    });
+    thead.appendChild(hrow);
+
+    // --- build TBODY as before ---
+    const tbody = document.createElement('tbody');
+    ROW_GROUPS.forEach((group, gi) => {
+      const s = document.createElement('tr'); s.className = 'section-row';
+      const c = document.createElement('td'); c.colSpan = 1 + contextCol.length; c.textContent = group.title;
+      s.appendChild(c); tbody.appendChild(s);
+
+      group.rows.forEach(r => {
+        const tr = document.createElement('tr');
+        const labelCell = document.createElement('td'); labelCell.className = 'col-label'; labelCell.textContent = r.label;
+        tr.appendChild(labelCell);
+        contextCol.forEach(run => {
+          const td = document.createElement('td');
+          const entry = run.values?.[r.id];
+          td.textContent = (entry && entry.display != null) ? entry.display : '';
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+
+      if (gi < ROW_GROUPS.length - 1) {
+        const sp = document.createElement('tr'); sp.className = 'spacer';
+        const sc = document.createElement('td'); sc.colSpan = 1 + contextCol.length;
+        sp.appendChild(sc); tbody.appendChild(sp);
+      }
+    });
+
+    grid.appendChild(thead);
+    grid.appendChild(tbody);
+    showModal(modal, true);
+  }
+
+  /** Modal open/close helpers */
+  function showModal(modal, open) {
+    if (!modal) return;
+    if (open) {
+      modal.classList.remove('hidden');
+      modal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    } else {
+      modal.classList.add('hidden');
+      modal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+  }
+
+  // Wire up buttons safely
+  window.addEventListener('DOMContentLoaded', () => {
+    const btn   = document.getElementById('previewExcelBtn');
+    const modal = document.getElementById('gwExcelPreview');
+    const close = document.getElementById('gwPreviewClose');
+
+    if (btn)   btn.addEventListener('click', openPreview);
+    if (close) close.addEventListener('click', () => showModal(modal, false));
+    if (modal) {
+      modal.addEventListener('click', (e) => {
+        if (e.target && e.target.getAttribute('data-close') === '1') showModal(modal, false);
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) showModal(modal, false);
+      });
+    }
+  });
+})();
 
 function displayResults(resultData) {
     const resultsDiv = document.getElementById('results');
@@ -573,12 +902,14 @@ function scrollFunction() {
     }
 } 
 
-document.getElementById('backToTopBtn').addEventListener('click', function() {
-    window.scrollTo({
-        top: 0,
-        behavior: 'smooth'
+{
+  const btt = document.getElementById('backToTopBtn');
+  if (btt) {
+    btt.addEventListener('click', function() {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     });
-});
+  }
+}
 
 // window.addEventListener('beforeunload', function (e) {
 //     e.preventDefault();
@@ -4827,13 +5158,19 @@ function recalculateDeductions() {
           "Qualifying Widow(er)":     29200
         },
         2025: {
-            "Single":                   15000,
-            "Married Filing Jointly":   30000,
-            "Married Filing Separately":15000,
-            "Head of Household":        22500,
-            "Qualifying Widow(er)":     30000
-        }
-        
+            "Single":                   15750,
+            "Married Filing Jointly":   31500,
+            "Married Filing Separately":15750,
+            "Head of Household":        23625,
+            "Qualifying Widow(er)":     31500
+        },
+        2026: {
+            "Single":                   16100,
+            "Married Filing Jointly":   32200,
+            "Married Filing Separately":16100,
+            "Head of Household":        24150,
+            "Qualifying Widow(er)":     32200
+        }  
       };
     const baseStd = STD[year]?.[status] || 0;
 
@@ -5372,16 +5709,17 @@ function populateBusinessDetailFields(index) {
 //----------------------//
 
 const darkModeCheckbox = document.getElementById('darkModeToggle');
-
-darkModeCheckbox.addEventListener('change', () => {
-  if (darkModeCheckbox.checked) {
-    document.body.classList.add('dark-mode');
-    localStorage.setItem('preferred-theme', 'dark');
-  } else {
-    document.body.classList.remove('dark-mode');
-    localStorage.setItem('preferred-theme', 'light');
-  }
-});
+if (darkModeCheckbox) {
+  darkModeCheckbox.addEventListener('change', () => {
+    if (darkModeCheckbox.checked) {
+      document.body.classList.add('dark-mode');
+      localStorage.setItem('preferred-theme', 'dark');
+    } else {
+      document.body.classList.remove('dark-mode');
+      localStorage.setItem('preferred-theme', 'light');
+    }
+  });
+}
 
 //-------------------//
 // 24. W2 CODE BOXES //
@@ -7244,24 +7582,6 @@ function updateFederalPayments() {
   if (dueEl)    dueEl.value    = formatCurrency(String(balanceDue));
 }
 
-const pet = document.getElementById('petSprite');
-let petVisible = false;
-
-document.getElementById('doNotTouchBtn').addEventListener('click', function () {
-  if (!petVisible) {
-    // Show pet and start following the cursor
-    pet.style.display = 'block';
-    petVisible = true;
-
-    document.addEventListener('mousemove', followCursor);
-  } else {
-    // Stop following and hide pet
-    document.removeEventListener('mousemove', followCursor);
-    pet.style.display = 'none';
-    petVisible = false;
-  }
-});
-
 document.getElementById('localTaxAfterCredits')
   .addEventListener('input', () => {
     updateTotalStateTax();
@@ -7396,6 +7716,8 @@ const mappingsTotal = [
   // { id: 'totalTax',                     type: 'write', cell: 'B147' },
 ];
 
+window.mappings = mappings;
+window.mappingsTotal = mappingsTotal;
 
 // ─── State-Tax “Calculate” Button Flow ─────────────────────────────────
 let _stateSectionInitialized = false;

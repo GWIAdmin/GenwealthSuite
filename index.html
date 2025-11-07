@@ -109,6 +109,7 @@
                 <option value="2023">2023</option>
                 <option value="2024">2024</option>
                 <option value="2025">2025</option>
+                <option value="2026">2026</option>
             </select>
           </div>
 
@@ -873,8 +874,10 @@
       <button type="submit" id="submitButton">Submit</button>
       <div id="results" class="hidden"></div>
 
-      <button id="doNotTouchBtn" class="notes-btn" style="margin-top: 20px;">🚫 Do NOT Touch</button>
-      <img id="petSprite" src="Assets/Chicken_Run.gif" style="position: fixed; width: 50px; top: 100px; left: 100px; display: none; z-index: 9999;" />
+      <!-- NEW: Excel Preview button (in-page modal) -->
+      <button type="button" id="previewExcelBtn" class="preview-btn" aria-haspopup="dialog">
+        Preview Excel
+      </button>
 
     </form>
   </div>
@@ -887,6 +890,23 @@
   <div id="topButton">
     <!-- Back to Top Button -->
     <button id="backToTopBtn" title="Go to top"><i class="fas fa-arrow-up"></i></button>
+  </div>
+
+  <!-- NEW: Excel Preview Modal -->
+  <div id="gwExcelPreview" class="gw-modal hidden" aria-hidden="true">
+    <div class="gw-modal__overlay" data-close="1"></div>
+    <div class="gw-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="gwPreviewTitle">
+      <div class="gw-modal__header">
+        <h3 id="gwPreviewTitle">Excel Preview</h3>
+        <button type="button" id="gwPreviewClose" class="gw-modal__close">Close</button>
+      </div>
+      <div class="gw-modal__body">
+        <div id="gwPreviewEmpty" class="gw-modal__empty hidden">No saved columns yet</div>
+        <div id="gwPreviewGridWrapper" class="gw-gridwrap">
+          <table id="gwPreviewGrid" class="gw-grid" aria-describedby="gwPreviewTitle"></table>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script type="module" src="./script.js"></script>
