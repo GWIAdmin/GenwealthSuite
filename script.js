@@ -412,6 +412,11 @@ function initUI() {
     document.body.classList.toggle('dark-mode', dmToggle.checked);
   });
 }
+// Local-only preview if not on localhost (or if you force it via the console).
+window.__LOCAL_PREVIEW_ONLY__ = (
+  window.location.hostname !== 'localhost' &&
+  window.location.hostname !== '127.0.0.1'
+);
 
 //-------------------------------//
 // 1. SUBMIT HANDLER AND RESULTS //
@@ -477,16 +482,13 @@ function validateBeforeSubmit() {
   return true;
 }
 
-document.getElementById('taxForm').addEventListener('submit', async function (e) {
-  e.preventDefault();
-
-  if (!validateBeforeSubmit()) return;
+async function saveToExcelAndPersist() {
+  if (!validateBeforeSubmit()) return { ok: false };
 
   // Build the Excel writes from the mapping table (base column 'B' is assumed).
   function toNumberMaybe(v) {
     if (v == null) return 0;
     if (typeof v === 'number') return v;
-    // currency like $1,234 or (1,234)
     const neg = /^\s*\(.*\)\s*$/.test(v);
     const cleaned = String(v).replace(/[^0-9.]/g, '');
     if (cleaned === '') return 0;
@@ -495,24 +497,18 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
   }
 
   const writes = [];
-  // AFTER  — read from window to avoid TDZ
   (Array.isArray(window.mappingsTotal) ? window.mappingsTotal : []).forEach(m => {
-
     if (m.type !== 'write') return;
     const el = document.getElementById(m.id);
     if (!el) return;
 
     let raw = el.value;
+    if (raw == null || raw === '' || raw === 'please select' || raw === 'Please Select') return;
 
-    if (raw == null || raw === '' || raw === 'please select' || raw === 'Please Select') {
-      return; // skip empties
-    }
-
-    // Normalizations that match your sheet’s expectations
     if (m.id === 'state') {
       raw = `${raw} Taxes`;
-      } else if (m.id === 'filingStatus') {
-      raw = (FS_MAP && FS_MAP[raw]) ? FS_MAP[raw] : raw;
+    } else if (m.id === 'filingStatus') {
+      raw = (typeof FS_MAP !== 'undefined' && FS_MAP && FS_MAP[raw]) ? FS_MAP[raw] : raw;
     } else if (m.id === 'blind') {
       const map = { 'Zero': 0, 'One': 1, 'Two': 2, '0': 0, '1': 1, '2': 2 };
       raw = (Object.prototype.hasOwnProperty.call(map, raw) ? map[raw] : 0);
@@ -525,29 +521,44 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
     writes.push({ cell: m.cell, value: raw });
   });
 
-  // Don’t hit the API with an empty writes[]
   if (!Array.isArray(writes) || writes.length === 0) {
     const resultsDiv = document.getElementById('results');
     if (resultsDiv) {
       resultsDiv.classList.remove('hidden');
       resultsDiv.innerHTML = '<p class="red-disclaimer">Nothing to save. Please enter data before submitting.</p>';
     }
-    return;
+    return { ok: false };
   }
 
-  // Resolve year and analysis label
   const yearSel = document.getElementById('year');
   const typeSel = document.getElementById('typeOfAnalysis');
   const year = parseInt(yearSel?.value || '0', 10);
   const analysisType = (typeSel?.value || '').trim();
 
-  // NEW: grab names for file naming
   const clientFirstName = document.getElementById('firstName')?.value?.trim() || '';
   const clientLastName  = document.getElementById('lastName')?.value?.trim()  || '';
 
   const resultsDiv = document.getElementById('results');
   resultsDiv.classList.remove('hidden');
   resultsDiv.innerHTML = '<p>Saving to Excel…</p>';
+
+// === LOCAL-ONLY PREVIEW MODE (no server call, no disk writes) ===
+if (window.__LOCAL_PREVIEW_ONLY__ === true) {
+  // Persist what we would have sent to the server so the modal mirrors a “submit”
+  persistExcelRun({
+    writes,
+    analysisType,
+    year,
+    server: { column: '', worksheet: '', filePath: '' } // no file in local-only mode
+  });
+
+  // Show a non-saving notice instead of “Saved: …”
+  resultsDiv.innerHTML =
+    `<p><strong>Preview only:</strong> no local server detected — rendered from form data on this computer. Nothing was written to Excel.</p>`;
+
+  return { ok: true, info: { localOnly: true } };
+}
+
 
   try {
     const resp = await fetch('/api/submitRunLocal', {
@@ -559,25 +570,31 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
       const t = await resp.text();
       throw new Error(t || 'Submit failed');
     }
+
     const info = await resp.json();
     resultsDiv.innerHTML =
       `<p><strong>Saved:</strong> wrote ${analysisType} ${year} into column <b>${info.column}</b> on <b>${info.worksheet}</b> of <code>${info.filePath}</code> (header row 24).` +
       ` Change inputs and submit again for a new year/type to fill the next column.</p>`;
 
-    // === NEW: persist run for preview (exact payload) ===
+    // Persist the exact payload so the modal renders the same run
     persistExcelRun({
       writes,
       analysisType,
       year,
       server: { column: info.column, worksheet: info.worksheet, filePath: info.filePath }
-    });
-    // ================================================
+    }); // this already exists in your file. :contentReference[oaicite:2]{index=2}
 
+    return { ok: true, info };
   } catch (err) {
     console.error(err);
     resultsDiv.innerHTML = `<p class="red-disclaimer">Excel save failed: ${err.message || err}</p>`;
+    return { ok: false, error: err };
   }
+}
 
+document.getElementById('taxForm').addEventListener('submit', async function (e) {
+  e.preventDefault();
+  await saveToExcelAndPersist();
 });
 
 // ================== Excel Preview (modal) ==================
@@ -825,7 +842,12 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
     const modal = document.getElementById('gwExcelPreview');
     const close = document.getElementById('gwPreviewClose');
 
-    if (btn)   btn.addEventListener('click', openPreview);
+    if (btn) btn.addEventListener('click', async () => {
+  const result = await saveToExcelAndPersist(); // acts like Submit
+  if (result && result.ok) {
+    openPreview();                              // then show the modal
+  }
+});
     if (close) close.addEventListener('click', () => showModal(modal, false));
     if (modal) {
       modal.addEventListener('click', (e) => {
