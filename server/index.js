@@ -609,5 +609,62 @@ app.post('/api/submitRunLocal', async (req, res) => {
   }
 });
 
+// --- AI Suggestions Proxy ---
+const OpenAI = require('openai');
+const ai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+app.post('/api/ai/suggest', async (req, res) => {
+  try {
+    const { snapshot } = req.body || {};
+    if (!snapshot) return res.status(400).json({ error: 'Missing snapshot' });
+
+    const system = `You are a seasoned US strategic tax planner.
+    Return ONLY valid JSON with top-level key "suggestions".
+    Produce between 8 and 10 strategies, aiming for 10 when plausible for the facts provided.
+    Each suggestion: title, rationale, impact, category, type, tags(array), confidence(0..1), references(array of {title,url}).
+    Be concise (each field ≤ 60 words). Tailor to the snapshot. No prose outside JSON.`;
+
+    const user = `CLIENT SNAPSHOT (JSON):
+${JSON.stringify(snapshot, null, 2)}
+
+Return exactly:
+{
+  "suggestions":[
+    {
+      "title":"string",
+      "rationale":"string",
+      "impact":"string",
+      "category":"string",
+      "type":"string",
+      "tags":["string"],
+      "confidence":0.8,
+      "references":[{"title":"string","url":"string"}]
+    }
+  ]
+}`;
+
+    const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+    const resp = await ai.chat.completions.create({
+      model,
+      temperature: 0.2,
+      max_tokens: 2000,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user }
+      ]
+    });
+
+    const content = resp?.choices?.[0]?.message?.content || '{}';
+    let parsed;
+    try { parsed = JSON.parse(content); } catch { parsed = {}; }
+    const suggestions = Array.isArray(parsed) ? parsed : (parsed.suggestions || []);
+    res.json({ suggestions });
+  } catch (err) {
+    console.error('AI proxy error:', err);
+    res.status(500).json({ error: 'AI suggestion failed' });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Listening on ${PORT}`));

@@ -23,6 +23,7 @@
     "dotenv": "^17.2.0",
     "express": "^5.1.0",
     "node-fetch": "^2.7.0",
+    "openai": "^6.8.1",
     "xlsx-populate": "^1.21.0"
   }
 }

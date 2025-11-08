@@ -2816,6 +2816,235 @@ function unformatCurrency(value) {
     return isNegative ? -floatVal : floatVal;
 }
 
+// ==================================================
+// Generate AI Suggestions (server-proxied, read-only)
+// ==================================================
+(function () {
+  // --- helpers ---
+  function numFrom(id) {
+    const el = document.getElementById(id);
+    if (!el) return 0;
+    const v = (el.value || '').toString();
+    if (/\$|,|\(|\)/.test(v)) return unformatCurrency(v);
+    const n = +v; return isNaN(n) ? 0 : n;
+  }
+  function setText(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+
+  // Build full snapshot of the form (read-only)
+  function buildSnapshot() {
+    const form = document.getElementById('taxForm');
+    const data = {};
+    if (form) {
+      Array.from(form.elements).forEach(el => {
+        const key = el.name || el.id; if (!key) return;
+        let v = el.value;
+        if (/\$|,|\(|\)/.test(v)) v = unformatCurrency(v);
+        else if (!isNaN(+v) && v !== '') v = +v;
+        data[key] = v;
+      });
+    }
+    const agi = numFrom('totalAdjustedGrossIncome');
+    const ti  = numFrom('taxableIncome');
+    const tot = numFrom('totalTax');
+    const ratePct = (() => { try { return Math.round(getCurrentAutoRatePercent()*100)/100; } catch { return 0; } })();
+
+    // businesses
+    const numBiz = parseInt(document.getElementById('numOfBusinesses')?.value || '0', 10) || 0;
+    const businesses = [];
+    for (let i = 1; i <= numBiz; i++) {
+      businesses.push({
+        index: i,
+        name: document.getElementById(`businessName_${i}`)?.value?.trim() || `Business ${i}`,
+        type: document.getElementById(`business${i}Type`)?.value || '',
+        net: numFrom(`business${i}Net`)
+      });
+    }
+    // schedule E
+    const eCount = parseInt(document.getElementById('numScheduleEs')?.value || '0', 10) || 0;
+    const scheduleE = [];
+    for (let i = 1; i <= eCount; i++) {
+      scheduleE.push({
+        index: i,
+        name: document.getElementById(`scheduleE${i}Name`)?.value?.trim() || `Schedule E-${i}`,
+        net: numFrom(`scheduleE${i}Net`)
+      });
+    }
+    // dependents
+    const depCount = parseInt(document.getElementById('numberOfDependents')?.value || '0', 10) || 0;
+    let under17 = 0, over17 = 0;
+    for (let i = 1; i <= depCount; i++) {
+      const qual = document.getElementById(`dependent${i}Credit`)?.value;
+      if (qual === 'Yes') {
+        const ageField = document.getElementById(`dependent${i}Age`)?.value;
+        const ageRange = document.getElementById(`dependent${i}AgeRange`)?.value;
+        const age = ageField ? parseInt(ageField, 10)
+                   : (ageRange === '17 or younger' ? 16 : (ageRange === '18 or older' ? 18 : null));
+        if (age != null) (age < 17 ? under17++ : over17++);
+      }
+    }
+
+    return {
+      meta: {
+        year: parseInt(document.getElementById('year')?.value,10) || 2025,
+        filingStatus: document.getElementById('filingStatus')?.value || '',
+        state: document.getElementById('state')?.value || ''
+      },
+      highlights: { agi, taxableIncome: ti, totalTax: tot, autoMarginalRatePct: ratePct },
+      businesses,
+      scheduleE,
+      dependents: { count: depCount, under17, over17 },
+      raw: data
+    };
+  }
+
+  // Render cards if { suggestions: [...] }
+  function renderSuggestions(list) {
+    const host = document.getElementById('ai-suggestions');
+    if (!host) return;
+    host.innerHTML = '';
+
+    (Array.isArray(list) ? list : []).forEach((item) => {
+      const {
+        title, name, headline,
+        rationale, why, description, summary,
+        impact, category, type, tags, confidence, references
+      } = item || {};
+
+      // Card shell
+      const card = document.createElement('div');
+      card.className = 'gw-card ai-card';
+
+      // Header: title + category chip (right)
+      const head = document.createElement('div');
+      head.className = 'gw-card-head';
+      const hLeft = document.createElement('div');
+      hLeft.innerHTML = `<strong class="ai-title">${escapeHtml(String(title || name || headline || 'Strategy'))}</strong>`;
+      const hRight = document.createElement('div');
+      hRight.innerHTML = category ? `<span class="ai-chip">${escapeHtml(String(category))}</span>` : '';
+      head.appendChild(hLeft); head.appendChild(hRight);
+      card.appendChild(head);
+
+    // Body stack (vertical layout)
+    const grid = document.createElement('div');
+    grid.className = 'gw-card-stack';
+
+      const whyBox = document.createElement('div');
+      const whyText = rationale || why || description || summary || '';
+      whyBox.innerHTML = `<label>Why</label><div>${safeHtml(whyText)}</div>`;
+
+      const impBox = document.createElement('div');
+      impBox.innerHTML = `<label>Impact</label><div>${safeHtml(impact || '')}</div>`;
+
+      const metaBox = document.createElement('div');
+      const conf = (typeof confidence === 'number') ? `${Math.round(confidence*100)}%` : (confidence || '');
+      const tagsArr = Array.isArray(tags) ? tags : (tags ? [tags] : []);
+      metaBox.innerHTML = `
+        <label>Meta</label>
+        <div>
+          ${type ? `<div><strong>Type:</strong> ${escapeHtml(String(type))}</div>` : ''}
+          ${conf ? `<div style="margin-top:6px"><span class="ai-conf">Confidence: ${escapeHtml(String(conf))}</span></div>` : ''}
+          ${tagsArr.length ? `<div class="ai-tags" style="margin-top:6px">${tagsArr.map(t => `<span class="ai-tag">${escapeHtml(String(t))}</span>`).join('')}</div>` : ''}
+        </div>
+      `;
+
+      grid.appendChild(whyBox);
+      grid.appendChild(impBox);
+      grid.appendChild(metaBox);
+      card.appendChild(grid);
+
+      // References (optional)
+      const refs = Array.isArray(references) ? references : (references ? [references] : []);
+      if (refs.length) {
+        const refWrap = document.createElement('div');
+        refWrap.className = 'ai-refs';
+        refWrap.innerHTML = `<label>References</label>`;
+        const ul = document.createElement('ul');
+        refs.forEach(r => {
+          const li = document.createElement('li');
+          if (typeof r === 'string') li.textContent = r;
+          else if (r && (r.title || r.url)) li.textContent = `${r.title || 'Reference'} — ${r.url || ''}`;
+          else li.textContent = JSON.stringify(r);
+          ul.appendChild(li);
+        });
+        refWrap.appendChild(ul);
+        card.appendChild(refWrap);
+      }
+
+      host.appendChild(card);
+    });
+  }
+
+  function escapeHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}
+  function safeHtml(v){ if (v==null) return ''; if (typeof v==='string') return escapeHtml(v); return escapeHtml(JSON.stringify(v)); }
+
+  async function callServer(snapshot) {
+    const r = await fetch('/api/ai/suggest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ snapshot })
+    });
+    if (!r.ok) throw new Error(`Server error ${r.status}`);
+    return r.json(); // { suggestions: [...] }
+  }
+
+  function bindGenerate() {
+    const btn = document.getElementById('ai-generate');
+    const out = document.getElementById('ai-output');
+    if (!btn || btn.dataset.bound === '1') return;
+
+    btn.addEventListener('click', async () => {
+      // refresh summary pills
+      const snap = buildSnapshot();
+      const h = snap.highlights;
+      setText('ai-pill-agi',  formatCurrency(String(h.agi || 0)));
+      setText('ai-pill-ti',   formatCurrency(String(h.taxableIncome || 0)));
+      setText('ai-pill-tt',   formatCurrency(String(h.totalTax || 0)));
+      setText('ai-pill-rate', (h.autoMarginalRatePct != null ? `${h.autoMarginalRatePct}%` : '0%'));
+
+      // call server
+      btn.disabled = true;
+      const old = btn.textContent; btn.textContent = 'Generating…';
+      out.value = 'Thinking…';
+      renderSuggestions([]);
+
+      try {
+        const { suggestions } = await callServer(snap);
+        const payload = { suggestions: suggestions || [] };
+        out.value = JSON.stringify(payload, null, 2); // always show raw
+        renderSuggestions(payload.suggestions);
+      } catch (e) {
+        out.value = `Error: ${e.message}`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = old;
+      }
+    });
+
+    // keep pills fresh as totals change
+    document.addEventListener('input', (e) => {
+      if (['totalAdjustedGrossIncome','taxableIncome','totalTax'].includes(e.target?.id)) {
+        const s = buildSnapshot(), hh = s.highlights;
+        setText('ai-pill-agi',  formatCurrency(String(hh.agi || 0)));
+        setText('ai-pill-ti',   formatCurrency(String(hh.taxableIncome || 0)));
+        setText('ai-pill-tt',   formatCurrency(String(hh.totalTax || 0)));
+        setText('ai-pill-rate', (hh.autoMarginalRatePct != null ? `${hh.autoMarginalRatePct}%` : '0%'));
+      }
+    });
+
+    btn.dataset.bound = '1';
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    const ai = document.getElementById('ai-strategy-content');
+    if (ai && !ai.classList.contains('active')) {
+      if (typeof openCollapsibleAuto === 'function') openCollapsibleAuto(ai);
+      else { ai.classList.add('active'); ai.style.maxHeight = 'none'; }
+    }
+  });
+
+  window.addEventListener('DOMContentLoaded', bindGenerate);
+})();
+
 function createLabelAndTextField(parent, id, labelText) {
     const label = document.createElement('label');
     label.htmlFor = id;

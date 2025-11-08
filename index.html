@@ -796,10 +796,36 @@
         </div>
       </section>
 
+      <!-- ChatGPT AI Strategy Suggestions (read-only, AI-agnostic) -->
+      <section id="ai-strategy">
+        <h2 data-target="ai-strategy-content">ChatGPT AI Strategy Suggestions</h2>
+        <div id="ai-strategy-content" class="collapsible-content active">
+        
+          <div class="gw-summary" style="margin-bottom:12px">
+            <span class="gw-pill"><strong>AGI</strong> <output id="ai-pill-agi">$0</output></span>
+            <span class="gw-pill"><strong>Taxable Income</strong> <output id="ai-pill-ti">$0</output></span>
+            <span class="gw-pill"><strong>Auto Marginal Rate</strong> <output id="ai-pill-rate">0%</output></span>
+            <span class="gw-pill"><strong>Total Tax</strong> <output id="ai-pill-tt">$0</output></span>
+          </div>
+        
+          <div class="gw-controls" style="margin:8px 0 14px">
+            <button id="ai-generate" type="button">Generate AI Suggestions</button>
+          </div>
+        
+          <div style="margin:8px 0 12px">
+            <label for="ai-output" style="font-weight:600; display:block; margin-bottom:6px">AI Output</label>
+            <textarea id="ai-output" rows="10" readonly style="width:100%; resize:vertical"></textarea>
+            <small>The AI’s raw output appears here. If it’s valid JSON with a suggestions array, the cards below will also populate.</small>
+          </div>
+        
+          <div id="ai-suggestions" class="gw-card-list" aria-label="AI strategies (read-only)"></div>
+        </div>
+      </section>
+
       <!-- 2025 Deduction Box Section -->
       <section class="gw-restruct-card" id="gw-restructure">
         <div class="gw-restruct-header">
-          <h2 data-target="gw-restructure-content">2025 Restructure</h2>
+          <h2 data-target="gw-restructure-content">Restructure</h2>
         </div>
 
         <div id="gw-restructure-content">
