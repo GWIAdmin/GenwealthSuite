@@ -5609,10 +5609,15 @@ document.addEventListener('DOMContentLoaded', function() {
     updateOlderThan65Options();
     undoStack.push(getFormSnapshot());
 
-    // Open the W-2 collapsible by adding the "active" class
+    // Open the W-2 collapsible using the animated helper so height is real
     const w2Container = document.getElementById('w2sContainer');
     if (w2Container) {
-      w2Container.classList.add('active');
+      if (typeof openCollapsibleAuto === 'function') {
+        openCollapsibleAuto(w2Container);
+      } else {
+        w2Container.classList.add('active');
+        w2Container.style.maxHeight = 'none';
+      }
     }
 
     document.getElementById('addW2Btn').addEventListener('click', addW2Block);
@@ -6807,6 +6812,34 @@ function addW2Block() {
     collapsibleContent.appendChild(removeBtn);
 
     document.getElementById('w2sContainer').appendChild(w2Block);
+
+    // Ensure parent sections are actually open with real height
+    const incomeContent = document.getElementById('incomeContent');
+    if (incomeContent) {
+      if (typeof openCollapsibleAuto === 'function') {
+        openCollapsibleAuto(incomeContent);
+      } else {
+        incomeContent.classList.add('active');
+        incomeContent.style.maxHeight = 'none';
+      }
+    }
+    
+    const w2Container2 = document.getElementById('w2sContainer');
+    if (w2Container2) {
+      if (typeof openCollapsibleAuto === 'function') {
+        openCollapsibleAuto(w2Container2);
+      } else {
+        w2Container2.classList.add('collapsible-content', 'active');
+        w2Container2.style.removeProperty('display');
+        w2Container2.style.maxHeight = 'none';
+      }
+    }
+    
+    // Bring the newly created block into view
+    setTimeout(() => {
+      w2Block.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 0);
+
     document.dispatchEvent(new CustomEvent('gw:w2ListChanged'));
 
     w2Block.querySelectorAll('.currency-field').forEach((field) => {
