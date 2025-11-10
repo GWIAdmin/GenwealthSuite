@@ -474,16 +474,69 @@ function validateBeforeSubmit() {
   if (est && !est.value.trim()) est.value = '0';
 
   if (problems.length) {
-    problems.forEach(p => expandSectionFor(p.el)); // open sections
+    problems.forEach(p => expandSectionFor(p.el));
     problems[0].el.focus();
-    alert('Please complete the highlighted required fields.');
+    if (opts.showAlert !== false) {
+      alert('Please complete the highlighted required fields.');
+    }
     return false;
   }
   return true;
 }
 
-async function saveToExcelAndPersist() {
-  if (!validateBeforeSubmit()) return { ok: false };
+function buildQuickWritesForPreview() {
+  // Mirrors the normalization logic in saveToExcelAndPersist(), but never blocks.
+  function toNumberMaybe(v) {
+    if (v == null) return 0;
+    if (typeof v === 'number') return v;
+    const neg = /^\s*\(.*\)\s*$/.test(v);
+    const cleaned = String(v).replace(/[^0-9.]/g, '');
+    if (cleaned === '') return 0;
+    const n = Number(cleaned);
+    return neg ? -n : n;
+  }
+
+  const writes = [];
+  const both = []
+    .concat(Array.isArray(window.mappingsTotal) ? window.mappingsTotal : [])
+    .concat(Array.isArray(window.mappings) ? window.mappings : []);
+
+  const seen = new Set();
+  both.forEach(m => {
+    if (!m || !m.cell || seen.has(m.cell)) return; // keep one write per cell
+    seen.add(m.cell);
+    if (m.type !== 'write' && m.type !== 'read') return; // accept both so preview can paint more rows
+    const el = document.getElementById(m.id);
+    if (!el) return;
+
+    let raw = el.value;
+
+    // Normalize a few special fields so the preview column headers look right
+    if (m.id === 'state' && raw) {
+      raw = `${raw} Taxes`;
+    } else if (m.id === 'filingStatus' && raw) {
+      raw = (FS_MAP && FS_MAP[raw]) ? FS_MAP[raw] : raw;
+    } else if (m.id === 'blind') {
+      const map = { 'Zero': 0, 'One': 1, 'Two': 2, '0': 0, '1': 1, '2': 2 };
+      raw = Object.prototype.hasOwnProperty.call(map, raw) ? map[raw] : (parseInt(raw, 10) || 0);
+    } else if (typeof raw === 'string' && /[$,()]/.test(raw)) {
+      raw = toNumberMaybe(raw);
+    } else if (!isNaN(+raw)) {
+      raw = +raw;
+    }
+
+    // Always push; empty strings are fine for preview
+    writes.push({ cell: m.cell, value: raw });
+  });
+
+  return writes;
+}
+
+async function saveToExcelAndPersist(options = {}) {
+  const { validate = true, showAlerts = true } = options;
+  if (validate && !validateBeforeSubmit({ showAlert: showAlerts })) {
+    return { ok: false };
+  }
 
   // Build the Excel writes from the mapping table (base column 'B' is assumed).
   function toNumberMaybe(v) {
@@ -842,12 +895,34 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
     const modal = document.getElementById('gwExcelPreview');
     const close = document.getElementById('gwPreviewClose');
 
-    if (btn) btn.addEventListener('click', async () => {
-  const result = await saveToExcelAndPersist(); // acts like Submit
-  if (result && result.ok) {
-    openPreview();                              // then show the modal
-  }
-});
+  if (btn) btn.addEventListener('click', async () => {
+    // 1) Try the normal path (saves and persists a run). If it works, open preview.
+    try {
+      const result = await saveToExcelAndPersist({ validate: false, showAlerts: false });
+      if (result && result.ok) {
+        openPreview();
+        return;
+      }
+    } catch (_) {
+      // swallow and fall through to preview-only path
+    }
+
+    // 2) Fallback: build a local, validation-free preview from whatever is on screen.
+    const writes = buildQuickWritesForPreview();
+    const year = parseInt(document.getElementById('year')?.value || '', 10) || '';
+    const analysisType = (document.getElementById('typeOfAnalysis')?.value || '').trim();
+
+    // Persist a purely local run so the grid has something to render
+    persistExcelRun({
+      writes,
+      analysisType,
+      year,
+      server: { column: '', worksheet: '', filePath: '' } // preview-only, no server context
+    });
+
+    openPreview();
+  });
+
     if (close) close.addEventListener('click', () => showModal(modal, false));
     if (modal) {
       modal.addEventListener('click', (e) => {
