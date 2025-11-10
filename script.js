@@ -6179,6 +6179,36 @@ function populateBusinessNameDropdown(dropdown) {
     }
 }   
 
+// === W-2 numbering helpers ===
+function currentW2DisplayIndex(blockEl) {
+  const list = Array.from(document.querySelectorAll('#w2sContainer .w2-block'));
+  return list.indexOf(blockEl) + 1; // 1-based
+}
+
+function renumberW2Headers() {
+  const blocks = document.querySelectorAll('#w2sContainer .w2-block');
+  blocks.forEach((blk, i) => {
+    const hdr = blk.querySelector('h3');
+    if (!hdr) return;
+    const idx = i + 1; // display index
+
+    const idNum = blk.id.replace('w2Block_', '');
+    const nameInput = document.getElementById(`w2Name_${idNum}`);
+    const whoseSel  = document.getElementById(`w2WhoseW2_${idNum}`);
+
+    // Default title if no name entered
+    let title = (nameInput && nameInput.value.trim())
+      ? nameInput.value.trim()
+      : `W-2 #${idx}`;
+
+    // Append " - <Who>" if present
+    if (whoseSel && whoseSel.value) {
+      title = `${title} - ${whoseSel.value}`;
+    }
+    hdr.textContent = title;
+  });
+}
+
 function addW2Block() {
     // Ensure the W-2 container is an animatable collapsible and force it open
     const w2Container = document.getElementById('w2sContainer');
@@ -6229,7 +6259,7 @@ function addW2Block() {
     function updateHeader() {
         let companyName = nameInput.value.trim();
         if (companyName === '') {
-            companyName = 'W-2 #' + w2Counter;
+            companyName = 'W-2 #' + currentW2DisplayIndex(w2Block);
         }
         if (document.getElementById('filingStatus').value === 'Married Filing Jointly' && whoseW2Select) {
             const selectedName = whoseW2Select.value;
@@ -6243,6 +6273,7 @@ function addW2Block() {
 
     // Update header when name input loses focus
     nameInput.addEventListener('blur', updateHeader);
+    nameInput.addEventListener('blur', renumberW2Headers);
 
     // If filing status is "Married Filing Jointly", add the dropdown for "Whose W-2 is this?"
     if (document.getElementById('filingStatus').value === 'Married Filing Jointly') {
@@ -6292,6 +6323,7 @@ function addW2Block() {
         whoseW2Select.addEventListener('change', () => {
         updateW2MappingLocal();
         recalculateTotals();
+        renumberW2Headers();
         });
     }
 
@@ -6803,8 +6835,18 @@ function addW2Block() {
         }
         // Remove the W-2 block from the DOM
         w2Block.remove();
+      
+        // if no W-2 blocks remain, reset the global counter so the next one is #1
+        const remaining = document.querySelectorAll('.w2-block').length;
+        if (remaining === 0) {
+          w2Counter = 0;
+        }
 
+        // Compact the visible numbering after any deletion
+        renumberW2Headers();
+      
         document.dispatchEvent(new CustomEvent('gw:w2ListChanged')); 
+
         // Recalculate totals so that the removal is reflected (including Reasonable Compensation)
         recalculateTotals();
     });
@@ -6823,7 +6865,7 @@ function addW2Block() {
         incomeContent.style.maxHeight = 'none';
       }
     }
-    
+
     const w2Container2 = document.getElementById('w2sContainer');
     if (w2Container2) {
       if (typeof openCollapsibleAuto === 'function') {
@@ -6834,11 +6876,14 @@ function addW2Block() {
         w2Container2.style.maxHeight = 'none';
       }
     }
-    
+
     // Bring the newly created block into view
     setTimeout(() => {
       w2Block.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 0);
+
+    // Renumber all W-2 headers so the new block gets the next visible number
+    renumberW2Headers();
 
     document.dispatchEvent(new CustomEvent('gw:w2ListChanged'));
 
