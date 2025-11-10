@@ -3064,9 +3064,8 @@ function unformatCurrency(value) {
 
   function bindGenerate() {
     const btn = document.getElementById('ai-generate');
-    const out = document.getElementById('ai-output');
     if (!btn || btn.dataset.bound === '1') return;
-
+  
     btn.addEventListener('click', async () => {
       // refresh summary pills
       const snap = buildSnapshot();
@@ -3075,26 +3074,25 @@ function unformatCurrency(value) {
       setText('ai-pill-ti',   formatCurrency(String(h.taxableIncome || 0)));
       setText('ai-pill-tt',   formatCurrency(String(h.totalTax || 0)));
       setText('ai-pill-rate', (h.autoMarginalRatePct != null ? `${h.autoMarginalRatePct}%` : '0%'));
-
+    
       // call server
       btn.disabled = true;
-      const old = btn.textContent; btn.textContent = 'Generating…';
-      out.value = 'Thinking…';
+      const old = btn.textContent;
+      btn.textContent = 'Generating…';
       renderSuggestions([]);
-
+    
       try {
         const { suggestions } = await callServer(snap);
-        const payload = { suggestions: suggestions || [] };
-        out.value = JSON.stringify(payload, null, 2); // always show raw
-        renderSuggestions(payload.suggestions);
+        renderSuggestions(suggestions || []);
       } catch (e) {
-        out.value = `Error: ${e.message}`;
+        console.error('AI Suggestions Error:', e.message);
+        alert('Unable to generate AI strategy suggestions right now.');
       } finally {
         btn.disabled = false;
         btn.textContent = old;
       }
     });
-
+  
     // keep pills fresh as totals change
     document.addEventListener('input', (e) => {
       if (['totalAdjustedGrossIncome','taxableIncome','totalTax'].includes(e.target?.id)) {
@@ -3105,7 +3103,7 @@ function unformatCurrency(value) {
         setText('ai-pill-rate', (hh.autoMarginalRatePct != null ? `${hh.autoMarginalRatePct}%` : '0%'));
       }
     });
-
+  
     btn.dataset.bound = '1';
   }
 
