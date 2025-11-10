@@ -3034,14 +3034,6 @@ function unformatCurrency(value) {
     btn.dataset.bound = '1';
   }
 
-  window.addEventListener('DOMContentLoaded', () => {
-    const ai = document.getElementById('ai-strategy-content');
-    if (ai && !ai.classList.contains('active')) {
-      if (typeof openCollapsibleAuto === 'function') openCollapsibleAuto(ai);
-      else { ai.classList.add('active'); ai.style.maxHeight = 'none'; }
-    }
-  });
-
   window.addEventListener('DOMContentLoaded', bindGenerate);
 })();
 
