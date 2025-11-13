@@ -5845,9 +5845,6 @@ highlightBtn.addEventListener('click', () => {
 // 21. UNDO/REDO BUTTON //
 //----------------------//
 
-let undoStack = [];
-let redoStack = [];
-
 function getFormSnapshot() {
     const form = document.getElementById('taxForm');
     const formData = new FormData(form);
@@ -5904,6 +5901,9 @@ function restoreFormSnapshot(snapshot) {
     recalculateTotals();
     recalculateDeductions();
 }
+
+let undoStack = [];
+let redoStack = [];
 
 document.getElementById('undoButton').addEventListener('click', function() {
     if (undoStack.length > 1) {
@@ -8347,6 +8347,23 @@ function readMoneyIfPresent(id) {
 // - leadKey:'agi' or 'taxableIncome' (what the sheet expects as the key “driver” value)
 const OUTLIER_TEMPLATES = {
 
+  'California': {
+    leadKey: 'agi',
+    fields: [
+      { key: 'caTaxableIncomeTop',          label: 'California Taxable Income',                io: 'output' },
+      { key: 'caTaxDueTop',                 label: 'California Tax Due',                       io: 'output' },
+      { key: 'agi',                         label: 'AGI',                                      io: 'output' },
+      { key: 'additions',                   label: 'Additions to Income',                      io: 'input'  },
+      { key: 'deductions',                  label: 'Deductions',                               io: 'input'  },
+      { key: 'standardItemizedDeduction',   label: 'Standard/Itemized Deduction',              io: 'output' },
+      { key: 'stateTaxableIncome',          label: 'State Taxable Income',                     io: 'output' },
+      { key: 'stateTaxesDue',               label: 'State Taxes Due',                          io: 'output' },
+      { key: 'credits',                     label: 'Credits',                                  io: 'input'  },
+      { key: 'afterTaxDeductions',          label: 'After Tax Deductions',                     io: 'output' },
+      { key: 'total',                       label: 'Total',                                    io: 'output' }
+    ]   
+  }, 
+
   'Connecticut': {
     leadKey: 'agi',  // CT block starts with AGI according to your sheet
     fields: [
@@ -8364,7 +8381,23 @@ const OUTLIER_TEMPLATES = {
       { key: 'afterTaxDeductions',          label: 'After Tax Deductions',                     io: 'output' },
       { key: 'total',                       label: 'Total',                                    io: 'output' }
     ]   
-  },    
+  },
+  
+  'Delaware': {
+    leadKey: 'agi',
+    fields: [
+      { key: 'deTaxableIncomeTop',          label: 'Delaware Taxable Income',                  io: 'output' },
+      { key: 'deTaxDueTop',                 label: 'Delaware Tax Due',                         io: 'output' },
+      { key: 'agi',                         label: 'AGI',                                      io: 'output' },
+      { key: 'additions',                   label: 'Additions to Income',                      io: 'input'  },
+      { key: 'deductions',                  label: 'Deductions',                               io: 'input'  },
+      { key: 'stateTaxableIncome',          label: 'State Taxable Income',                     io: 'output' },
+      { key: 'stateTaxesDue',               label: 'State Taxes Due',                          io: 'output' },
+      { key: 'credits',                     label: 'Credits',                                  io: 'input'  },
+      { key: 'afterTaxDeductions',          label: 'After Tax Deductions',                     io: 'output' },
+      { key: 'total',                       label: 'Total',                                    io: 'output' }
+    ]   
+  }, 
 
   'Maryland': {   
     leadKey: 'agi',   
