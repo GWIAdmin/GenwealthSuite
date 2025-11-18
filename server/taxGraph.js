@@ -113,16 +113,16 @@ function classifyLeadLabel(label) {
  */
 async function locateStateSection(state, headers) {
   const startRow = 892;
-  const colAValues = await fetchRange(`A${startRow}:A2465`, headers);
+  const colAValues = await fetchRange(`A${startRow}:A2900`, headers);
   if (!Array.isArray(colAValues)) {
-    throw new Error(`Could not read any data in A${startRow}:A2465; check your sheet range.`);
+    throw new Error(`Could not read any data in A${startRow}:A2900; check your sheet range.`);
   }
   const cells = colAValues.map(r => (r[0] || '').toString().trim());
 
   const targetLabel = `${state} Tax Due`;
   const relTaxDueIdx = cells.findIndex(val => val === targetLabel);
   if (relTaxDueIdx === -1) {
-    throw new Error(`Could not find “${targetLabel}” between A${startRow} and A2465`);
+    throw new Error(`Could not find “${targetLabel}” between A${startRow} and A2900`);
   }
 
   const relAgiIdx = cells.findIndex((val, idx) => idx > relTaxDueIdx && val !== '');
@@ -356,12 +356,12 @@ function norm(s) {
 
 async function findRowsByLabels(state, labels, headers) {
   const startRow = 892;
-  const colAValues = await fetchRange(`A${startRow}:A2465`, headers);
+  const colAValues = await fetchRange(`A${startRow}:A2900`, headers);
   const cells = colAValues.map(r => (r[0] || '').toString().trim());
 
   const anchor      = `${state} Tax Due`;
   const anchorIdx   = cells.findIndex(v => norm(v) === norm(anchor));
-  if (anchorIdx === -1) throw new Error(`Could not find “${anchor}” between A${startRow} and A2465`);
+  if (anchorIdx === -1) throw new Error(`Could not find “${anchor}” between A${startRow} and A2900`);
 
   // ──────────────────────────────────────────────────────────────────────────
   // Maryland: use exact row offsets from the known anchor to avoid any label

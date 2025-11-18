@@ -1593,43 +1593,50 @@ function D(msg, ...args) {
 }
 
 function updateTotalStateTax() {
-  // Base = Outlier "Total:" if present, otherwise fall back to stateTaxesDue (normal states)
   const outlierTotalEl = document.getElementById('state_total');
-  const baseStateTax = outlierTotalEl
-    ? unformatCurrency(outlierTotalEl.value || '0') // outlier "Total:"
-    : getFieldValue('stateTaxesDue');                // normal states
 
-  // Add Local tax after credits
+  // Only treat the outlier "Total:" as active if it's visible
+  const usingOutlier =
+    outlierTotalEl &&
+    outlierTotalEl.offsetParent !== null; // null when an ancestor is display:none
+
+  const baseStateTax = usingOutlier
+    ? unformatCurrency(outlierTotalEl.value || '0')
+    : getFieldValue('stateTaxesDue');
+
   const localTax = getFieldValue('localTaxAfterCredits');
 
-  // This is the amount of state tax before payments/interest/penalty
   const totalStateTax = baseStateTax + localTax;
 
-  // Payments and adjustments
   const withholdings       = getFieldValue('stateWithholdings');
   const paymentsAndCredits = getFieldValue('statePaymentsAndCredits');
-  const interest           = getFieldValue('stateInterest'); // adds to amount owed
-  const penalty            = getFieldValue('statePenalty');  // adds to amount owed
+  const interest           = getFieldValue('stateInterest');
+  const penalty            = getFieldValue('statePenalty');
 
-  // Totals
   const totalPaid  = withholdings + paymentsAndCredits;
   const amountOwed = totalStateTax + interest + penalty;
 
-  // Split into refund vs balance due
-  const overpayment = Math.max(0, totalPaid - amountOwed);        // "Estimated Refund (Overpayment)"
-  const balanceDue  = Math.max(0, amountOwed - totalPaid);        // "Estimated Balance Due"
+  const overpayment = Math.max(0, totalPaid - amountOwed);
+  const balanceDue  = Math.max(0, amountOwed - totalPaid);
 
-  // Write back to the DOM
   const totalStateTaxField = document.getElementById('totalStateTax');
-  if (totalStateTaxField) totalStateTaxField.value = formatCurrency(String(totalStateTax));
+  if (totalStateTaxField) {
+    totalStateTaxField.value = formatCurrency(String(totalStateTax));
+  }
 
   const refundField = document.getElementById('stateEstimatedRefundOverpayment');
-  if (refundField) refundField.value = formatCurrency(String(overpayment));
+  if (refundField) {
+    refundField.value = formatCurrency(String(overpayment));
+  }
 
   const balanceDueField = document.getElementById('stateEstimatedBalanceDue');
-  if (balanceDueField) balanceDueField.value = formatCurrency(String(balanceDue));
+  if (balanceDueField) {
+    balanceDueField.value = formatCurrency(String(balanceDue));
+  }
+  
+  // Always keep grand Total Tax in sync with updated state numbers
+  updateTotalTax();
 }
-
 
 ['stateWithholdings','statePaymentsAndCredits','stateInterest','statePenalty']
   .forEach(id => {
@@ -8312,7 +8319,7 @@ async function handleCalculateStateTaxes() {
 
 // No-tax jurisdictions (can short-circuit to zero)
 const NO_TAX_STATES = new Set([
-  'Alaska','Florida','Nevada','South Dakota','Tennessee','Texas','Washington','Wyoming','New Hampshire'
+  'Florida','Nevada','South Dakota','Tennessee','Texas','Washington','Wyoming','New Hampshire'
 ]);
 
 // Use a slugged id for every dynamic state field so keys like "standardDeduction/Itemized"
@@ -8346,6 +8353,22 @@ function readMoneyIfPresent(id) {
 // - io:     'input' (editable) or 'output' (read-only)
 // - leadKey:'agi' or 'taxableIncome' (what the sheet expects as the key “driver” value)
 const OUTLIER_TEMPLATES = {
+
+  'Alaska': {
+    leadKey: 'agi',
+    fields: [
+      { key: 'akTaxableIncomeTop',          label: 'Alaska Taxable Income',          io: 'output' },
+      { key: 'akTaxDueTop',                 label: 'Alaska Tax Due',                 io: 'output' },
+      { key: 'agi',                         label: 'Taxable Income',                 io: 'output' },
+      { key: 'additions',                   label: 'Additions to Income',            io: 'input'  },
+      { key: 'deductions',                  label: 'Deductions',                     io: 'input'  },
+      { key: 'CorporateStateTaxableIncome', label: 'Corporate State Taxable Income', io: 'output'  },
+      { key: 'stateTaxableIncome',          label: 'Corporate tax due',              io: 'output'  },
+      { key: 'credits',                     label: 'Credits',                        io: 'input'  },
+      { key: 'afterTaxDeductions',          label: 'After tax Deductions',           io: 'input'  },
+      { key: 'total',                       label: 'Total',                          io: 'output' }
+    ]
+  },
 
   'California': {
     leadKey: 'agi',
@@ -8399,6 +8422,38 @@ const OUTLIER_TEMPLATES = {
     ]   
   }, 
 
+  'Hawaii': {
+    leadKey: 'agi',
+    fields: [
+      { key: 'hiTaxableIncomeTop', label: 'Hawaii Taxable Income', io: 'output' },
+      { key: 'hiTaxDueTop',        label: 'Hawaii Tax Due',        io: 'output' },
+      { key: 'agi',                label: 'AGI',                   io: 'output' },
+      { key: 'additions',          label: 'Additions to Income',   io: 'input'  },
+      { key: 'deductions',         label: 'Deductions',            io: 'input'  },
+      { key: 'stateTaxableIncome', label: 'Taxable income',        io: 'output' },
+      { key: 'stateTaxesDue',      label: 'State Taxes Due',       io: 'output' },
+      { key: 'credits',            label: 'Credits',               io: 'input'  },
+      { key: 'afterTaxDeductions', label: 'After tax Deductions',  io: 'input'  },
+      { key: 'total',              label: 'Total',                 io: 'output' }
+    ]
+  },
+
+  'Idaho': {
+    leadKey: 'agi',
+    fields: [
+      { key: 'idTaxableIncomeTop', label: 'Idaho Taxable Income',  io: 'output' },
+      { key: 'idTaxDueTop',        label: 'Idaho Tax Due',         io: 'output' },
+      { key: 'agi',                label: 'AGI',                   io: 'output' },
+      { key: 'additions',          label: 'Additions to Income',   io: 'input'  },
+      { key: 'deductions',         label: 'Deductions',            io: 'input'  },
+      { key: 'stateTaxableIncome', label: 'State Taxable income',  io: 'output' },
+      { key: 'stateTaxesDue',      label: 'State Taxes Due',       io: 'output' },
+      { key: 'credits',            label: 'Credits',               io: 'input'  },
+      { key: 'afterTaxDeductions', label: 'After tax Deductions',  io: 'input'  },
+      { key: 'total',              label: 'Total',                 io: 'output' }
+    ]
+  },
+
   'Maryland': {   
     leadKey: 'agi',   
     fields: [   
@@ -8411,6 +8466,8 @@ const OUTLIER_TEMPLATES = {
       { key: 'stateTaxableIncome',          label: 'State Taxable Income',                     io: 'output' },
       { key: 'stateTaxesDue',               label: 'State Taxes Due',                          io: 'output' },
       { key: 'localTax',                    label: 'Local Tax',                                io: 'output' },
+      { key: 'credits',                     label: 'Credits',                                  io: 'input'  },
+      { key: 'afterTaxDeductions',          label: 'After tax Deductions',                     io: 'input'  },
       { key: 'total',                       label: 'Total',                                    io: 'output' }
     ]
   },
@@ -8440,7 +8497,7 @@ const OUTLIER_TEMPLATES = {
       { key: 'agi',                         label: 'AGI',                                       io: 'output' },
       { key: 'additions',                   label: 'Additions to Income',                       io: 'input'  },
       { key: 'deductions',                  label: 'Deductions',                                io: 'input'  },
-      { key: 'exemption',                   label: 'Exemption',                                 io: 'input'  },
+      { key: 'exemption',                   label: 'Personal Exemption',                        io: 'input'  },
       { key: 'stateTaxableIncome',          label: 'State Taxable Income',                      io: 'output' },
       { key: 'stateTaxesDue',               label: 'State Taxes Due',                           io: 'output' },
       { key: 'credits',                     label: 'Credits',                                   io: 'input'  },
@@ -8457,7 +8514,7 @@ const OUTLIER_TEMPLATES = {
       { key: 'agi',                         label: 'AGI',                                       io: 'output' },
       { key: 'additions',                   label: 'Additions to Income',                       io: 'input'  },
       { key: 'deductions',                  label: 'Deductions',                                io: 'input'  },
-      { key: 'standardDeduction',           label: 'Standard Deduction',                        io: 'output' },
+      { key: 'standardDeduction',           label: 'Standard/Itemized Deduction',               io: 'output' },
       { key: 'stateTaxableIncome',          label: 'State Taxable Income',                      io: 'output' },
       { key: 'stateTaxesDue',               label: 'State Taxes Due',                           io: 'output' },
       { key: 'credits',                     label: 'Credits',                                   io: 'input'  },
@@ -8528,10 +8585,10 @@ const OUTLIER_TEMPLATES = {
       { key: 'additions',                   label: 'Additions to Income',                       io: 'input'  },
       { key: 'deductions',                  label: 'Deductions',                                io: 'input'  },
       { key: 'nyagi',                       label: 'New York AGI',                              io: 'output' },
-      { key: 'standardDeductionOrItemized', label: 'Standard or Itemized Deduction',            io: 'output' },
+      { key: 'standardDeductionOrItemized', label: 'Standard/Itemized deduction',               io: 'output' },
       { key: 'otherDeductions',             label: 'Other Deductions',                          io: 'input'  },
       { key: 'stateTaxableIncome',          label: 'State Taxable Income',                      io: 'output' },
-      { key: 'newYorkTaxDue',               label: 'New York Tax Due',                          io: 'output' },
+      { key: 'newYorkTaxDue',               label: 'NY Tax Due',                          io: 'output' },
       { key: 'credits',                     label: 'Credits',                                   io: 'input'  },
       { key: 'afterTaxDeductions',          label: 'After Tax Deductions',                      io: 'input'  },
       { key: 'total',                       label: 'Total',                                     io: 'output' },
@@ -8539,7 +8596,7 @@ const OUTLIER_TEMPLATES = {
   },
 
   // TODO:
-  'Missouri':       { leadKey:'taxableIncome', fields:[/*...*/] },
+  // 'Missouri':       { leadKey:'taxableIncome', fields:[/*...*/] },
 };
 
 // helper: returns template object or null
@@ -8843,11 +8900,23 @@ function readLeadNumbers() {
         if (inputs.credits != null && inputs.credits < 0) inputs.credits = 0;
         if (inputs.deductions != null && inputs.deductions < 0) inputs.deductions = 0;
 
-        // Call flexible endpoint
+        // Only send the lead key (AGI OR Taxable Income OR custom key).
+        const leadValue =
+          tpl.leadKey === 'agi'
+            ? agi
+            : tpl.leadKey === 'taxableIncome'
+              ? taxableIncome
+              : (inputs[tpl.leadKey] ?? taxableIncome);
+
         const payload = {
-          state, year, filingStatus, agi, taxableIncome,
-          inputs, schema
+          state,
+          year,
+          filingStatus,
+          [tpl.leadKey]: leadValue,   // <-- ONLY the correct one
+          inputs,
+          schema
         };
+
         const res = await fetch('/api/stateInputsFlex', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -8868,6 +8937,30 @@ function readLeadNumbers() {
           D('Outlier request payload', { state, year, filingStatus, agi, taxableIncome, schema, inputs });
 
         });
+
+        // --- Maryland: compute Total = State Taxes Due + Local Tax ---
+        // Backend is not returning a "total" field for Maryland, so
+        // derive it from the two components and push into the UI.
+        if (state === 'Maryland') {
+          const stateTax = Number(data.stateTaxesDue || 0);
+          const localTax = Number(data.localTax || 0);
+          const total = stateTax + localTax;
+
+          // This is the dynamic "Total:" field in the Maryland block
+          const mdTotalField = document.getElementById('state_total');
+          if (mdTotalField) {
+            mdTotalField.value = formatCurrency(String(total));
+          }
+
+          // Keep the master Total State Tax field in sync
+          const totalStateTaxEl = document.getElementById('totalStateTax');
+          if (totalStateTaxEl) {
+            totalStateTaxEl.value = formatCurrency(String(total));
+          }
+
+          // Re-run the refund / balance-due math
+          updateTotalStateTax();
+        }
 
       // 🔁 Copy the outlier "Total:" value into "Total State Tax:"
       const dynTotalEl = document.getElementById('state_total'); // outlier “Total:”
@@ -8921,12 +9014,17 @@ function readLeadNumbers() {
           set('totalStateTax',            'totalStateTax');
           setStateButtonDirty(false);
         }
+            // After any state calc (outlier or normal), re-sync Total State Tax and Total Tax
+            updateTotalStateTax();
+            updateTotalTax();
+
       }
     } catch (err) {
       console.error(err);
       alert('State tax calculation failed: ' + (err.message || err));
   } finally {
     showStateLoader(false);
+    recalculateTotals();
     // Ensure totals refresh for both normal and outlier paths
     updateTotalTax();
   }
@@ -8942,18 +9040,35 @@ function readLeadNumbers() {
 
   stateSel.addEventListener('change', function() {
     const stateName = this.value;
-    // keep your existing mirror to [ State ] field
+
     const selectStateEl = document.getElementById('selectState');
     if (selectStateEl) {
       selectStateEl.value = stateName;
       selectStateEl.classList.add('auto-copied');
     }
+
+    // Flip between static / dynamic layouts
     switchStateLayout(stateName);
-    // If we're on a normal state, the next click should use /api/calculateStateTaxes2
+
+    // If we're on a normal state, force the next click to re-load from Excel
     if (!getOutlierTemplate(stateName)) {
       _stateSectionInitialized = false;
-      setStateButtonDirty(false);
     }
+
+    // (Optional) visually clear main state outputs so user sees this as "fresh"
+    [
+      'stateAdjustedGrossIncome',
+      'stateTaxableIncomeInput',
+      'stateTaxesDue',
+      'totalStateTax'
+    ].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+
+    setStateButtonDirty(false);
+    updateTotalStateTax();
+    updateTotalTax();
   });
 
   stateSel.dataset.layoutBound = 'true';
