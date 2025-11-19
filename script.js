@@ -5734,6 +5734,41 @@ document.addEventListener('DOMContentLoaded', function() {
 // 16. AUTO-COPY STATE TO "SELECTSTATE" //
 //--------------------------------------//
 
+function updateNyLocalSectionsVisibility() {
+  const stateSel   = document.getElementById('state');
+  const nycSel     = document.getElementById('nycResident');
+  const yonkSel    = document.getElementById('yonkersResident');
+
+  const dynContainer = document.getElementById('stateDynamicContainer');
+  const nyWrapper    = document.querySelector('.ny-state');
+  const yonkWrapper  = document.querySelector('.ny-yonkers');
+  const nycWrapper   = document.querySelector('.ny-nyc');
+
+  const isNY = stateSel && stateSel.value === 'New York';
+
+  // Show the whole NY dynamic container only when state = New York
+  if (dynContainer) {
+    dynContainer.style.display = isNY ? 'block' : 'none';
+  }
+
+  // Always show the main NY state section if we are in New York
+  if (nyWrapper) {
+    nyWrapper.style.display = isNY ? '' : 'none';
+  }
+
+  // Yonkers: only when state = NY and user answered Yes
+  const showYonkers = isNY && yonkSel && yonkSel.value === 'Yes';
+  if (yonkWrapper) {
+    yonkWrapper.style.display = showYonkers ? '' : 'none';
+  }
+
+  // NYC: only when state = NY and user answered Yes
+  const showNYC = isNY && nycSel && nycSel.value === 'Yes';
+  if (nycWrapper) {
+    nycWrapper.style.display = showNYC ? '' : 'none';
+  }
+}
+
 document.getElementById('state').addEventListener('input', function() {
     const selectStateEl = document.getElementById('selectState');
     selectStateEl.value = this.value;
@@ -5742,14 +5777,29 @@ document.getElementById('state').addEventListener('input', function() {
     // NEW: Trigger update on all W-2 blocks so FUTA and "Unemployment 2022 - 2025:" update automatically
     const w2Blocks = document.querySelectorAll('.w2-block');
     w2Blocks.forEach(block => {
-      // Find the wages input field in each W-2 block
       const wagesInput = block.querySelector("input[id^='w2Wages_']");
       if (wagesInput) {
-        // Dispatch a "blur" event so updateW2Mapping() is re-run for that block
         wagesInput.dispatchEvent(new Event('blur'));
       }
     });
+
+    // 🔁 Also update NY/NYC/Yonkers visibility whenever state changes
+    updateNyLocalSectionsVisibility();
 });
+
+// When user answers the NYC or Yonkers questions, toggle those subsections
+const nycResidentSel     = document.getElementById('nycResident');
+const yonkersResidentSel = document.getElementById('yonkersResident');
+
+if (nycResidentSel) {
+  nycResidentSel.addEventListener('change', updateNyLocalSectionsVisibility);
+}
+if (yonkersResidentSel) {
+  yonkersResidentSel.addEventListener('change', updateNyLocalSectionsVisibility);
+}
+
+// Run once on load to set the correct initial visibility
+updateNyLocalSectionsVisibility();
 
 //-----------------------------//
 // 17. HANDLE "ENTER" AS "TAB" //
@@ -8749,18 +8799,18 @@ function renderCommonStateAdjustments(container) {
 // Render a full template (outlier state)
 function renderOutlierUI(stateName) {
   const staticBlock = document.getElementById('stateStaticBlock');
-  const dyn = document.getElementById('stateDynamicContainer');
-  const tpl = getOutlierTemplate(stateName);
+  const dyn         = document.getElementById('stateDynamicContainer');
+  const tpl         = getOutlierTemplate(stateName);
   if (!dyn || !tpl) return;
 
-  // hide static block, show dynamic
+  // hide static block, show dynamic container
   if (staticBlock) staticBlock.style.display = 'none';
   dyn.style.display = 'block';
-  dyn.innerHTML = ''; // clear
+  dyn.innerHTML = ''; // clear everything in the dynamic area
 
-  D(`Render outlier UI for ${stateName}`, getOutlierTemplate(stateName));
+  D(`Render outlier UI for ${stateName}`, tpl);
 
-  // header readout for selected state (to mirror your static "[ State ]" field)
+  // Header “[ State ]”
   const header = document.createElement('div');
   header.className = 'form-group';
   header.innerHTML = `
@@ -8769,8 +8819,177 @@ function renderOutlierUI(stateName) {
   `;
   dyn.appendChild(header);
 
-  // add all configured fields
-  tpl.fields.forEach(f => renderField(dyn, f, stateName));
+  // -------- NEW YORK SPECIAL LAYOUT --------
+  if (stateName === 'New York') {
+    // 1) Build the three visual cards
+
+    // New York State card
+    const nyStateCard   = document.createElement('div');
+    nyStateCard.className = 'ny-section-wrapper ny-state';
+
+    const nyStateHeader = document.createElement('h3');
+    nyStateHeader.className = 'ny-subheader ny-subheader-state';
+    nyStateHeader.textContent = 'New York State';
+    nyStateHeader.style.cursor = 'pointer';
+
+    const nyStateTag = document.createElement('span');
+    nyStateTag.className = 'ny-tag ny-tag-state';
+    nyStateTag.textContent = 'State Tax';
+    nyStateHeader.appendChild(nyStateTag);
+
+    const nyStateContent = document.createElement('div');
+    nyStateContent.id = 'nyStateContent';
+    nyStateContent.classList.add('collapsible-content');
+    nyStateContent.classList.remove('active');
+    nyStateContent.style.maxHeight = '0px';
+    nyStateContent.style.overflow = 'hidden';
+
+    // Add click handler to toggle collapse
+    nyStateHeader.addEventListener('click', () => {
+      const isOpen = nyStateContent.classList.toggle('active');
+      if (isOpen) {
+        nyStateContent.style.maxHeight = nyStateContent.scrollHeight + 'px';
+        nyStateContent.addEventListener('transitionend', function toAuto(e) {
+          if (e.propertyName === 'max-height' && nyStateContent.classList.contains('active')) {
+            nyStateContent.style.maxHeight = 'none';
+          }
+          nyStateContent.removeEventListener('transitionend', toAuto);
+        });
+      } else {
+        nyStateContent.style.maxHeight = nyStateContent.scrollHeight + 'px';
+        void nyStateContent.offsetHeight;
+        nyStateContent.style.maxHeight = '0px';
+      }
+    });
+
+    nyStateCard.appendChild(nyStateHeader);
+    nyStateCard.appendChild(nyStateContent);
+    dyn.appendChild(nyStateCard);
+
+    // Row for Yonkers + NYC
+    const localsRow = document.createElement('div');
+    localsRow.className = 'ny-locals-row';
+
+    // NYC card
+    const nycCard = document.createElement('div');
+    nycCard.className = 'ny-section-wrapper ny-nyc';
+    nycCard.style.marginBottom = '15px';
+
+    const nycHeader = document.createElement('h3');
+    nycHeader.className = 'ny-subheader ny-subheader-nyc';
+    nycHeader.textContent = 'New York City';
+    nycHeader.style.cursor = 'pointer';
+
+    const nycTag = document.createElement('span');
+    nycTag.className = 'ny-tag ny-tag-nyc';
+    nycTag.textContent = 'City Tax';
+    nycHeader.appendChild(nycTag);
+
+    const nycContent = document.createElement('div');
+    nycContent.id = 'nyNycContent';
+    nycContent.classList.add('collapsible-content');
+    nycContent.classList.remove('active');
+    nycContent.style.maxHeight = '0px';
+    nycContent.style.overflow = 'hidden';
+
+    // Add click handler to toggle collapse
+    nycHeader.addEventListener('click', () => {
+      const isOpen = nycContent.classList.toggle('active');
+      if (isOpen) {
+        nycContent.style.maxHeight = nycContent.scrollHeight + 'px';
+        nycContent.addEventListener('transitionend', function toAuto(e) {
+          if (e.propertyName === 'max-height' && nycContent.classList.contains('active')) {
+            nycContent.style.maxHeight = 'none';
+          }
+          nycContent.removeEventListener('transitionend', toAuto);
+        });
+      } else {
+        nycContent.style.maxHeight = nycContent.scrollHeight + 'px';
+        void nycContent.offsetHeight;
+        nycContent.style.maxHeight = '0px';
+      }
+    });
+
+    nycCard.appendChild(nycHeader);
+    nycCard.appendChild(nycContent);
+    localsRow.appendChild(nycCard);
+
+    // Yonkers card
+    const yonkCard = document.createElement('div');
+    yonkCard.className = 'ny-section-wrapper ny-yonkers';
+    yonkCard.style.marginBottom = '15px';
+
+    const yonkHeader = document.createElement('h3');
+    yonkHeader.className = 'ny-subheader ny-subheader-yonkers';
+    yonkHeader.textContent = 'Yonkers';
+    yonkHeader.style.cursor = 'pointer';
+
+    const yonkTag = document.createElement('span');
+    yonkTag.className = 'ny-tag ny-tag-yonkers';
+    yonkTag.textContent = 'Local Tax';
+    yonkHeader.appendChild(yonkTag);
+
+    const yonkContent = document.createElement('div');
+    yonkContent.id = 'nyYonkersContent';
+    yonkContent.classList.add('collapsible-content');
+    yonkContent.classList.remove('active');
+    yonkContent.style.maxHeight = '0px';
+    yonkContent.style.overflow = 'hidden';
+
+    // Add click handler to toggle collapse
+    yonkHeader.addEventListener('click', () => {
+      const isOpen = yonkContent.classList.toggle('active');
+      if (isOpen) {
+        yonkContent.style.maxHeight = yonkContent.scrollHeight + 'px';
+        yonkContent.addEventListener('transitionend', function toAuto(e) {
+          if (e.propertyName === 'max-height' && yonkContent.classList.contains('active')) {
+            yonkContent.style.maxHeight = 'none';
+          }
+          yonkContent.removeEventListener('transitionend', toAuto);
+        });
+      } else {
+        yonkContent.style.maxHeight = yonkContent.scrollHeight + 'px';
+        void yonkContent.offsetHeight;
+        yonkContent.style.maxHeight = '0px';
+      }
+    });
+
+    yonkCard.appendChild(yonkHeader);
+    yonkCard.appendChild(yonkContent);
+    localsRow.appendChild(yonkCard);
+
+    dyn.appendChild(localsRow);
+
+    // 2) Route each template field into the correct card
+    const yonkersKeys = new Set([
+      'yonkersTaxesDue',
+      'yonkersCredits',
+      'yonkersAfterTaxDeductions',
+      'yonkersTotal'
+    ]);
+    const nycKeys = new Set([
+      'nycTaxesDue',
+      'nycCredits',
+      'nycAfterTaxDeductions',
+      'nycTotal'
+    ]);
+
+    tpl.fields.forEach(f => {
+      let target;
+      if (yonkersKeys.has(f.key)) {
+        target = yonkContent;
+      } else if (nycKeys.has(f.key)) {
+        target = nycContent;
+      } else {
+        target = nyStateContent;
+      }
+      renderField(target, f, stateName);
+    });
+
+  } else {
+    // -------- ALL OTHER OUTLIER STATES (unchanged) --------
+    tpl.fields.forEach(f => renderField(dyn, f, stateName));
+  }
 
   // Mark button dirty on any edit in the dynamic state block
   dyn.addEventListener('input', (e) => {
@@ -8779,7 +8998,7 @@ function renderOutlierUI(stateName) {
     }
   }, { once: false });
 
-  // At the end of renderOutlierUI(stateName)
+  // Keep Total State Tax in sync with outlier “Total” cell if present
   const outlierTotalEl =
       document.getElementById('state_total')      // generic outlier Total
       || document.getElementById('state_stateTotal'); // New York “Total (State)”
@@ -8790,19 +9009,18 @@ function renderOutlierUI(stateName) {
       if (totalStateTaxEl) {
         totalStateTaxEl.value = formatCurrency(String(n));
       }
-      updateTotalStateTax(); // keep balance/refund in sync
+      updateTotalStateTax();
     };
     outlierTotalEl.addEventListener('input', syncTotal);
-    syncTotal(); // run once immediately
+    syncTotal();
   }
 
   updateTotalStateTax();
-  
-  // …existing updateTotalStateTax();
-  if (stateName === 'New York') {
-    applyNYToggleVisibility(); // initial paint honors current Yes/No
-  }
 
+  // New York: apply the NYC/Yonkers Yes/No toggle logic
+  if (stateName === 'New York') {
+    applyNYToggleVisibility();
+  }
 }
 
 function moveFormGroupByFieldId(fieldId, targetContainer) {

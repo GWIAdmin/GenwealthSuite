@@ -1320,3 +1320,125 @@ body.dark-mode #ai-suggestions .ai-tag { background: #1b1630; border-color: #644
 
 /* Hide empty Impact column if AI doesn’t send it */
 #ai-suggestions .gw-card.ai-card .gw-card-grid > div[hidden] { display: none; }
+
+/* ================================
+   New York Section Styling
+   ================================ */
+.ny-section-wrapper {
+  background: #ffffff;
+  border: 4px solid #552583;
+  border-radius: 20px;
+  padding: 18px 20px;
+  margin-top: 25px;
+  box-shadow: 0 2px 5px rgba(0,0,0,.25);
+}
+
+.ny-subheader {
+  margin: 0 0 15px 0;
+  padding: 10px;
+  text-align: center;
+  font-size: 1.3rem;
+  background: #dcd6f6;
+  color: #4E4C5E;
+  border: 3px solid #552583;
+  border-radius: 15px;
+}
+
+body.dark-mode .ny-section-wrapper {
+  background: var(--business-entry);
+  border-color: var(--border-dark);
+}
+
+body.dark-mode .ny-subheader {
+  background: #38135f;
+  color: var(--h3-dark);
+  border-color: var(--border-dark);
+}
+
+/* Layout row for Yonkers + NYC when both are present */
+.ny-locals-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+/* Let each local panel share the row, but stack on narrow screens */
+.ny-locals-row .ny-section-wrapper {
+  flex: 1 1 0;
+  min-width: 260px;
+}
+
+/* Section-specific header colors */
+.ny-subheader-state {
+  /* keep existing purple theme */
+}
+
+.ny-subheader-yonkers {
+  background: #ffe7d9;       /* soft orange */
+  border-color: #d9480f;
+}
+
+.ny-subheader-nyc {
+  background: #dbeafe;       /* soft blue */
+  border-color: #1d4ed8;
+}
+
+/* Tag pill inside each header */
+.ny-tag {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #fff;
+  color: #333;
+}
+
+.ny-tag-state {
+  background: #fff7cc;
+  color: #92400e;
+}
+
+.ny-tag-yonkers {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.ny-tag-nyc {
+  background: #e0ecff;
+  color: #1e3a8a;
+}
+
+/* Dark mode variants */
+body.dark-mode .ny-subheader-yonkers {
+  background: #5b2610;
+  border-color: #f97316;
+}
+
+body.dark-mode .ny-subheader-nyc {
+  background: #1f2937;
+  border-color: #60a5fa;
+}
+
+body.dark-mode .ny-tag {
+  background: #111827;
+  color: #f9fafb;
+}
+
+body.dark-mode .ny-tag-state {
+  background: #4b5563;
+  color: #fbbf24;
+}
+
+body.dark-mode .ny-tag-yonkers {
+  background: #4b2714;
+  color: #fed7aa;
+}
+
+body.dark-mode .ny-tag-nyc {
+  background: #111827;
+  color: #bfdbfe;
+}
