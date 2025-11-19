@@ -60,7 +60,7 @@
         <a href="#employerEmployeeTaxes">Employer and Employee Taxes</a>
         <a href="#stateTaxableIncome">State Taxable Income</a>
         <a href="#totalTaxSection">Total Tax</a>
-        <a href="#gw-restructure">2025 Restructure</a>
+        <a href="#gw-restructure">Restructure</a>
         <a href="#adjustment-summary">Strategic Adjustment Summary</a>
         <a href="#submitButton">Submit</a>
       </div>
@@ -216,6 +216,26 @@
             <option value="Wisconsin">Wisconsin</option>
             <option value="Wyoming">Wyoming</option>
             </select>
+
+          <!-- NY local-tax toggles (shown only when State = New York) -->
+          <div class="form-group" id="nycQuestion" style="display:none; margin-top: 15px;">
+            <label for="nycResident">Subject to New York City Tax?</label>
+            <select id="nycResident" name="nycResident">
+              <option value="Please Select" disabled selected>Please Select</option>
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="yonkersQuestion" style="display:none;">
+            <label for="yonkersResident">Subject to Yonkers Tax?</label>
+            <select id="yonkersResident" name="yonkersResident">
+              <option value="Please Select" disabled selected>Please Select</option>
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+            </select>
+          </div>
+
           </div>
 
           <div class="form-group">

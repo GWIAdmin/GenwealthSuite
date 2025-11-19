@@ -1593,17 +1593,32 @@ function D(msg, ...args) {
 }
 
 function updateTotalStateTax() {
-  const outlierTotalEl = document.getElementById('state_total');
+  const stateSelect = document.getElementById('state');
+  const stateName   = stateSelect ? stateSelect.value : '';
 
-  // Only treat the outlier "Total:" as active if it's visible
+  const outlierTotalEl =
+    document.getElementById('state_total')      // generic outlier Total
+    || document.getElementById('state_stateTotal'); // New York dynamic “Total”
+
+  // Only treat the outlier "Total:" as active if it is actually visible
   const usingOutlier =
     outlierTotalEl &&
-    outlierTotalEl.offsetParent !== null; // null when an ancestor is display:none
+    outlierTotalEl.offsetParent !== null;
 
-  const baseStateTax = usingOutlier
-    ? unformatCurrency(outlierTotalEl.value || '0')
-    : getFieldValue('stateTaxesDue');
+  let baseStateTax;
 
+  if (stateName === 'New York') {
+    // For New York, the summary “NY Tax Due” line is the state-only tax.
+    // Yonkers and NYC live in the separate Local Tax field.
+    baseStateTax = getFieldValue('stateTaxesDue');
+  } else {
+    // For all other states, keep the existing behavior.
+    baseStateTax = usingOutlier
+      ? unformatCurrency(outlierTotalEl.value || '0')
+      : getFieldValue('stateTaxesDue');
+  }
+
+  // Local tax summary (Yonkers + NYC for New York, or zero for states without locals)
   const localTax = getFieldValue('localTaxAfterCredits');
 
   const totalStateTax = baseStateTax + localTax;
@@ -1633,8 +1648,8 @@ function updateTotalStateTax() {
   if (balanceDueField) {
     balanceDueField.value = formatCurrency(String(balanceDue));
   }
-  
-  // Always keep grand Total Tax in sync with updated state numbers
+
+  // Keep the overall Total Tax in sync with the updated state amount
   updateTotalTax();
 }
 
@@ -2871,8 +2886,8 @@ function formatCurrency(value) {
     let floatValue = parseFloat(numericValue);
     if (isNaN(floatValue)) return '';
 
-    // 3) Truncate to integer, format with Intl, drop “.00”
-    const truncatedValue = parseInt(floatValue, 10);
+    // 3) Round to the nearest dollar, format with Intl, drop “.00”
+    const truncatedValue = Math.round(floatValue);
     const absoluteVal = Math.abs(truncatedValue);
     let formattedVal = new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -7946,18 +7961,32 @@ function updateTotalTax() {
   // 9) Write everything back to the form
   const taxField   = document.getElementById('tax');
   const fedField   = document.getElementById('totalFederalTax');
-
   const totalField = document.getElementById('totalTax');
-  const stateTax = getFieldValue('totalStateTax');
-  
-  if (taxField)   taxField.value   = fmt(computedTax);
-  if (fedField)   fedField.value   = fmt(totalFed);
+
+  // Start with the computed Total State Tax field
+  let stateTax = getFieldValue('totalStateTax');
+
+  // For New York, enforce “state + local” even if the field is out of sync
+  const stateSelect = document.getElementById('state');
+  const stateName   = stateSelect ? stateSelect.value : '';
+  if (stateName === 'New York') {
+    const nyBase  = getFieldValue('stateTaxesDue');
+    const nyLocal = getFieldValue('localTaxAfterCredits');
+    stateTax = nyBase + nyLocal;
+  }
+
+  if (taxField) {
+    taxField.value = fmt(computedTax);
+  }
+  if (fedField) {
+    fedField.value = fmt(totalFed);
+  }
 
   if (totalField) {
     const grandTotal = totalFed + stateTax + employeeFICA + employerFICA;
     totalField.value = fmt(grandTotal);
   }
-  
+
   // Keep Payments section in sync with latest federal tax
   updateFederalPayments();
 }
@@ -8588,10 +8617,22 @@ const OUTLIER_TEMPLATES = {
       { key: 'standardDeductionOrItemized', label: 'Standard/Itemized deduction',               io: 'output' },
       { key: 'otherDeductions',             label: 'Other Deductions',                          io: 'input'  },
       { key: 'stateTaxableIncome',          label: 'State Taxable Income',                      io: 'output' },
-      { key: 'newYorkTaxDue',               label: 'NY Tax Due',                          io: 'output' },
+      { key: 'newYorkTaxDue',               label: 'NY Tax Due',                                io: 'output' },
       { key: 'credits',                     label: 'Credits',                                   io: 'input'  },
       { key: 'afterTaxDeductions',          label: 'After Tax Deductions',                      io: 'input'  },
-      { key: 'total',                       label: 'Total',                                     io: 'output' },
+      { key: 'stateTotal',                  label: 'Total (State)',                             io: 'output' },
+      
+      // Yonkers
+      { key: 'yonkersTaxesDue',             label: 'Yonkers Taxes Due',                         io: 'output' },
+      { key: 'yonkersCredits',              label: 'Credits',                                   io: 'input'  },
+      { key: 'yonkersAfterTaxDeductions',   label: 'After tax Deductions',                      io: 'input'  },
+      { key: 'yonkersTotal',                label: 'Total (Yonkers)',                           io: 'output' },
+
+      // New York City
+      { key: 'nycTaxesDue',                 label: 'NYC Taxes Due',                             io: 'output' },
+      { key: 'nycCredits',                  label: 'Credits',                                   io: 'input'  },
+      { key: 'nycAfterTaxDeductions',       label: 'After tax Deductions',                      io: 'input'  },
+      { key: 'nycTotal',                    label: 'Total (City)',                              io: 'output' },
     ] 
   },
 
@@ -8739,7 +8780,9 @@ function renderOutlierUI(stateName) {
   }, { once: false });
 
   // At the end of renderOutlierUI(stateName)
-  const outlierTotalEl = document.getElementById('state_total'); // the dynamic "Total:" for outliers
+  const outlierTotalEl =
+      document.getElementById('state_total')      // generic outlier Total
+      || document.getElementById('state_stateTotal'); // New York “Total (State)”
   if (outlierTotalEl) {
     const syncTotal = () => {
       const n = unformatCurrency(outlierTotalEl.value || '0');
@@ -8754,6 +8797,12 @@ function renderOutlierUI(stateName) {
   }
 
   updateTotalStateTax();
+  
+  // …existing updateTotalStateTax();
+  if (stateName === 'New York') {
+    applyNYToggleVisibility(); // initial paint honors current Yes/No
+  }
+
 }
 
 function moveFormGroupByFieldId(fieldId, targetContainer) {
@@ -8831,6 +8880,75 @@ function readMoney(id) {
   const el = document.getElementById(id);
   if (!el) return 0;
   return unformatCurrency(el.value || '0');
+}
+
+// --- NYC/Yonkers dynamic visibility (NY outlier UI) ---
+function applyNYToggleVisibility() {
+  // answers
+  const showNYC     = (document.getElementById('nycResident')?.value === 'Yes');
+  const showYonkers = (document.getElementById('yonkersResident')?.value === 'Yes');
+
+  // helper -> locate the .form-group that contains a given outlier field
+  const groupOf = (key) => {
+    const el = document.getElementById(stateFieldId(key));
+    return el ? el.closest('.form-group') : null;
+  };
+
+  // Yonkers trio
+  const yKeys = ['yonkersTaxesDue','yonkersCredits','yonkersAfterTaxDeductions','yonkersTotal'];
+  yKeys.forEach(k => {
+    const g = groupOf(k);
+    if (g) g.style.display = showYonkers ? 'block' : 'none';
+  });
+  // When hidden, clear editable Yonkers inputs so they never leak into math
+  if (!showYonkers) {
+    ['state_yonkersCredits','state_yonkersAfterTaxDeductions'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+  }
+
+  // NYC trio
+  const nKeys = ['nycTaxesDue','nycCredits','nycAfterTaxDeductions','nycTotal'];
+  nKeys.forEach(k => {
+    const g = groupOf(k);
+    if (g) g.style.display = showNYC ? 'block' : 'none';
+  });
+  if (!showNYC) {
+    ['state_nycCredits','state_nycAfterTaxDeductions'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+  }
+
+  // Always re-sync Local Tax and roll-up totals after any visibility change
+  syncNYLocalTaxesFromToggles();
+}
+
+// Recompute Local Tax (NYC + Yonkers) based on user toggle answers
+function syncNYLocalTaxesFromToggles() {
+  const includeNYC     = (document.getElementById('nycResident')?.value === 'Yes');
+  const includeYonkers = (document.getElementById('yonkersResident')?.value === 'Yes');
+
+  // Prefer “Taxes Due” (unambiguous) and only fall back to “Total” if Taxes Due is blank
+  const yTotalEl = document.getElementById('state_yonkersTotal');
+  const yDueEl   = document.getElementById('state_yonkersTaxesDue');
+  const nTotalEl = document.getElementById('state_nycTotal');
+  const nDueEl   = document.getElementById('state_nycTaxesDue');
+
+  const yonkersVal = yDueEl && yDueEl.value.trim() !== ''
+      ? unformatCurrency(yDueEl.value)
+      : (yTotalEl ? unformatCurrency(yTotalEl.value || '0') : 0);
+
+  const nycVal = nDueEl && nDueEl.value.trim() !== ''
+      ? unformatCurrency(nDueEl.value)
+      : (nTotalEl ? unformatCurrency(nTotalEl.value || '0') : 0);
+
+  const localSum = (includeYonkers ? yonkersVal : 0) + (includeNYC ? nycVal : 0);
+
+  const localEl = document.getElementById('localTaxAfterCredits');
+  if (localEl) localEl.value = formatCurrency(String(localSum));
+
+  updateTotalStateTax();
+  updateTotalTax();
 }
 
 // Read AGI/Taxable Income from your existing totals
@@ -8938,6 +9056,60 @@ function readLeadNumbers() {
 
         });
 
+        // --- New York: push state + local pieces into the summary block ---
+        if (state === 'New York') {
+          // NY state-only total (row "Total" in the NY block)
+          const nyStateOnly =
+            Number(
+              data.total ??
+              data.newYorkTaxDue ??
+              data.nyTaxDueTop ??
+              0
+            );
+
+          // Yonkers + NYC totals from the outlier block
+          const yonkersTotal = Number(data.yonkersTotal ?? 0);
+          const nycTotal     = Number(data.nycTotal ?? 0);
+
+
+          // Top "State Taxes Due" line: NY portion only
+          const stateTaxesDueEl = document.getElementById('stateTaxesDue');
+          if (stateTaxesDueEl) {
+            stateTaxesDueEl.value = formatCurrency(String(nyStateOnly));
+          }
+
+          // Toggle-aware local taxes for New York
+          const includeNYC     = (document.getElementById('nycResident')?.value === 'Yes');
+          const includeYonkers = (document.getElementById('yonkersResident')?.value === 'Yes');
+
+          const localSum = (includeYonkers ? yonkersTotal : 0) + (includeNYC ? nycTotal : 0);
+
+          const localTaxEl = document.getElementById('localTaxAfterCredits');
+          if (localTaxEl) {
+            localTaxEl.value = formatCurrency(String(localSum));
+          }
+
+          // "State Taxable Income" summary: use the NY taxable income top line
+          const taxableSummaryEl = document.getElementById('stateTaxableIncomeInput');
+          if (taxableSummaryEl) {
+            const ti =
+              data.nyTaxableIncomeTop != null
+                ? Number(data.nyTaxableIncomeTop)
+                : Number(data.stateTaxableIncome ?? 0);
+            taxableSummaryEl.value = formatCurrency(String(ti));
+          }
+
+          // "Taxable Income" / AGI line for NY summary
+          const agiEl = document.getElementById('stateAdjustedGrossIncome');
+          if (agiEl) {
+            const agiVal =
+              data.nyagi != null
+                ? Number(data.nyagi)
+                : Number(data.agi ?? 0);
+            agiEl.value = formatCurrency(String(agiVal));
+          }
+        }
+
         // --- Maryland: compute Total = State Taxes Due + Local Tax ---
         // Backend is not returning a "total" field for Maryland, so
         // derive it from the two components and push into the UI.
@@ -8961,15 +9133,6 @@ function readLeadNumbers() {
           // Re-run the refund / balance-due math
           updateTotalStateTax();
         }
-
-      // 🔁 Copy the outlier "Total:" value into "Total State Tax:"
-      const dynTotalEl = document.getElementById('state_total'); // outlier “Total:”
-      const totalStateTaxEl = document.getElementById('totalStateTax');
-      if (dynTotalEl && totalStateTaxEl) {
-        const n = unformatCurrency(dynTotalEl.value || '0');
-        totalStateTaxEl.value = formatCurrency(String(n));
-      }
-
 
       } else {
         // Normal 32-state flow:
@@ -9041,6 +9204,21 @@ function readLeadNumbers() {
   stateSel.addEventListener('change', function() {
     const stateName = this.value;
 
+    const nycQ      = document.getElementById('nycQuestion');
+    const yonkersQ  = document.getElementById('yonkersQuestion');
+    const nycSel    = document.getElementById('nycResident');
+    const ykrSel    = document.getElementById('yonkersResident');
+
+    if (stateName === 'New York') {
+      if (nycQ)     nycQ.style.display = 'block';
+      if (yonkersQ) yonkersQ.style.display = 'block';
+    } else {
+      if (nycQ)     nycQ.style.display = 'none';
+      if (yonkersQ) yonkersQ.style.display = 'none';
+      if (nycSel)   nycSel.value = 'Please Select';
+      if (ykrSel)   ykrSel.value = 'Please Select';
+    }
+
     const selectStateEl = document.getElementById('selectState');
     if (selectStateEl) {
       selectStateEl.value = stateName;
@@ -9073,6 +9251,17 @@ function readLeadNumbers() {
 
   stateSel.dataset.layoutBound = 'true';
 })();
+
+['nycResident','yonkersResident'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el && !el.dataset.boundNY) {
+    el.addEventListener('change', () => {
+      syncNYLocalTaxesFromToggles();
+      applyNYToggleVisibility();
+    });
+    el.dataset.boundNY = '1';
+  }
+});
 
 // ------------------------------//
 // 30. Deduction Strategy Box    //
