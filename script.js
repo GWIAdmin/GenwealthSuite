@@ -1653,15 +1653,19 @@ function updateTotalStateTax() {
   updateTotalTax();
 }
 
-['stateWithholdings','statePaymentsAndCredits','stateInterest','statePenalty']
-  .forEach(id => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.addEventListener('input', () => {
-        updateTotalStateTax();
-      });
-    }
-  });
+[
+  'stateWithholdings',
+  'statePaymentsAndCredits',
+  'stateInterest',
+  'statePenalty',
+  'stateTaxesDue',
+  'localTaxAfterCredits'
+].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) {
+    el.addEventListener('input', updateTotalStateTax);
+  }
+});
 
 //-------------------------------------//
 // CHILD TAX CREDIT CONSTANTS & RULES //
@@ -5436,6 +5440,7 @@ function recalculateTotals() {
         updateNetInvestmentTax();
         updateAggregateResComp();
         calculateEmployerEmployeeTaxes();
+        updateTotalStateTax();
         updateTotalTax();
 
         isRecalculating = false;
@@ -8073,15 +8078,6 @@ document.getElementById('stateTaxesDue')
     updateTotalStateTax();
 
   });
-
-
-function followCursor(event) {
-  const offsetX = 20; // Adjust if you want pet slightly offset from cursor
-  const offsetY = 20;
-
-  pet.style.left = `${event.clientX + offsetX}px`;
-  pet.style.top = `${event.clientY + offsetY}px`;
-}
 
 //-----------------------//
 // 29. State Adjustments //
