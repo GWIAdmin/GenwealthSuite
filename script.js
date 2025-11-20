@@ -8730,72 +8730,6 @@ function renderField(container, tplField, stateName) {
   container.appendChild(wrap);
 }
 
-// Renders the common state adjustments for BOTH normal and outlier flows
-// Uses the SAME IDs as the static block so existing logic keeps working.
-function renderCommonStateAdjustments(container) {
-  const block = document.createElement('div');
-  block.className = 'form-group';
-  block.id = 'stateCommonAdjustments';
-
-  block.innerHTML = `
-    <div class="form-group">
-      <label for="localTaxAfterCredits">Local Tax after Credits:</label>
-      <input type="text" id="localTaxAfterCredits" name="localTaxAfterCredits" class="currency-field">
-    </div>
-
-    <div class="form-group">
-      <label for="stateWithholdings">Withholdings:</label>
-      <input type="text" id="stateWithholdings" name="stateWithholdings" class="currency-field">
-    </div>
-
-    <div class="form-group">
-      <label for="statePaymentsAndCredits">Payments and Credits:</label>
-      <input type="text" id="statePaymentsAndCredits" name="statePaymentsAndCredits" class="currency-field">
-    </div>
-
-    <div class="form-group">
-      <label for="stateInterest">Interest:</label>
-      <input type="text" id="stateInterest" name="stateInterest" class="currency-field">
-    </div>
-
-    <div class="form-group">
-      <label for="statePenalty">Penalty:</label>
-      <input type="text" id="statePenalty" name="statePenalty" class="currency-field">
-    </div>
-
-    <div class="form-group">
-      <label for="stateEstimatedRefundOverpayment">Estimated Refund (Overpayment):</label>
-      <input type="text" id="stateEstimatedRefundOverpayment" name="stateEstimatedRefundOverpayment" class="currency-field" readonly required>
-    </div>
-
-    <div class="form-group">
-      <label for="stateEstimatedBalanceDue">Estimated Balance Due:</label>
-      <input type="text" id="stateEstimatedBalanceDue" name="stateEstimatedBalanceDue" class="currency-field" readonly required>
-    </div>
-  `;
-
-  container.appendChild(block);
-
-  // Currency formatting on blur (reuse your global helper)
-  block.querySelectorAll('.currency-field').forEach((el) => {
-    el.addEventListener('blur', () => {
-      el.value = formatCurrency(el.value);
-    });
-  });
-
-  // Live recompute when users type
-  ['localTaxAfterCredits','stateWithholdings','statePaymentsAndCredits','stateInterest','statePenalty']
-    .forEach(id => {
-      const el = block.querySelector('#' + id);
-      if (el) {
-        el.addEventListener('input', () => {
-          updateTotalStateTax();
-          updateTotalTax(); // keep grand totals synced
-        });
-      }
-    });
-}
-
 // Render a full template (outlier state)
 function renderOutlierUI(stateName) {
   const staticBlock = document.getElementById('stateStaticBlock');
@@ -9030,20 +8964,29 @@ function moveFormGroupByFieldId(fieldId, targetContainer) {
   targetContainer.appendChild(group);
 }
 
-// Move the common state adjustment groups between static and dynamic containers.
+// Move the common state adjustment block (Optional + refund/balance)
+// between the static and dynamic containers.
 function relocateCommonStateAdjustments(fromContainer, toContainer) {
-  // Order matters so the UI looks sane
-  const idsInOrder = [
-    'localTaxAfterCredits',
-    'totalStateTax',
-    'stateWithholdings',
-    'statePaymentsAndCredits',
-    'stateInterest',
-    'statePenalty',
-    'stateEstimatedRefundOverpayment',
-    'stateEstimatedBalanceDue'
-  ];
-  idsInOrder.forEach(id => moveFormGroupByFieldId(id, toContainer));
+  if (!fromContainer || !toContainer) return;
+
+  // Entire Optional wrapper (h3 + six fields)
+  const optionalWrapper =
+    fromContainer.querySelector('.state-optional-wrapper');
+
+  // Refund / balance groups live directly under the state block
+  const refundGroup = fromContainer
+    .querySelector('#stateEstimatedRefundOverpayment')
+    ?.closest('.form-group');
+
+  const balanceGroup = fromContainer
+    .querySelector('#stateEstimatedBalanceDue')
+    ?.closest('.form-group');
+
+  [optionalWrapper, refundGroup, balanceGroup].forEach(node => {
+    if (node && !toContainer.contains(node)) {
+      toContainer.appendChild(node);
+    }
+  });
 }
 
 // Switch UI for a selected state
