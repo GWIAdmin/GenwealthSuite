@@ -8826,24 +8826,6 @@ function renderOutlierUI(stateName) {
     nycContent.style.maxHeight = '0px';
     nycContent.style.overflow = 'hidden';
 
-    // Add click handler to toggle collapse
-    nycHeader.addEventListener('click', () => {
-      const isOpen = nycContent.classList.toggle('active');
-      if (isOpen) {
-        nycContent.style.maxHeight = nycContent.scrollHeight + 'px';
-        nycContent.addEventListener('transitionend', function toAuto(e) {
-          if (e.propertyName === 'max-height' && nycContent.classList.contains('active')) {
-            nycContent.style.maxHeight = 'none';
-          }
-          nycContent.removeEventListener('transitionend', toAuto);
-        });
-      } else {
-        nycContent.style.maxHeight = nycContent.scrollHeight + 'px';
-        void nycContent.offsetHeight;
-        nycContent.style.maxHeight = '0px';
-      }
-    });
-
     nycCard.appendChild(nycHeader);
     nycCard.appendChild(nycContent);
     localsRow.appendChild(nycCard);
@@ -8870,22 +8852,37 @@ function renderOutlierUI(stateName) {
     yonkContent.style.maxHeight = '0px';
     yonkContent.style.overflow = 'hidden';
 
-    // Add click handler to toggle collapse
+    // Shared toggle for NYC + Yonkers: clicking either opens/closes both
+    function toggleNYLocalsTogether(open) {
+      [nycContent, yonkContent].forEach(content => {
+        if (!content) return;
+
+        content.classList.toggle('active', open);
+
+        if (open) {
+          content.style.maxHeight = content.scrollHeight + 'px';
+          content.addEventListener('transitionend', function toAuto(e) {
+            if (e.propertyName === 'max-height' && content.classList.contains('active')) {
+              content.style.maxHeight = 'none';
+            }
+            content.removeEventListener('transitionend', toAuto);
+          });
+        } else {
+          content.style.maxHeight = content.scrollHeight + 'px';
+          void content.offsetHeight;
+          content.style.maxHeight = '0px';
+        }
+      });
+    }
+
+    nycHeader.addEventListener('click', () => {
+      const isOpen = !nycContent.classList.contains('active');
+      toggleNYLocalsTogether(isOpen);
+    });
+
     yonkHeader.addEventListener('click', () => {
-      const isOpen = yonkContent.classList.toggle('active');
-      if (isOpen) {
-        yonkContent.style.maxHeight = yonkContent.scrollHeight + 'px';
-        yonkContent.addEventListener('transitionend', function toAuto(e) {
-          if (e.propertyName === 'max-height' && yonkContent.classList.contains('active')) {
-            yonkContent.style.maxHeight = 'none';
-          }
-          yonkContent.removeEventListener('transitionend', toAuto);
-        });
-      } else {
-        yonkContent.style.maxHeight = yonkContent.scrollHeight + 'px';
-        void yonkContent.offsetHeight;
-        yonkContent.style.maxHeight = '0px';
-      }
+      const isOpen = !nycContent.classList.contains('active');
+      toggleNYLocalsTogether(isOpen);
     });
 
     yonkCard.appendChild(yonkHeader);
