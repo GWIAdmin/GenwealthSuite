@@ -1345,7 +1345,7 @@ body.dark-mode input:not([readonly]),
 body.dark-mode select:not([readonly]),
 body.dark-mode textarea:not([readonly]) {
   background-color: var(--input-dark) !important;
-  color: var(--text-dark) !important;
+  color: var(--h3-dark) !important;
 }
 
 /* Dark mode - read-only */
