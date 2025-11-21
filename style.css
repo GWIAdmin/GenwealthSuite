@@ -225,8 +225,6 @@ input:focus, select:focus, textarea:focus {
 .state-field-success { border-color: #4CAF50 !important; background-color: rgba(76,175,80,.1); }
 .state-field-error   { border-color: #f44336 !important; background-color: rgba(244,67,54,.1); }
 
-#stateTaxableIncomeContent .currency-field[readonly] { background-color: rgba(253,185,39,.1); color: #333; font-weight: normal; }
-
 /* =============================
    7) BUTTONS
    ============================= */
@@ -1320,6 +1318,44 @@ body.dark-mode #ai-suggestions .ai-tag { background: #1b1630; border-color: #644
 
 /* Hide empty Impact column if AI doesn’t send it */
 #ai-suggestions .gw-card.ai-card .gw-card-grid > div[hidden] { display: none; }
+
+/* ============================================
+   GLOBAL EDITABLE vs NON-EDITABLE INPUT COLORS
+   ============================================ */
+
+/* Light mode - editable inputs */
+input:not([readonly]), 
+select:not([readonly]), 
+textarea:not([readonly]) {
+  background-color: #ffffff !important;    /* white */
+  color: #000000 !important;
+}
+
+/* Light mode - read-only fields */
+input[readonly], 
+select[readonly], 
+textarea[readonly] {
+  background-color: #e5e5e5 !important;   /* light muted grey */
+  color: #333 !important;
+  cursor: not-allowed;
+}
+
+/* Dark mode - editable */
+body.dark-mode input:not([readonly]),
+body.dark-mode select:not([readonly]),
+body.dark-mode textarea:not([readonly]) {
+  background-color: var(--input-dark) !important;
+  color: var(--text-dark) !important;
+}
+
+/* Dark mode - read-only */
+body.dark-mode input[readonly],
+body.dark-mode select[readonly],
+body.dark-mode textarea[readonly] {
+  background-color: #2a2a38 !important;   /* dark muted grey */
+  color: var(--h3-dark) !important;
+  cursor: not-allowed;
+}
 
 /* ================================
    New York Section Styling
