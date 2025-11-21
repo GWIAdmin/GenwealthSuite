@@ -352,6 +352,39 @@ function initCollapsibles() {
   });
 }
 
+// Hide State Tax Button Until Section Opens
+const stateHeader = document.querySelector('#stateTaxableIncome h2');
+const stateButton = document.getElementById('calculateStateTaxesBTN');
+const stateContent = document.getElementById('stateTaxableIncomeContent');
+
+// Start Hidden
+stateButton.style.display = 'none';
+
+stateHeader.addEventListener('click', () => {
+    const isOpening = !stateContent.classList.contains('active');
+
+    if (isOpening) {
+        // SHOW — smooth fade-in
+        stateButton.style.display = 'block';     // make it visible immediately
+        stateButton.style.opacity = 0;           // start transparent
+        stateButton.style.transition = 'opacity 0.5s ease';
+
+        requestAnimationFrame(() => {            // next frame for smooth start
+            stateButton.style.opacity = 1;       // fade in
+        });
+
+    } else {
+        // HIDE — smooth fade-out
+        stateButton.style.transition = 'opacity 0.5s ease';
+        stateButton.style.opacity = 0;           // fade out
+
+        // Wait for fade-out to complete before hiding
+        setTimeout(() => {
+            stateButton.style.display = 'none';
+        }, 250);
+    }
+});
+
 // Smooth open/close with post-transition auto-height.
 // Safe for dynamic blocks (W-2, Schedule-E, Business cards, etc.)
 function openCollapsibleAuto(contentEl) {
