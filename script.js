@@ -8200,6 +8200,7 @@ let _stateSectionInitialized = false;
 
 // --- Dynamic State Taxes button + loader helpers ---
 const STATE_EDITABLE_IDS = [
+  'stateAdjustedGrossIncome',
   'stateAdditionsToIncome',
   'stateDeductions',
   'stateCredits',
@@ -8263,6 +8264,7 @@ function renderStateSection(data) {
     el.value = (raw != null) ? formatCurrency(String(raw)) : '';
     // Allow manual edits for four inputs; everything else is read-only
     const editableIds = new Set([
+      'stateAdjustedGrossIncome',
       'stateDeductions',
       'stateAdditionsToIncome',
       'stateCredits',
@@ -8406,7 +8408,32 @@ function stateFieldId(key) {
 // Some "output" fields should still be editable in the UI.
 // state => set of keys that are editable despite io:'output'
 const EDITABLE_OUTPUT_OVERRIDES = {
-  'New York': new Set(['standardDeductionOrItemized'])
+  'Alaska':        new Set(['agi']),  
+  'California':    new Set(['agi']),
+  'California':    new Set(['standardItemizedDeduction']),
+  'Connecticut':   new Set(['agi']),
+  'Delaware':      new Set(['agi']),
+  'Hawaii':        new Set(['agi']),
+  'Idaho':         new Set(['agi']),  
+  'Maryland':      new Set(['agi']),
+  'Maryland':      new Set(['standardDeductionOrItemized']),
+  'Massachusetts': new Set(['agi']),
+  'Massachusetts': new Set(['personalExemption']),
+  'Michigan':      new Set(['agi']),
+  'Michigan':      new Set(['exemption']),
+  'Minnesota':     new Set(['agi']),
+  'Nebraska':      new Set(['agi']),
+  'Nebraska':      new Set(['standardDeduction']),
+  'New York':      new Set(['agi']),
+  'New York':      new Set(['standardDeductionOrItemized']),
+  'Oregon':        new Set(['agi']),
+  'Oregon':        new Set(['exemption']),
+  'Oregon':        new Set(['standardDeduction']),
+  'Washington DC': new Set(['agi']),
+  'Washington DC': new Set(['spouse1']),
+  'Washington DC': new Set(['spouse2']),
+  'Wisconsin':     new Set(['agi']),
+  'Wisconsin':     new Set(['standardDeduction'])
 };
 
 function isEditableOutput(stateName, key) {
@@ -8624,7 +8651,7 @@ const OUTLIER_TEMPLATES = {
       { key: 'additions',                   label: 'Additions to Income',                       io: 'input'  },
       { key: 'deductions',                  label: 'Deductions',                                io: 'input'  },
       { key: 'totalIncome',                 label: 'Total Income',                              io: 'output' },
-      { key: 'standardDeduction',           label: 'Standard Deduction',                        io: 'output' },
+      { key: 'standardDeduction',           label: 'Standard/Itemized Deduction',               io: 'output' },
       { key: 'stateTaxableIncome',          label: 'State Taxable Income',                      io: 'output' },
       { key: 'stateTaxesDue',               label: 'State Taxes Due',                           io: 'output' },
       { key: 'credits',                     label: 'Credits',                                   io: 'input'  },
@@ -8643,7 +8670,7 @@ const OUTLIER_TEMPLATES = {
       { key: 'deductions',                  label: 'Deductions',                                io: 'input'  },
       { key: 'stateTaxableIncome',          label: 'State Taxable Income',                      io: 'output' },
       { key: 'spouse1',                     label: 'Spouse 1 Portion of Income',                io: 'output' },
-      { key: 'spouse2',                     label: 'Spouse 2 Portion of Income',                io: 'input'  },
+      { key: 'spouse2',                     label: 'Spouse 2 Portion of Income',                io: 'output' },
       { key: 'stateTaxesDue',               label: 'State Taxes Due',                           io: 'output' },
       { key: 'credits',                     label: 'Credits',                                   io: 'input'  },
       { key: 'afterTaxDeductions',          label: 'After tax Deductions',                      io: 'input'  },
@@ -9105,11 +9132,54 @@ function syncNYLocalTaxesFromToggles() {
   updateTotalTax();
 }
 
-// Read AGI/Taxable Income from your existing totals
+// Read AGI / Taxable Income, letting the state-level override win
+// 1) Outlier dynamic lead field (e.g. California AGI in the dynamic block)
+// 2) Static "[ State ] → Taxable Income" summary field
+// 3) Fall back to federal AGI / Taxable Income
 function readLeadNumbers() {
+  const stateSel   = document.getElementById('state');
+  const stateName  = stateSel ? stateSel.value : '';
+  let manualLead   = undefined;
+
+  // 1) If this is an outlier state with a template, try the dynamic lead field first
+  const tpl = getOutlierTemplate(stateName);
+  if (tpl && tpl.leadKey) {
+    const dynId = stateFieldId(tpl.leadKey);      // e.g. "state_agi" or "state_taxableIncome"
+    const dynEl = document.getElementById(dynId);
+    if (dynEl) {
+      const raw = (dynEl.value || '').trim();
+      if (raw !== '') {
+        const v = unformatCurrency(raw);
+        if (!Number.isNaN(v)) {
+          manualLead = v;
+        }
+      }
+    }
+  }
+
+  // 2) Static summary field under [ State ] → "Taxable Income:"
+  if (manualLead == null) {
+    const staticEl = document.getElementById('stateAdjustedGrossIncome');
+    if (staticEl) {
+      const raw = (staticEl.value || '').trim();
+      if (raw !== '') {
+        const v = unformatCurrency(raw);
+        if (!Number.isNaN(v)) {
+          manualLead = v;
+        }
+      }
+    }
+  }
+
+  // 3) Fallback to federal AGI / Taxable Income if nothing was manually entered
+  const baseAGI = readMoney('totalAdjustedGrossIncome');
+  const baseTI  = readMoney('taxableIncome');
+
+  const useManual = (typeof manualLead === 'number' && !Number.isNaN(manualLead));
+
   return {
-    agi:           readMoney('totalAdjustedGrossIncome'),
-    taxableIncome: readMoney('taxableIncome')
+    agi:           useManual ? manualLead : baseAGI,
+    taxableIncome: useManual ? manualLead : baseTI
   };
 }
 
@@ -9346,6 +9416,9 @@ function readLeadNumbers() {
     updateTotalTax();
   }
   });
+
+  // Make sure all state summary fields (including AGI/Taxable) mark the button dirty
+  attachStateDirtyListeners();
 
   btn.dataset.bound = 'true';
 })();
