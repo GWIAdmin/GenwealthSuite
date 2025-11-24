@@ -313,6 +313,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     updateAggregateResComp();       // sum into the global RC field
     recalculateTotals();            // re‑run your full totals (incl. state & employer FICA)
 
+    // Initialize multi-state UI (extra state selectors + cards)
+    initMultiStateUI();
+    // Make sure cards reflect any default state selection
+    renderStateRuns();
   });
 
 window.getBrackets        = getBrackets;
@@ -352,38 +356,11 @@ function initCollapsibles() {
   });
 }
 
-// Hide State Tax Button Until Section Opens
-const stateHeader = document.querySelector('#stateTaxableIncome h2');
+// Keep State Tax button hidden by default; card logic will show it when needed.
 const stateButton = document.getElementById('calculateStateTaxesBTN');
-const stateContent = document.getElementById('stateTaxableIncomeContent');
-
-// Start Hidden
-stateButton.style.display = 'none';
-
-stateHeader.addEventListener('click', () => {
-    const isOpening = !stateContent.classList.contains('active');
-
-    if (isOpening) {
-        // SHOW — smooth fade-in
-        stateButton.style.display = 'block';     // make it visible immediately
-        stateButton.style.opacity = 0;           // start transparent
-        stateButton.style.transition = 'opacity 0.5s ease';
-
-        requestAnimationFrame(() => {            // next frame for smooth start
-            stateButton.style.opacity = 1;       // fade in
-        });
-
-    } else {
-        // HIDE — smooth fade-out
-        stateButton.style.transition = 'opacity 0.5s ease';
-        stateButton.style.opacity = 0;           // fade out
-
-        // Wait for fade-out to complete before hiding
-        setTimeout(() => {
-            stateButton.style.display = 'none';
-        }, 250);
-    }
-});
+if (stateButton) {
+  stateButton.style.display = 'none';
+}
 
 // Smooth open/close with post-transition auto-height.
 // Safe for dynamic blocks (W-2, Schedule-E, Business cards, etc.)
@@ -1699,6 +1676,279 @@ function updateTotalStateTax() {
     el.addEventListener('input', updateTotalStateTax);
   }
 });
+
+// === Multi-state selection from Personal Information ===
+
+// === Multi-state selection from Personal Information ===
+
+// Cached list of states with income (resident + additional states).
+// This is kept in sync only when the user changes Personal Information,
+// so it does not bounce around when you open/close state cards.
+window.personalStates = window.personalStates || [];
+
+/**
+ * Rebuild window.personalStates from the Personal Information inputs.
+ * Called when the user changes the resident state or additional states.
+ */
+function refreshPersonalStatesFromInputs() {
+  const states = [];
+
+  const mainEl = document.getElementById('state');
+  if (mainEl && mainEl.value) {
+    states.push(mainEl.value);
+  }
+
+  const numOther = parseInt(
+    document.getElementById('numOtherStates')?.value || '0',
+    10
+  ) || 0;
+
+  for (let i = 1; i <= numOther; i++) {
+    const sel = document.getElementById(`otherState_${i}`);
+    if (sel && sel.value && !states.includes(sel.value)) {
+      states.push(sel.value);
+    }
+  }
+
+  window.personalStates = states;
+}
+
+/**
+ * Returns the ordered list of all states with income,
+ * based on the cached personalStates list.
+ */
+function getSelectedStates() {
+  if (!Array.isArray(window.personalStates) || window.personalStates.length === 0) {
+    refreshPersonalStatesFromInputs();
+  }
+  return window.personalStates;
+}
+
+// === Multi-State Summary Store & Renderer (up to 4 states) ===
+
+// In-memory store: stateName -> snapshot of summary numbers
+window.stateRuns = window.stateRuns || {};
+
+/**
+ * Capture the current state summary into stateRuns[stateName]
+ * and rebuild the UI cards.
+ */
+function captureStateRunSummary(stateName) {
+  if (!stateName) return;
+
+  // numeric helpers
+  const read = (id) => getFieldValue(id); // already unformats currency
+
+  const snapshot = {
+    stateTaxesDue:          read('stateTaxesDue'),
+    localTaxAfterCredits:   read('localTaxAfterCredits'),
+    totalStateTax:          read('totalStateTax'),
+    refund:                 read('stateEstimatedRefundOverpayment'),
+    balanceDue:             read('stateEstimatedBalanceDue')
+  };
+
+  // Store / overwrite this state
+  window.stateRuns[stateName] = snapshot;
+
+  // Enforce a soft cap of 4 states by dropping the oldest entry
+  const maxStates = 4;
+  const keys = Object.keys(window.stateRuns);
+  if (keys.length > maxStates) {
+    delete window.stateRuns[keys[0]];
+  }
+
+  renderStateRuns();
+}
+
+/**
+ * Sum all states' Total State Tax.
+ */
+function sumAllStateTax() {
+  return Object.values(window.stateRuns || {}).reduce(
+    (sum, r) => sum + (Number(r.totalStateTax) || 0),
+    0
+  );
+}
+
+/**
+ * Render one collapsible header per selected state under #stateCardsContainer.
+ * Clicking a header:
+ *   - sets the main "State" in Personal Information
+ *   - moves the shared panel (#stateSharedPanel) under that header
+ *   - shows the Calculate button inside that panel
+ */
+function renderStateRuns() {
+  const host        = document.getElementById('stateCardsContainer');
+  const sharedPanel = document.getElementById('stateSharedPanel');
+  const btn         = document.getElementById('calculateStateTaxesBTN');
+  if (!host || !sharedPanel || !btn) return;
+
+  host.innerHTML = '';
+
+  const selectedStates = getSelectedStates();
+  if (!selectedStates.length) {
+    // No states → hide the shared panel and button
+    sharedPanel.style.display = 'none';
+    btn.style.display = 'none';
+    return;
+  }
+
+  // Default: keep shared panel parked and hidden until a card is opened
+  sharedPanel.style.display = 'none';
+  btn.style.display = 'none';
+
+  selectedStates.forEach((stateName) => {
+    const card  = document.createElement('div');
+    card.className = 'state-card';
+
+    const header = document.createElement('h3');
+    header.className = 'state-card-header';
+    header.textContent = stateName;
+    header.dataset.state = stateName;
+    card.appendChild(header);
+
+    const body = document.createElement('div');
+    body.className = 'state-card-body collapsible-content';
+    body.style.maxHeight = '0px';
+    card.appendChild(body);
+
+    header.addEventListener('click', () => {
+      const bodyIsOpen    = body.classList.contains('active');
+      const panelIsOnThis = (_activeStateName === stateName);
+    
+      // 1) If this card currently owns the shared panel and is open,
+      //    a click should toggle it closed and park the panel.
+      if (panelIsOnThis && bodyIsOpen) {
+        closeCollapsibleAuto(body);
+        sharedPanel.style.display = 'none';
+        btn.style.display = 'none';
+        _activeStateName = null;
+        return;
+      }
+    
+      // 2) Otherwise, ensure THIS card’s body is open — but do NOT touch any others.
+      if (!bodyIsOpen) {
+        openCollapsibleAuto(body);
+      }
+    
+      // 3) Make this state the active one for the shared panel
+      _activeStateName = stateName;
+    
+      // Sync the Personal Information state (drives NY local sections, etc.)
+      const stateSel = document.getElementById('state');
+      if (stateSel) {
+        stateSel.value = stateName;
+        stateSel.dispatchEvent(new Event('input'));
+      }
+    
+      // 4) Move the shared panel into this card
+      sharedPanel.style.display = 'block';
+      body.appendChild(sharedPanel);
+    
+      // Show the button at the top of the shared panel
+      btn.style.display = 'block';
+      btn.style.opacity = 1;
+      sharedPanel.insertBefore(btn, sharedPanel.firstChild);
+    
+      // 5) Hydrate this card from its cached state data if we have it
+      const slot = statePanelStore[stateName];
+      if (slot && slot.lastData) {
+        renderStateSection(slot.lastData, stateName);
+        setStateButtonDirty(false);
+      } else {
+        // Optional: clear fields on first open for this state
+        STATE_EDITABLE_IDS.concat([
+          'stateTaxableIncomeInput',
+          'stateTaxesDue',
+          'totalStateTax'
+        ]).forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = '';
+        });
+        setStateButtonDirty(false);
+      }
+    });
+
+    host.appendChild(card);
+  });
+}
+
+/* Local helpers for these cards, mirroring openCollapsibleAuto / closeCollapsibleAuto */
+function openCollapsableStateRun(contentEl) {
+  if (!contentEl) return;
+  contentEl.classList.add('active');
+  contentEl.style.maxHeight = contentEl.scrollHeight + 'px';
+  const toAuto = (e) => {
+    if (e.propertyName === 'max-height' && contentEl.classList.contains('active')) {
+      contentEl.style.maxHeight = 'none';
+      contentEl.removeEventListener('transitionend', toAuto);
+    }
+  };
+  contentEl.addEventListener('transitionend', toAuto);
+}
+
+function closeCollapsableStateRun(contentEl) {
+  if (!contentEl) return;
+  if (getComputedStyle(contentEl).maxHeight === 'none') {
+    contentEl.style.maxHeight = contentEl.scrollHeight + 'px';
+    void contentEl.offsetHeight;
+  }
+  contentEl.classList.remove('active');
+  contentEl.style.maxHeight = '0px';
+}
+
+// === Build "additional states" UI and keep cards in sync ===
+
+function initMultiStateUI() {
+  const numSel    = document.getElementById('numOtherStates');
+  const container = document.getElementById('otherStatesContainer');
+  const baseStateSelect = document.getElementById('state');
+
+  if (!numSel || !container || !baseStateSelect) return;
+
+  const baseOptionsHtml = baseStateSelect.innerHTML;
+
+  function rebuildOtherStateSelects() {
+    container.innerHTML = '';
+
+    const count = parseInt(numSel.value || '0', 10) || 0;
+    for (let i = 1; i <= count; i++) {
+      const wrap = document.createElement('div');
+      wrap.className = 'form-group';
+
+      const label = document.createElement('label');
+      label.htmlFor = `otherState_${i}`;
+      label.textContent = `Additional State ${i}:`;
+      wrap.appendChild(label);
+
+      const sel = document.createElement('select');
+      sel.id = `otherState_${i}`;
+      sel.name = `otherState_${i}`;
+      sel.innerHTML = baseOptionsHtml; // same list as primary State
+
+      // Optional: default to "Please Select"
+      sel.value = '';
+
+      // When any additional state changes, refresh the cached list + cards
+      sel.addEventListener('change', () => {
+        refreshPersonalStatesFromInputs();
+        renderStateRuns();
+      });
+
+      wrap.appendChild(sel);
+      container.appendChild(wrap);
+    }
+
+    // After changing how many selects exist, refresh cached list + cards
+    refreshPersonalStatesFromInputs();
+    renderStateRuns();
+  }
+
+  numSel.addEventListener('change', rebuildOtherStateSelects);
+
+  // initial build
+  rebuildOtherStateSelects();
+}
 
 //-------------------------------------//
 // CHILD TAX CREDIT CONSTANTS & RULES //
@@ -5809,10 +6059,11 @@ function updateNyLocalSectionsVisibility() {
 
 document.getElementById('state').addEventListener('input', function() {
     const selectStateEl = document.getElementById('selectState');
+    if (!selectStateEl) return;
     selectStateEl.value = this.value;
     selectStateEl.classList.add('auto-copied');
     
-    // NEW: Trigger update on all W-2 blocks so FUTA and "Unemployment 2022 - 2025:" update automatically
+    // Trigger update on all W-2 blocks so FUTA and "Unemployment 2022 - 2025:" update automatically
     const w2Blocks = document.querySelectorAll('.w2-block');
     w2Blocks.forEach(block => {
       const wagesInput = block.querySelector("input[id^='w2Wages_']");
@@ -5821,8 +6072,18 @@ document.getElementById('state').addEventListener('input', function() {
       }
     });
 
-    // 🔁 Also update NY/NYC/Yonkers visibility whenever state changes
+    // Also update NY/NYC/Yonkers visibility whenever state changes
     updateNyLocalSectionsVisibility();
+    // IMPORTANT: do NOT call renderStateRuns() here – header clicks dispatch 'input' and
+    // we do not want to rebuild the cards in the middle of that handler.
+});
+
+// When the resident state is changed in Personal Information,
+// refresh the cached list of states and redraw the cards.
+// (Card clicks only dispatch 'input', so they do not affect this.)
+document.getElementById('state').addEventListener('change', function() {
+  refreshPersonalStatesFromInputs();
+  renderStateRuns();
 });
 
 // When user answers the NYC or Yonkers questions, toggle those subsections
@@ -8051,7 +8312,7 @@ function updateTotalTax() {
   const fedField   = document.getElementById('totalFederalTax');
   const totalField = document.getElementById('totalTax');
 
-  // Start with the computed Total State Tax field
+  // Start with the computed Total State Tax field (single-state fallback)
   let stateTax = getFieldValue('totalStateTax');
 
   // For New York, enforce “state + local” even if the field is out of sync
@@ -8061,6 +8322,11 @@ function updateTotalTax() {
     const nyBase  = getFieldValue('stateTaxesDue');
     const nyLocal = getFieldValue('localTaxAfterCredits');
     stateTax = nyBase + nyLocal;
+  }
+
+  // If we have one or more stateRuns, override with the sum of all states
+  if (window.stateRuns && Object.keys(window.stateRuns).length > 0) {
+    stateTax = sumAllStateTax();
   }
 
   if (taxField) {
@@ -8228,9 +8494,6 @@ const mappingsTotal = [
 window.mappings = mappings;
 window.mappingsTotal = mappingsTotal;
 
-// ─── State-Tax “Calculate” Button Flow ─────────────────────────────────
-let _stateSectionInitialized = false;
-
 // --- Dynamic State Taxes button + loader helpers ---
 const STATE_EDITABLE_IDS = [
   'stateAdjustedGrossIncome',
@@ -8241,9 +8504,31 @@ const STATE_EDITABLE_IDS = [
 ];
 let _stateDirty = false;
 
+// New: per-state panel store and active state
+const statePanelStore = {};   // stateName -> { initialized: boolean, lastData: object }
+let _activeStateName = null;
+
+function getActiveStateName() {
+  if (_activeStateName) return _activeStateName;
+  const sel = document.getElementById('state');
+  return sel ? sel.value.trim() : '';
+}
+
+function getStateSlot(stateName) {
+  if (!statePanelStore[stateName]) {
+    statePanelStore[stateName] = { initialized: false, lastData: null };
+  }
+  return statePanelStore[stateName];
+}
+
 function setStateButtonDirty(dirty) {
-  const btn = document.getElementById('calculateStateTaxesBTN');
   _stateDirty = !!dirty;
+  const btn = document.getElementById('calculateStateTaxesBTN');
+  if (!btn) {
+    // No button in this DOM context (or not rendered yet) – just track the flag.
+    return;
+  }
+
   if (dirty) {
     btn.textContent = 'Update State Taxes';
     btn.classList.add('state-update');
@@ -8275,7 +8560,7 @@ function toggleStateLoader(on) {
   }
 }
 
-function renderStateSection(data) {
+function renderStateSection(data, stateNameOverride) {
   const mapping = {
     agi:                    'stateAdjustedGrossIncome',
     additions:              'stateAdditionsToIncome',
@@ -8313,15 +8598,21 @@ function renderStateSection(data) {
   });
   updateTotalStateTax();
 
-}
-    
-// Wire up the “Calculate State Taxes” button
-//document.getElementById('calculateStateTaxesBTN').addEventListener('click', handleCalculateStateTaxes);
+  // New: cache the last data for this state
+  const stateName = stateNameOverride || getActiveStateName();
+  if (stateName) {
+    const slot = getStateSlot(stateName);
+    slot.lastData = data;
+  }
 
-async function readStateData() {
-  const agi = parseFloat(document.getElementById('totalAdjustedGrossIncome').value.replace(/[\$,]/g, '')) || 0;
-  const w2Income = parseFloat(document.getElementById('wages').value.replace(/[\$,]/g, '')) || 0;
-  const taxableIncome = parseFloat(document.getElementById('taxableIncome').value.replace(/[\$,]/g, '')) || 0;
+}
+
+async function readStateData(stateOverride) {
+  const agi          = parseFloat(document.getElementById('totalAdjustedGrossIncome').value.replace(/[\$,]/g, '')) || 0;
+  const w2Income     = parseFloat(document.getElementById('wages').value.replace(/[\$,]/g, '')) || 0;
+  const taxableIncome= parseFloat(document.getElementById('taxableIncome').value.replace(/[\$,]/g, '')) || 0;
+  const uiStateName  = document.getElementById('state').value.trim();
+  const stateName    = stateOverride || uiStateName;
 
   const writes = mappings
     .filter(m => m.type === 'write')
@@ -8331,9 +8622,8 @@ async function readStateData() {
       let value;
 
       if (m.id === 'state') {
-        value = `${raw} Taxes`;
+        value = `${stateName} Taxes`;               // force sheet context to this state
       } else if (m.id === 'filingStatus') {
-        // Map UI label → sheet code (MFJ, MFS, HOH, QW; Single stays Single)
         value = (FS_MAP && FS_MAP[raw]) ? FS_MAP[raw] : raw;
       } else if (m.id === 'blind') {
         const code = raw.toLowerCase();
@@ -8349,80 +8639,131 @@ async function readStateData() {
 
   const payload = {
     writes,
-    state: document.getElementById('state').value.trim(),
+    state: stateName,
     w2Income,
     agi,
     taxableIncome
   };
 
   const resp = await fetch('/api/calculateStateTaxes2', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
 
-  if (!resp.ok) throw new Error(await resp.text());
+  if (!resp.ok) {
+    throw new Error(await resp.text());
+  }
   return await resp.json();
 }
 
+function parseMoney(id) {
+  const el = document.getElementById(id);
+  if (!el) return 0;
+  const raw = el.value || '0';
+  return unformatCurrency(raw);
+}
+
+async function updateStateInputsForState(stateName) {
+  if (NO_TAX_STATES.has(stateName)) {
+    // Immediate zero, but still keep panel consistent
+    const zeros = {
+      agi: 0, additions: 0, deductions: 0,
+      credits: 0, afterTaxDeductions: 0,
+      stateTaxableIncomeInput: 0,
+      stateTaxesDue: 0,
+      totalStateTax: 0
+    };
+    return zeros;
+  }
+
+  if (OUTLIER_TEMPLATES[stateName]) {
+    // Flexible / outlier schema
+    const tmpl = OUTLIER_TEMPLATES[stateName];
+    const inputs = collectOutlierInputs(tmpl);  // your existing helper
+    const payload = {
+      state: stateName,
+      year: Number(document.getElementById('year').value) || undefined,
+      filingStatus: document.getElementById('filingStatus').value || undefined,
+      inputs
+    };
+
+    const resp = await fetch('/api/stateInputsFlex', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!resp.ok) {
+      throw new Error(`State tax flex update failed (${resp.status}): ` + await resp.text());
+    }
+    return await resp.json();
+  }
+
+  // Classic 8-row states – use agi/taxable and 4 editable inputs
+  const payload = {
+    state: stateName,
+    year: Number(document.getElementById('year').value) || undefined,
+    filingStatus: document.getElementById('filingStatus').value || undefined,
+    agi: Number((document.getElementById('totalAdjustedGrossIncome').value || '0').replace(/[^0-9.-]/g, '')) || undefined,
+    taxableIncome: Number((document.getElementById('taxableIncome').value || '0').replace(/[^0-9.-]/g, '')) || undefined,
+    additions: parseMoney('stateAdditionsToIncome'),
+    deductions: parseMoney('stateDeductions'),
+    credits: parseMoney('stateCredits'),
+    afterTaxDeductions: parseMoney('stateAfterTaxDeductions')
+  };
+
+  const resp = await fetch('/api/stateInputs', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  if (!resp.ok) {
+    throw new Error(`State tax update failed (${resp.status}): ` + await resp.text());
+  }
+  return await resp.json();
+}
+
+document
+  .getElementById('calculateStateTaxesBTN')
+  .addEventListener('click', handleCalculateStateTaxes);
+
 async function handleCalculateStateTaxes() {
   const btn = document.getElementById('calculateStateTaxesBTN');
+  const stateName = getActiveStateName();
+
+  if (!stateName) {
+    console.error('No active state for state tax calculation.');
+    return;
+  }
+
+  const slot = getStateSlot(stateName);
+
   btn.disabled = true;
   toggleStateLoader(true);
 
   try {
-    if (!_stateSectionInitialized) {
-      // FIRST RUN
-      const data = await readStateData();
-      renderStateSection(data);
-      _stateSectionInitialized = true;
-
-      // Start watching for edits after first paint
-      attachStateDirtyListeners();
+    let data;
+    if (!slot.initialized) {
+      // First run for this state in this session
+      data = await readStateData(stateName);
+      slot.initialized = true;
     } else {
-        const parseMoney = (id) =>
-          Number((document.getElementById(id).value || "0").replace(/[^0-9.-]/g, "")) || 0;
-        
-        const payload = {
-          state: document.getElementById('state').value.trim(),
-          year: Number(document.getElementById('year').value) || undefined,
-          filingStatus: document.getElementById('filingStatus').value || undefined,
-        
-          // Both AGI and Taxable Income available — backend will choose based on label
-          agi: Number((document.getElementById('totalAdjustedGrossIncome').value || "0").replace(/[^0-9.-]/g, "")) || undefined,
-          taxableIncome: Number((document.getElementById('taxableIncome').value || "0").replace(/[^0-9.-]/g, "")) || undefined,
-        
-          // Editable state fields
-          additions: parseMoney('stateAdditionsToIncome'),
-          deductions: parseMoney('stateDeductions'),
-          credits: parseMoney('stateCredits'),
-          afterTaxDeductions: parseMoney('stateAfterTaxDeductions'),
-        };
-        
-        const resp = await fetch('/api/stateInputs', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        
-        if (!resp.ok) {
-          const txt = await resp.text();
-          throw new Error(`State tax update failed (${resp.status}): ${txt}`);
-        }
-        const data = await resp.json();
-        renderStateSection(data);
-        
-        // Reset button back to "Calculate State Taxes"
-        setStateButtonDirty(false);
+      // Lightweight updates for this state
+      data = await updateStateInputsForState(stateName);
     }
+
+    renderStateSection(data, stateName);
+    captureStateRunSummary(stateName);
+    setStateButtonDirty(false);
   } catch (err) {
     console.error(err);
-    alert(err.message || 'State tax calculation failed.');
+    alert('State tax calculation failed: ' + err.message);
   } finally {
     toggleStateLoader(false);
     btn.disabled = false;
   }
-  updateTotalTax();
-
 }
  
 /* ----- OUTLIER STATE TEMPLATES (UI + API) -----*/
@@ -9216,246 +9557,6 @@ function readLeadNumbers() {
   };
 }
 
-// Attach or replace the calculate handler exactly once
-(function wireStateCalcButton() {
-  const btn = document.getElementById('calculateStateTaxesBTN');
-  if (!btn || btn.dataset.bound === 'true') return;
-
-  btn.addEventListener('click', async () => {
-    const state = document.getElementById('state')?.value;
-    if (!state) return;
-
-    const { agi, taxableIncome } = readLeadNumbers();
-    const year = parseInt(document.getElementById('year')?.value, 10) || undefined;
-    const filingStatusUI = document.getElementById('filingStatus')?.value || undefined;
-    const filingStatus   = (FS_MAP && FS_MAP[filingStatusUI]) ? FS_MAP[filingStatusUI] : filingStatusUI;
-
-    D('Click Update State Taxes', { state, year, filingStatus, agi, taxableIncome });
-
-    // Nice UX
-    btn.dataset.originalText = btn.dataset.originalText || btn.textContent;
-    btn.textContent = (btn.textContent.includes('Calculate')) ? 'Update State Taxes' : 'Update State Taxes';
-    showStateLoader(true);
-
-    try {
-      const tpl = getOutlierTemplate(state);
-
-      if (tpl) {
-        // Build schema & inputs for flex endpoint
-         const schema = {
-           leadKey: tpl.leadKey,
-           labels:  Object.fromEntries(tpl.fields.map(f => [f.key, f.label])),
-           readKeys: tpl.fields.map(f => f.key),
-           ioByKey: Object.fromEntries(tpl.fields.map(f => [f.key, f.io]))
-         };
-         const inputs = {};
-         tpl.fields.forEach(f => {
-           // Normal editable inputs...
-           if (f.io === 'input') {
-             inputs[f.key] = readMoney(stateFieldId(f.key));
-             return;
-           }
-          // Editable "outputs" (only include if user typed something)
-          if (isEditableOutput(state, f.key)) {
-            const maybe = readMoneyIfPresent(stateFieldId(f.key));
-            if (maybe !== undefined) inputs[f.key] = maybe;
-          }
-        });
-
-       // Maryland requires the chosen "Standard Deduction or Itemized".
-       // Use your already-computed Total Deductions as the source of truth.
-       if (state === 'Maryland') {
-         const chosenDeduction = getFieldValue('totalDeductions'); // pulls & unformats "#totalDeductions"
-         if (!inputs.standardDeductionOrItemized || inputs.standardDeductionOrItemized <= 0) {
-           inputs.standardDeductionOrItemized = chosenDeduction;
-         }
-       }
-
-        // Clamp some obviously non-negative concepts
-        if (inputs.credits != null && inputs.credits < 0) inputs.credits = 0;
-        if (inputs.deductions != null && inputs.deductions < 0) inputs.deductions = 0;
-
-        // Only send the lead key (AGI OR Taxable Income OR custom key).
-        const leadValue =
-          tpl.leadKey === 'agi'
-            ? agi
-            : tpl.leadKey === 'taxableIncome'
-              ? taxableIncome
-              : (inputs[tpl.leadKey] ?? taxableIncome);
-
-        const payload = {
-          state,
-          year,
-          filingStatus,
-          [tpl.leadKey]: leadValue,   // <-- ONLY the correct one
-          inputs,
-          schema
-        };
-
-        const res = await fetch('/api/stateInputsFlex', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        if (!res.ok) throw new Error(await res.text());
-        const data = await res.json();
-
-        // Paint outputs back into dynamic UI
-        tpl.fields.forEach(f => {
-          const id = stateFieldId(f.key);
-          const el = document.getElementById(id);
-          if (el && data[f.key] !== undefined) {
-            el.value = formatCurrency(String(data[f.key]));
-          }
-          setStateButtonDirty(false);
-
-          D('Outlier request payload', { state, year, filingStatus, agi, taxableIncome, schema, inputs });
-
-        });
-
-        // --- New York: push state + local pieces into the summary block ---
-        if (state === 'New York') {
-          // NY state-only total (row "Total" in the NY block)
-          const nyStateOnly =
-            Number(
-              data.total ??
-              data.newYorkTaxDue ??
-              data.nyTaxDueTop ??
-              0
-            );
-
-          // Yonkers + NYC totals from the outlier block
-          const yonkersTotal = Number(data.yonkersTotal ?? 0);
-          const nycTotal     = Number(data.nycTotal ?? 0);
-
-
-          // Top "State Taxes Due" line: NY portion only
-          const stateTaxesDueEl = document.getElementById('stateTaxesDue');
-          if (stateTaxesDueEl) {
-            stateTaxesDueEl.value = formatCurrency(String(nyStateOnly));
-          }
-
-          // Toggle-aware local taxes for New York
-          const includeNYC     = (document.getElementById('nycResident')?.value === 'Yes');
-          const includeYonkers = (document.getElementById('yonkersResident')?.value === 'Yes');
-
-          const localSum = (includeYonkers ? yonkersTotal : 0) + (includeNYC ? nycTotal : 0);
-
-          const localTaxEl = document.getElementById('localTaxAfterCredits');
-          if (localTaxEl) {
-            localTaxEl.value = formatCurrency(String(localSum));
-          }
-
-          // "State Taxable Income" summary: use the NY taxable income top line
-          const taxableSummaryEl = document.getElementById('stateTaxableIncomeInput');
-          if (taxableSummaryEl) {
-            const ti =
-              data.nyTaxableIncomeTop != null
-                ? Number(data.nyTaxableIncomeTop)
-                : Number(data.stateTaxableIncome ?? 0);
-            taxableSummaryEl.value = formatCurrency(String(ti));
-          }
-
-          // "Taxable Income" / AGI line for NY summary
-          const agiEl = document.getElementById('stateAdjustedGrossIncome');
-          if (agiEl) {
-            const agiVal =
-              data.nyagi != null
-                ? Number(data.nyagi)
-                : Number(data.agi ?? 0);
-            agiEl.value = formatCurrency(String(agiVal));
-          }
-        }
-
-        // --- Maryland: compute Total = State Taxes Due + Local Tax ---
-        // Backend is not returning a "total" field for Maryland, so
-        // derive it from the two components and push into the UI.
-        if (state === 'Maryland') {
-          const stateTax = Number(data.stateTaxesDue || 0);
-          const localTax = Number(data.localTax || 0);
-          const total = stateTax + localTax;
-
-          // This is the dynamic "Total:" field in the Maryland block
-          const mdTotalField = document.getElementById('state_total');
-          if (mdTotalField) {
-            mdTotalField.value = formatCurrency(String(total));
-          }
-
-          // Keep the master Total State Tax field in sync
-          const totalStateTaxEl = document.getElementById('totalStateTax');
-          if (totalStateTaxEl) {
-            totalStateTaxEl.value = formatCurrency(String(total));
-          }
-
-          // Re-run the refund / balance-due math
-          updateTotalStateTax();
-        }
-
-      } else {
-        // Normal 32-state flow:
-        // • First click uses /api/calculateStateTaxes2 (readStateData)
-        // • Subsequent updates use /api/stateInputs
-        if (!_stateSectionInitialized) {
-          const data = await readStateData(); // calls /api/calculateStateTaxes2
-          renderStateSection(data);
-          _stateSectionInitialized = true;
-          attachStateDirtyListeners();
-          setStateButtonDirty(false);
-        } else {
-          const body = {
-            state,
-            year,
-            filingStatus,
-            agi,
-            taxableIncome,
-            additions:          readMoney('stateAdditionsToIncome'),
-            deductions:         readMoney('stateDeductions'),
-            credits:            readMoney('stateCredits'),
-            afterTaxDeductions: readMoney('stateAfterTaxDeductions')
-          };
-          const res = await fetch('/api/stateInputs', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-          });
-          if (!res.ok) throw new Error(await res.text());
-          const data = await res.json();
-          const set = (id, key) => {
-            const el = document.getElementById(id);
-            if (el && data[key] !== undefined) el.value = formatCurrency(String(data[key]));
-          };
-          set('stateAdjustedGrossIncome', 'agi');
-          set('stateAdditionsToIncome',   'additions');
-          set('stateDeductions',          'deductions');
-          set('stateTaxableIncomeInput',  'stateTaxableIncomeInput');
-          set('stateTaxesDue',            'stateTaxesDue');
-          set('stateCredits',             'credits');
-          set('stateAfterTaxDeductions',  'afterTaxDeductions');
-          set('totalStateTax',            'totalStateTax');
-          setStateButtonDirty(false);
-        }
-            // After any state calc (outlier or normal), re-sync Total State Tax and Total Tax
-            updateTotalStateTax();
-            updateTotalTax();
-
-      }
-    } catch (err) {
-      console.error(err);
-      alert('State tax calculation failed: ' + (err.message || err));
-  } finally {
-    showStateLoader(false);
-    recalculateTotals();
-    // Ensure totals refresh for both normal and outlier paths
-    updateTotalTax();
-  }
-  });
-
-  // Make sure all state summary fields (including AGI/Taxable) mark the button dirty
-  attachStateDirtyListeners();
-
-  btn.dataset.bound = 'true';
-})();
-
 // When the user changes the state, flip between static/dynamic layouts
 (function wireStateChangeLayout() {
   const stateSel = document.getElementById('state');
@@ -9487,11 +9588,6 @@ function readLeadNumbers() {
 
     // Flip between static / dynamic layouts
     switchStateLayout(stateName);
-
-    // If we're on a normal state, force the next click to re-load from Excel
-    if (!getOutlierTemplate(stateName)) {
-      _stateSectionInitialized = false;
-    }
 
     // (Optional) visually clear main state outputs so user sees this as "fresh"
     [

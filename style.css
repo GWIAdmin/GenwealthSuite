@@ -1164,6 +1164,26 @@ body.dark-mode .gw-grid .col-label { background: #2f2247; border-right-color: va
 body.dark-mode .gw-grid tbody tr:nth-child(even) td { background: #2b2440; }
 body.dark-mode .gw-grid .section-row td { background: #2f2247; color: var(--h3-dark); border-color: var(--border-dark); }
 
+/* Per-state cards under "State Taxable Income" */
+.state-card {
+  border-radius: 12px;
+  border: 1px solid var(--accent);
+}
+
+.state-card-header {
+  padding: 12px 18px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: center;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+.state-card-body {
+  padding: 16px;
+}
+
 /* =======================================================
    AI Strategy — single source of truth (brand-aligned)
    ======================================================= */

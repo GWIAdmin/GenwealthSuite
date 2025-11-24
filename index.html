@@ -247,6 +247,20 @@
             </select>
           </div>
 
+          <!-- NEW: additional states with income -->
+          <div class="form-group">
+            <label for="numOtherStates">Number of Additional States with Income (W-2, K-1, etc.):</label>
+            <select id="numOtherStates" name="numOtherStates">
+              <option value="0" selected>0</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+            </select>
+          </div>
+
+          <!-- NEW: dynamic additional-state selectors (max 3) -->
+          <div id="otherStatesContainer"></div>          
+
           <div class="form-group">
             <label for="olderthan65">How many 65 or older:</label>
             <select id="olderthan65" name="olderthan65_select" required>
@@ -715,56 +729,61 @@
 
       <div id="stateTaxableIncomeContent"> 
 
-      <!-- NEW: dynamic container for outlier states -->
-      <div id="stateDynamicContainer" class="form-group" style="display:none;"></div>
+        <!-- NEW: one header per state (collapsible) -->
+        <div id="stateCardsContainer"></div>
 
-      <div id="stateStaticBlock">
-        <div class="form-group">
-          <label for="selectState">[ State ]</label>
-          <input type="text" placeholder="Input State in &quot;Personal Information&quot;" id="selectState" name="selectState" readonly>
-        </div>
+        <!-- NEW: shared state panel that moves under whichever card is open -->
+        <div id="stateSharedPanel" style="display:none;">
 
-          <div class="form-group">
-            <label for="stateAdjustedGrossIncome">Taxable Income:</label>
-            <input type="text" id="stateAdjustedGrossIncome" name="stateAdjustedGrossIncome" class="currency-field">
+          <!-- dynamic outlier UI lives here (NY, CA, etc.) -->
+          <div id="stateDynamicContainer" class="form-group" style="display:none;"></div>
+
+          <!-- existing static block (unchanged) -->
+          <div id="stateStaticBlock">
+            <div class="form-group">
+              <label for="selectState">[ State ]</label>
+              <input type="text" placeholder="Input State in &quot;Personal Information&quot;" id="selectState" name="selectState" readonly>
+            </div>
+
+            <div class="form-group">
+              <label for="stateAdjustedGrossIncome">Taxable Income:</label>
+              <input type="text" id="stateAdjustedGrossIncome" name="stateAdjustedGrossIncome" class="currency-field">
+            </div>
+
+            <div class="form-group">
+              <label for="stateAdditionsToIncome">Additions to Income:</label>
+              <input type="text" id="stateAdditionsToIncome" name="stateAdditionsToIncome" class="currency-field">
+            </div>
+
+            <div class="form-group">
+              <label for="stateDeductions">Deductions from Income:</label>
+              <input type="text" id="stateDeductions" name="stateDeductions" class="currency-field">
+            </div>
+
+            <div class="form-group">
+              <label for="stateTaxableIncomeInput">State Taxable Income:</label>
+              <input type="text" id="stateTaxableIncomeInput" name="stateTaxableIncomeInput" class="currency-field" readonly>
+            </div>
+
+            <div class="form-group">
+              <label for="stateTaxesDue">State Taxes Due:</label>
+              <input type="text" id="stateTaxesDue" name="stateTaxesDue" class="currency-field" readonly>
+            </div>
+
+            <div class="form-group">
+              <label for="stateCredits">Credits:</label>
+              <input type="text" id="stateCredits" name="stateCredits" class="currency-field">
+            </div>
+            
+            <div class="form-group">
+              <label for="stateAfterTaxDeductions">State After Tax Deductions:</label>
+              <input type="text" id="stateAfterTaxDeductions" name="stateAfterTaxDeductions" class="currency-field">
+            </div>
           </div>
 
-          <div class="form-group">
-            <label for="stateAdditionsToIncome">Additions to Income:</label>
-            <input type="text" id="stateAdditionsToIncome" name="stateAdditionsToIncome" class="currency-field">
-          </div>
-
-          <div class="form-group">
-            <label for="stateDeductions">Deductions from Income:</label>
-            <input type="text" id="stateDeductions" name="stateDeductions" class="currency-field">
-          </div>
-
-          <div class="form-group">
-            <label for="stateTaxableIncomeInput">State Taxable Income:</label>
-            <input type="text" id="stateTaxableIncomeInput" name="stateTaxableIncomeInput" class="currency-field" readonly>
-          </div>
-
-          <div class="form-group">
-            <label for="stateTaxesDue">State Taxes Due:</label>
-            <input type="text" id="stateTaxesDue" name="stateTaxesDue" class="currency-field" readonly>
-          </div>
-
-          <div class="form-group">
-            <label for="stateCredits">Credits:</label>
-            <input type="text" id="stateCredits" name="stateCredits" class="currency-field">
-          </div>
-          
-          <div class="form-group">
-            <label for="stateAfterTaxDeductions">State After Tax Deductions:</label>
-            <input type="text" id="stateAfterTaxDeductions" name="stateAfterTaxDeductions" class="currency-field">
-          </div>
-
-        </div>
-
-                <!-- Optional Section (Collapsible) -->
+          <!-- Optional Section (collapsible) (unchanged) -->
           <div class="state-optional-wrapper">
             <h3 data-target="stateOptionalContent" style="cursor: pointer; font-size: 1.5rem; margin-top: 20px; margin-bottom: 15px;">Optional</h3>
-            
             <div id="stateOptionalContent" class="collapsible-content">
 
               <div class="form-group">
@@ -797,7 +816,6 @@
                 <input type="text" id="statePenalty" name="statePenalty" class="currency-field">
               </div>
             </div>
-
           </div>
 
           <div class="form-group">
@@ -809,7 +827,10 @@
             <label for="stateEstimatedBalanceDue">Estimated Balance Due:</label>
             <input type="text" id="stateEstimatedBalanceDue" name="stateEstimatedBalanceDue" class="currency-field" readonly required>
           </div>
-          </div>
+
+        </div> <!-- end #stateSharedPanel -->
+
+      </div> <!-- end #stateTaxableIncomeContent -->
       </section>
 
       <!-- Total Tax -->
