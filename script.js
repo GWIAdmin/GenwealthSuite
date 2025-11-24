@@ -1840,6 +1840,9 @@ function renderStateRuns() {
         stateSel.value = stateName;
         stateSel.dispatchEvent(new Event('input'));
       }
+
+      // NEW: ensure the correct layout (static vs outlier dynamic) is applied
+      switchStateLayout(stateName);
     
       // 4) Move the shared panel into this card
       sharedPanel.style.display = 'block';
@@ -8561,6 +8564,46 @@ function toggleStateLoader(on) {
 }
 
 function renderStateSection(data, stateNameOverride) {
+  const stateName = stateNameOverride || getActiveStateName();
+  const tpl = getOutlierTemplate(stateName);
+
+  // If this is an outlier state, first push values into the dynamic fields.
+  if (tpl && data && typeof data === 'object') {
+    tpl.fields.forEach(f => {
+      const val = data[f.key];
+      if (val == null || val === '') return;
+
+      const id = stateFieldId(f.key);            // e.g. "state_caTaxableIncomeTop"
+      const el = document.getElementById(id);
+      if (!el) return;
+
+      // Use your normal formatting; leave inputs editable where allowed
+      el.value = formatCurrency(String(val));
+    });
+
+    // Now build a synthetic "summary" object that the static mapping can use.
+    const summary = {
+      agi:                      data.agi,
+      additions:                data.additions,
+      deductions:               data.deductions,
+      credits:                  data.credits,
+      afterTaxDeductions:       data.afterTaxDeductions,
+      stateTaxableIncomeInput:  data.stateTaxableIncome
+                                || data.caTaxableIncomeTop
+                                || data.nyTaxableIncomeTop,
+      stateTaxesDue:            data.stateTaxesDue
+                                || data.caTaxDueTop
+                                || data.newYorkTaxDue,
+      totalStateTax:            data.total
+                                || data.stateTotal
+                                || data.totalStateTax
+    };
+
+    // Use this summary in place of the raw data for the static fields below.
+    data = { ...data, ...summary };
+  }
+
+  // Existing static block mapping (unchanged)
   const mapping = {
     agi:                    'stateAdjustedGrossIncome',
     additions:              'stateAdditionsToIncome',
@@ -8580,7 +8623,7 @@ function renderStateSection(data, stateNameOverride) {
     }
     const raw = data[key];
     el.value = (raw != null) ? formatCurrency(String(raw)) : '';
-    // Allow manual edits for four inputs; everything else is read-only
+
     const editableIds = new Set([
       'stateAdjustedGrossIncome',
       'stateDeductions',
@@ -8596,15 +8639,15 @@ function renderStateSection(data, stateNameOverride) {
       el.classList.remove('readonly');
     }
   });
+
   updateTotalStateTax();
 
-  // New: cache the last data for this state
-  const stateName = stateNameOverride || getActiveStateName();
-  if (stateName) {
-    const slot = getStateSlot(stateName);
+  // Cache last data per state as before
+  const slotName = stateNameOverride || getActiveStateName();
+  if (slotName) {
+    const slot = getStateSlot(slotName);
     slot.lastData = data;
   }
-
 }
 
 async function readStateData(stateOverride) {
@@ -8664,28 +8707,75 @@ function parseMoney(id) {
   return unformatCurrency(raw);
 }
 
+function collectOutlierInputs(tpl) {
+  const inputs = {};
+
+  // Each field in OUTLIER_TEMPLATES has a key like "agi", "deductions", "credits", etc.
+  // We must extract whatever the user entered into the corresponding dynamic field.
+  tpl.fields.forEach(f => {
+    const id = stateFieldId(f.key);   // e.g. "state_agi"
+    const el = document.getElementById(id);
+
+    if (!el) return;
+
+    let raw = (el.value || '').trim();
+
+    // Follow your convention:
+    // • Blank means "undefined" → DO NOT send it (server treats blank as 'not overridden')
+    // • If numeric → convert with unformatCurrency
+    if (raw === '') {
+      inputs[f.key] = undefined;
+    } else {
+      const num = unformatCurrency(raw);
+      inputs[f.key] = Number.isFinite(num) ? num : raw;
+    }
+  });
+
+  return inputs;
+}
+
 async function updateStateInputsForState(stateName) {
   if (NO_TAX_STATES.has(stateName)) {
-    // Immediate zero, but still keep panel consistent
-    const zeros = {
+    return {
       agi: 0, additions: 0, deductions: 0,
       credits: 0, afterTaxDeductions: 0,
       stateTaxableIncomeInput: 0,
       stateTaxesDue: 0,
       totalStateTax: 0
     };
-    return zeros;
   }
+
+  // Compute lead numbers once for both paths
+  const { agi, taxableIncome } = readLeadNumbers();
 
   if (OUTLIER_TEMPLATES[stateName]) {
     // Flexible / outlier schema
     const tmpl = OUTLIER_TEMPLATES[stateName];
-    const inputs = collectOutlierInputs(tmpl);  // your existing helper
+    const inputs = collectOutlierInputs(tmpl);
+
+    // Build schema: labels + ioByKey + leadKey + readKeys
+    const labels = {};
+    const ioByKey = {};
+    tmpl.fields.forEach(f => {
+      labels[f.key] = f.label;
+      ioByKey[f.key] = f.io;     // 'input' or 'output'
+    });
+
+    const schema = {
+      leadKey: tmpl.leadKey,           // 'agi' or 'taxableIncome'
+      labels,                          // { key -> Column A label }
+      ioByKey,                         // { key -> 'input' | 'output' }
+      readKeys: tmpl.fields.map(f => f.key)
+    };
+
     const payload = {
       state: stateName,
       year: Number(document.getElementById('year').value) || undefined,
       filingStatus: document.getElementById('filingStatus').value || undefined,
-      inputs
+      agi: typeof agi === 'number' ? agi : undefined,
+      taxableIncome: typeof taxableIncome === 'number' ? taxableIncome : undefined,
+      inputs,
+      schema
     };
 
     const resp = await fetch('/api/stateInputsFlex', {
@@ -8700,13 +8790,13 @@ async function updateStateInputsForState(stateName) {
     return await resp.json();
   }
 
-  // Classic 8-row states – use agi/taxable and 4 editable inputs
+  // Classic 8-row states – unchanged logic, but reuse readLeadNumbers() values
   const payload = {
     state: stateName,
     year: Number(document.getElementById('year').value) || undefined,
     filingStatus: document.getElementById('filingStatus').value || undefined,
-    agi: Number((document.getElementById('totalAdjustedGrossIncome').value || '0').replace(/[^0-9.-]/g, '')) || undefined,
-    taxableIncome: Number((document.getElementById('taxableIncome').value || '0').replace(/[^0-9.-]/g, '')) || undefined,
+    agi: typeof agi === 'number' ? agi : undefined,
+    taxableIncome: typeof taxableIncome === 'number' ? taxableIncome : undefined,
     additions: parseMoney('stateAdditionsToIncome'),
     deductions: parseMoney('stateDeductions'),
     credits: parseMoney('stateCredits'),
@@ -8747,7 +8837,13 @@ async function handleCalculateStateTaxes() {
     let data;
     if (!slot.initialized) {
       // First run for this state in this session
-      data = await readStateData(stateName);
+      if (OUTLIER_TEMPLATES[stateName]) {
+        // Outlier states (CA, CT, MD, NY, etc.) → use flex engine from the start
+        data = await updateStateInputsForState(stateName);
+      } else {
+        // Regular 8-row states → classic path
+        data = await readStateData(stateName);
+      }
       slot.initialized = true;
     } else {
       // Lightweight updates for this state
