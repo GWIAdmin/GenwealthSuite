@@ -1167,7 +1167,10 @@ body.dark-mode .gw-grid .section-row td { background: #2f2247; color: var(--h3-d
 /* Per-state cards under "State Taxable Income" */
 .state-card {
   border-radius: 12px;
-  border: 1px solid var(--accent);
+}
+
+body.dark-mode .state-card {
+border: 1px solid var(--accent);
 }
 
 .state-card-header {
