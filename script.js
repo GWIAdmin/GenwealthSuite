@@ -1748,16 +1748,67 @@ function captureStateRunSummary(stateName) {
   };
 
   // Store / overwrite this state
+  const hadStateBefore = Object.prototype.hasOwnProperty.call(window.stateRuns, stateName);
   window.stateRuns[stateName] = snapshot;
 
-  // Enforce a soft cap of 4 states by dropping the oldest entry
+  // Soft cap: at most 4 states
   const maxStates = 4;
   const keys = Object.keys(window.stateRuns);
+  let droppedKey = null;
   if (keys.length > maxStates) {
-    delete window.stateRuns[keys[0]];
+    droppedKey = keys[0];
+    delete window.stateRuns[droppedKey];
   }
 
-  renderStateRuns();
+  // Only rebuild cards if we actually dropped a state from the store
+  if (droppedKey) {
+    const activeBefore = _activeStateName;   // remember which card was open
+    renderStateRuns();
+
+    // Optional: re-open the previously active card so UX stays smooth
+    if (activeBefore) {
+      const hdr = document.querySelector(
+        `.state-card-header[data-state="${activeBefore}"]`
+      );
+      if (hdr) hdr.click();
+    }
+  } else {
+    // Same set of states → just refresh the chip, keep cards as-is
+    updateStateHeaderChip(stateName);
+  }
+}
+
+function updateStateHeaderChip(stateName) {
+  if (!stateName || !window.stateRuns) return;
+
+  const header = document.querySelector(
+    `.state-card-header[data-state="${stateName}"]`
+  );
+  if (!header) return;
+
+  const chip = header.querySelector('.state-card-chip');
+  if (!chip) return;
+
+  const snap = window.stateRuns[stateName];
+  if (!snap) {
+    chip.textContent = '';
+    chip.classList.remove('has-data');
+    return;
+  }
+
+  const tax    = Number(snap.totalStateTax || 0);
+  const refund = Number(snap.refund || 0);
+  
+  const parts = [];
+  if (!Number.isNaN(tax)) {
+    parts.push(`Tax ${formatCurrency(String(tax))}`);
+  }
+  if (refund > 0) {
+    parts.push(`Refund ${formatCurrency(String(refund))}`);
+  }
+
+  chip.textContent = parts.join(' • ');
+  chip.classList.toggle('has-data', parts.length > 0);
 }
 
 /**
@@ -1803,8 +1854,20 @@ function renderStateRuns() {
 
     const header = document.createElement('h3');
     header.className = 'state-card-header';
-    header.textContent = stateName;
     header.dataset.state = stateName;
+
+    // Left: state name
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'state-card-title';
+    titleSpan.textContent = stateName;
+
+    // Right: summary chip (filled in later)
+    const chipSpan = document.createElement('span');
+    chipSpan.className = 'state-card-chip';
+    chipSpan.textContent = ''; // will be populated by updateStateHeaderChip
+
+    header.appendChild(titleSpan);
+    header.appendChild(chipSpan);
     card.appendChild(header);
 
     const body = document.createElement('div');
@@ -1834,32 +1897,31 @@ function renderStateRuns() {
       // 3) Make this state the active one for the shared panel
       _activeStateName = stateName;
     
-      // Sync the Personal Information state (drives NY local sections, etc.)
+      // Keep Personal Information "State" in sync (NY locals, etc.)
       const stateSel = document.getElementById('state');
       if (stateSel) {
         stateSel.value = stateName;
         stateSel.dispatchEvent(new Event('input'));
       }
-
-      // NEW: ensure the correct layout (static vs outlier dynamic) is applied
+    
+      // Ensure outlier vs static layout is applied
       switchStateLayout(stateName);
     
       // 4) Move the shared panel into this card
       sharedPanel.style.display = 'block';
       body.appendChild(sharedPanel);
     
-      // Show the button at the top of the shared panel
+      // 5) Show the button at the top of the shared panel
       btn.style.display = 'block';
       btn.style.opacity = 1;
       sharedPanel.insertBefore(btn, sharedPanel.firstChild);
     
-      // 5) Hydrate this card from its cached state data if we have it
+      // 6) Hydrate from cached state data, if present
       const slot = statePanelStore[stateName];
       if (slot && slot.lastData) {
         renderStateSection(slot.lastData, stateName);
         setStateButtonDirty(false);
       } else {
-        // Optional: clear fields on first open for this state
         STATE_EDITABLE_IDS.concat([
           'stateTaxableIncomeInput',
           'stateTaxesDue',
@@ -1873,6 +1935,9 @@ function renderStateRuns() {
     });
 
     host.appendChild(card);
+
+    // Paint the chip if we already have a run stored for this state
+    updateStateHeaderChip(stateName);
   });
 }
 
