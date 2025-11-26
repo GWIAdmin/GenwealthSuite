@@ -8919,45 +8919,25 @@ function stateFieldId(key) {
 // Some "output" fields should still be editable in the UI.
 // state => set of keys that are editable despite io:'output'
 const EDITABLE_OUTPUT_OVERRIDES = {
-  'Alaska':        new Set(['agi']),  
-  'California':    new Set(['agi']),
-  'California':    new Set(['standardItemizedDeduction']),
+  'Alaska':        new Set(['agi']),
+  'California':    new Set(['agi', 'standardItemizedDeduction']),
   'Connecticut':   new Set(['agi']),
   'Delaware':      new Set(['agi']),
   'Hawaii':        new Set(['agi']),
-  'Idaho':         new Set(['agi']),  
-  'Maryland':      new Set(['agi']),
-  'Maryland':      new Set(['standardDeductionOrItemized']),
-  'Massachusetts': new Set(['agi']),
-  'Massachusetts': new Set(['personalExemption']),
-  'Michigan':      new Set(['agi']),
-  'Michigan':      new Set(['exemption']),
+  'Idaho':         new Set(['agi']),
+  'Maryland':      new Set(['agi', 'standardDeductionOrItemized']),
+  'Massachusetts': new Set(['agi', 'personalExemption']),
+  'Michigan':      new Set(['agi', 'exemption']),
   'Minnesota':     new Set(['agi']),
-  'Nebraska':      new Set(['agi']),
-  'Nebraska':      new Set(['standardDeduction']),
-  'New York':      new Set(['agi']),
-  'New York':      new Set(['standardDeductionOrItemized']),
-  'Oregon':        new Set(['agi']),
-  'Oregon':        new Set(['exemption']),
-  'Oregon':        new Set(['standardDeduction']),
-  'Washington DC': new Set(['agi']),
-  'Washington DC': new Set(['spouse1']),
-  'Washington DC': new Set(['spouse2']),
-  'Wisconsin':     new Set(['agi']),
-  'Wisconsin':     new Set(['standardDeduction'])
+  'Nebraska':      new Set(['agi', 'standardDeduction']),
+  'New York':      new Set(['agi', 'standardDeductionOrItemized']),
+  'Oregon':        new Set(['agi', 'exemption', 'standardDeduction']),
+  'Washington DC': new Set(['agi', 'spouse1', 'spouse2']),
+  'Wisconsin':     new Set(['agi', 'standardDeduction'])
 };
 
 function isEditableOutput(stateName, key) {
   return !!(EDITABLE_OUTPUT_OVERRIDES[stateName] && EDITABLE_OUTPUT_OVERRIDES[stateName].has(key));
-}
-
-// helper: read only if the user entered something
-function readMoneyIfPresent(id) {
-  const el = document.getElementById(id);
-  if (!el) return undefined;
-  const raw = (el.value ?? '').trim();
-  if (raw === '') return undefined;     // <- key change: don't force 0
-  return unformatCurrency(raw);
 }
 
 // Template schema notes:
