@@ -721,20 +721,38 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
       { id: 'employeeTaxes', label: 'Employee Taxes' },
       { id: 'employerTaxes', label: 'Employer Taxes' }
     ]},
-    { title: 'State: [Selected]', rows: [
-      { id: 'stateTaxableIncomeInput',        label: 'Taxable Income' },
-      { id: 'stateTaxesDue',                  label: 'Tax' },
-      { id: 'totalStateTax',                  label: 'Other Taxes' }, // acts as “Total State Tax”
-      { id: 'stateWithholdings',              label: 'Withholdings' },
-      { id: 'statePaymentsAndCredits',        label: 'Payments and Credits' },
-      { id: 'stateInterest',                  label: 'Interest' },
-      { id: 'statePenalty',                   label: 'Penalty' },
-      { id: 'stateEstimatedRefundOverpayment',label: 'Estimated Total Refunds' },
-      { id: 'stateEstimatedBalanceDue',       label: 'Estimated Balance Due' },
-      { id: 'totalTax',                       label: 'Total Tax' } // grand total (federal + state + payroll) already computed
+    // NEW: per-state detail for all states (preview only)
+    { title: 'State Details (All States)', rows: [
+      // Slot 1
+      { id: 'preview_state1_taxable', label: 'State 1 – Taxable Income' },
+      { id: 'preview_state1_local',   label: 'State 1 – Local tax after credits' },
+      { id: 'preview_state1_total',   label: 'State 1 – Total Tax' },
+      { id: 'preview_state1_refund',  label: 'State 1 – Estimated Refund (Overpayment)' },
+      { id: 'preview_state1_balance', label: 'State 1 – Estimated Balance Due' },
+
+      // Slot 2
+      { id: 'preview_state2_taxable', label: 'State 2 – Taxable Income' },
+      { id: 'preview_state2_local',   label: 'State 2 – Local tax after credits' },
+      { id: 'preview_state2_total',   label: 'State 2 – Total Tax' },
+      { id: 'preview_state2_refund',  label: 'State 2 – Estimated Refund (Overpayment)' },
+      { id: 'preview_state2_balance', label: 'State 2 – Estimated Balance Due' },
+
+      // Slot 3
+      { id: 'preview_state3_taxable', label: 'State 3 – Taxable Income' },
+      { id: 'preview_state3_local',   label: 'State 3 – Local tax after credits' },
+      { id: 'preview_state3_total',   label: 'State 3 – Total Tax' },
+      { id: 'preview_state3_refund',  label: 'State 3 – Estimated Refund (Overpayment)' },
+      { id: 'preview_state3_balance', label: 'State 3 – Estimated Balance Due' },
+
+      // Slot 4
+      { id: 'preview_state4_taxable', label: 'State 4 – Taxable Income' },
+      { id: 'preview_state4_local',   label: 'State 4 – Local tax after credits' },
+      { id: 'preview_state4_total',   label: 'State 4 – Total Tax' },
+      { id: 'preview_state4_refund',  label: 'State 4 – Estimated Refund (Overpayment)' },
+      { id: 'preview_state4_balance', label: 'State 4 – Estimated Balance Due' }
     ]},
+
     { title: 'Summary', rows: [
-      // purely presentational; maps to your already-computed total
       { id: 'totalTax', label: 'Total Estimated Difference in Federal & State Taxes Saved' }
     ]}
   ];
@@ -750,6 +768,50 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
   function displayFor(label, val) {
     if (typeof val === 'number') return formatCurrency(String(val)); // uses your existing helper
     return String(val ?? '');
+  }
+
+  /**
+   * Inject per-state summary values into the preview values map.
+   * These are not tied to specific Excel cells; they are display-only.
+   */
+  function addStatePreviewValues(values) {
+    if (!values) return;
+    if (!window.stateRuns || !Object.keys(window.stateRuns).length) return;
+
+    const states = (typeof getSelectedStates === 'function')
+      ? getSelectedStates()
+      : Object.keys(window.stateRuns);
+
+    if (!states || !states.length) return;
+
+    const fieldDefs = [
+      { key: 'taxable', snapKey: 'taxableIncome' },
+      { key: 'local',   snapKey: 'localTaxAfterCredits' },
+      { key: 'total',   snapKey: 'totalStateTax' },
+      { key: 'refund',  snapKey: 'refund' },
+      { key: 'balance', snapKey: 'balanceDue' }
+    ];
+
+    states.slice(0, 4).forEach((stateName, idx) => {
+      const snap = window.stateRuns[stateName];
+      if (!snap) return;
+      const slot = idx + 1;
+
+      fieldDefs.forEach(fd => {
+        const val = snap[fd.snapKey];
+        if (val == null || val === '' || Number.isNaN(Number(val))) return;
+
+        const id = `preview_state${slot}_${fd.key}`;
+        const numeric = typeof val === 'number' ? val : Number(val);
+
+        values[id] = {
+          label: `${stateName} – ${fd.snapKey}`,
+          display: displayFor(fd.snapKey, numeric),
+          raw: numeric,
+          cell: null
+        };
+      });
+    });
   }
 
   /** Persist a run exactly as sent */
@@ -791,6 +853,9 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
         });
       });
 
+      // NEW: inject per-state preview rows from stateRuns
+      addStatePreviewValues(values);
+
       const meta = {
         analysisType: normalizeType(analysisType),
         year,
@@ -805,6 +870,38 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
       console.warn('[Preview] persist failed:', e);
     }
   };
+
+  /**
+   * Update labels in ROW_GROUPS for preview_state* rows
+   * so they include the actual state names.
+   */
+  function updateMultiStatePreviewRowLabels() {
+    const states = (typeof getSelectedStates === 'function')
+      ? getSelectedStates()
+      : Object.keys(window.stateRuns || {});
+
+    if (!states || !states.length) return;
+
+    const fieldLabels = {
+      taxable: 'Taxable Income',
+      local:   'Local tax after credits',
+      total:   'Total Tax',
+      refund:  'Estimated Refund (Overpayment)',
+      balance: 'Estimated Balance Due'
+    };
+
+    ROW_GROUPS.forEach(group => {
+      group.rows.forEach(row => {
+        const m = row.id && row.id.match(/^preview_state(\d+)_(\w+)$/);
+        if (!m) return;
+        const slot = parseInt(m[1], 10) - 1;
+        const fieldKey = m[2];
+        const stateName = states[slot] || `State ${slot + 1}`;
+        const suffix = fieldLabels[fieldKey] || '';
+        row.label = `${stateName} – ${suffix}`;
+      });
+    });
+  }
 
   /** Build and show the preview modal */
   function openPreview() {
@@ -842,6 +939,8 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
       latestByType[type] || { meta: { analysisType: type, year: fallbackYear, column: '', worksheet, filePath }, values: {} }
     );
 
+    // NEW: refresh the multi-state labels for this preview
+    updateMultiStatePreviewRowLabels();
     empty.classList.add('hidden');
 
     // --- build THEAD as before ---
@@ -1747,11 +1846,12 @@ function captureStateRunSummary(stateName) {
   const read = (id) => getFieldValue(id); // already unformats currency
 
   const snapshot = {
-    stateTaxesDue:          read('stateTaxesDue'),
-    localTaxAfterCredits:   read('localTaxAfterCredits'),
-    totalStateTax:          read('totalStateTax'),
-    refund:                 read('stateEstimatedRefundOverpayment'),
-    balanceDue:             read('stateEstimatedBalanceDue')
+    taxableIncome:        read('stateTaxableIncomeInput'),
+    stateTaxesDue:        read('stateTaxesDue'),
+    localTaxAfterCredits: read('localTaxAfterCredits'),
+    totalStateTax:        read('totalStateTax'),
+    refund:               read('stateEstimatedRefundOverpayment'),
+    balanceDue:           read('stateEstimatedBalanceDue')
   };
 
   // Store / overwrite this state
@@ -1769,10 +1869,8 @@ function captureStateRunSummary(stateName) {
 
   // Only rebuild cards if we actually dropped a state from the store
   if (droppedKey) {
-    const activeBefore = _activeStateName;   // remember which card was open
+    const activeBefore = _activeStateName;
     renderStateRuns();
-
-    // Optional: re-open the previously active card so UX stays smooth
     if (activeBefore) {
       const hdr = document.querySelector(
         `.state-card-header[data-state="${activeBefore}"]`
