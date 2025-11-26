@@ -7282,7 +7282,8 @@ function calculateDetailedSelfEmploymentTax() {
       "2022": 147000,
       "2023": 160200,
       "2024": 168600,
-      "2025": 176100
+      "2025": 176100,
+      "2026": 183600
     };
     const SOCIAL_SECURITY_WAGE_BASE = wageBaseMap[taxYear];
   
@@ -7533,12 +7534,11 @@ function calculateEmployerEmployeeTaxes() {
     // 1. Determine the tax year and set the Social Security wage base.
     const taxYear = document.getElementById('year').value;
     const wageBaseMap = {
-        "2020": 137700,
-        "2021": 142800,
         "2022": 147000,
         "2023": 160200,
         "2024": 168600,
-        "2025": 176100
+        "2025": 176100,
+        "2026": 183600
     };
     const SOCIAL_SECURITY_WAGE_BASE = wageBaseMap[taxYear] || 0;
 
@@ -8021,7 +8021,14 @@ window.computeOrdinaryTax = computeOrdinaryTax;
       'Married Filing Jointly':    { zero: 96700, fifteen: 600050 },
       'Married Filing Separately': { zero: 48350, fifteen: 300000 },
       'Head of Household':         { zero: 64750, fifteen: 566700 }
+    },
+    2026: {
+      Single:                      { zero: 49450, fifteen: 545500 },
+      'Married Filing Jointly':    { zero: 98900, fifteen: 613700 },
+      'Married Filing Separately': { zero: 49450, fifteen: 306850 },
+      'Head of Household':         { zero: 66200, fifteen: 579600 }
     }
+
   };
 
 function computeCapitalGainTax(
@@ -8415,7 +8422,6 @@ const STATE_EDITABLE_IDS = [
   'stateCredits',
   'stateAfterTaxDeductions'
 ];
-let _stateDirty = false;
 
 // New: per-state panel store and active state
 const statePanelStore = {};   // stateName -> { initialized: boolean, lastData: object }
@@ -8435,7 +8441,6 @@ function getStateSlot(stateName) {
 }
 
 function setStateButtonDirty(dirty) {
-  _stateDirty = !!dirty;
   const btn = document.getElementById('calculateStateTaxesBTN');
   if (!btn) {
     // No button in this DOM context (or not rendered yet) – just track the flag.
