@@ -539,6 +539,8 @@ function buildQuickWritesForPreview() {
     writes.push({ cell: m.cell, value: raw });
   });
 
+  appendExtraStateLabels(writes);
+
   return writes;
 }
 
@@ -583,6 +585,8 @@ async function saveToExcelAndPersist(options = {}) {
 
     writes.push({ cell: m.cell, value: raw });
   });
+
+  appendExtraStateLabels(writes);
 
   if (!Array.isArray(writes) || writes.length === 0) {
     const resultsDiv = document.getElementById('results');
@@ -1646,8 +1650,6 @@ function updateTotalStateTax() {
 
 // === Multi-state selection from Personal Information ===
 
-// === Multi-state selection from Personal Information ===
-
 // Cached list of states with income (resident + additional states).
 // This is kept in sync only when the user changes Personal Information,
 // so it does not bounce around when you open/close state cards.
@@ -1689,6 +1691,44 @@ function getSelectedStates() {
     refreshPersonalStatesFromInputs();
   }
   return window.personalStates;
+}
+
+// Cells where additional-state labels live in the Excel template
+// B3 is already driven by mappingsTotal["state"] → "<State> Taxes"
+const EXTRA_STATE_LABEL_CELLS = ['B5', 'B7', 'B9']; // Additional State 1–3
+
+/**
+ * Append up to 3 extra state label writes:
+ *   Additional State 1 → B5
+ *   Additional State 2 → B7
+ *   Additional State 3 → B9
+ *
+ * Only writes the labels ("<State> Taxes"), *not* any numeric amounts,
+ * so your formulas can do the rest.
+ */
+function appendExtraStateLabels(writes) {
+  if (!Array.isArray(writes)) return;
+
+  // Uses the cached list built from Personal Information
+  const states = (typeof getSelectedStates === 'function')
+    ? getSelectedStates()
+    : [];
+
+  // No additional states → nothing to do
+  if (!states || states.length <= 1) return;
+
+  for (let i = 1; i < states.length && i <= EXTRA_STATE_LABEL_CELLS.length; i++) {
+    const stateName = states[i];
+    if (!stateName) continue;
+
+    const cell = EXTRA_STATE_LABEL_CELLS[i - 1];
+    const label = `${stateName} Taxes`;
+
+    // Do not double-write the same cell if something already added it
+    if (!writes.some(w => w && w.cell === cell)) {
+      writes.push({ cell, value: label });
+    }
+  }
 }
 
 // === Multi-State Summary Store & Renderer (up to 4 states) ===
