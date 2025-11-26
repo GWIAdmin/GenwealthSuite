@@ -1941,30 +1941,6 @@ function renderStateRuns() {
   });
 }
 
-/* Local helpers for these cards, mirroring openCollapsibleAuto / closeCollapsibleAuto */
-function openCollapsableStateRun(contentEl) {
-  if (!contentEl) return;
-  contentEl.classList.add('active');
-  contentEl.style.maxHeight = contentEl.scrollHeight + 'px';
-  const toAuto = (e) => {
-    if (e.propertyName === 'max-height' && contentEl.classList.contains('active')) {
-      contentEl.style.maxHeight = 'none';
-      contentEl.removeEventListener('transitionend', toAuto);
-    }
-  };
-  contentEl.addEventListener('transitionend', toAuto);
-}
-
-function closeCollapsableStateRun(contentEl) {
-  if (!contentEl) return;
-  if (getComputedStyle(contentEl).maxHeight === 'none') {
-    contentEl.style.maxHeight = contentEl.scrollHeight + 'px';
-    void contentEl.offsetHeight;
-  }
-  contentEl.classList.remove('active');
-  contentEl.style.maxHeight = '0px';
-}
-
 // === Build "additional states" UI and keep cards in sync ===
 
 function initMultiStateUI() {
