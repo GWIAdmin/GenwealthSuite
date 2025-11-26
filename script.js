@@ -945,37 +945,6 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
   });
 })();
 
-function displayResults(resultData) {
-    const resultsDiv = document.getElementById('results');
-
-    // first update the form’s Taxable Income and re‑calc state tax
-    document.getElementById('taxableIncome').value = parseInt(resultData.taxableIncome, 10);
-
-    const fedTax = parseInt(resultData.totalTax, 10);
-
-    // use the server‑returned state income tax directly
-    const stateTax = parseInt(resultData.stateTotalTax, 10) || 0;
-
-    const totalTax = fedTax + stateTax;
-    let refundOrDue = parseInt(resultData.refundOrDue, 10);
-    if (isNaN(refundOrDue)) {
-      // sum up every “Federal Income Tax Withheld” from the W-2 blocks
-      const withholdings = Array.from(
-        document.querySelectorAll("input[id^='w2FederalTaxWithheld_']")
-      ).reduce((sum, fld) => sum + unformatCurrency(fld.value), 0);
-
-      refundOrDue = totalTax - withholdings;
-    }
-    resultsDiv.innerHTML = `
-      <h2>Your Tax Results</h2>
-      <p><strong>Taxable Income:</strong> $${parseInt(resultData.taxableIncome, 10)}</p>
-      <p><strong>Federal Tax Owed:</strong> $${fedTax}</p>
-      <p><strong>State Tax Owed:</strong> $${stateTax}</p>
-      <p><strong>Total Tax Owed:</strong> $${totalTax}</p>
-      <p><strong>Refund or Amount Due:</strong> $${refundOrDue}</p>
-    `;
-}
-
 //-----------------------//
 // 1.1. Global Variables //
 //-----------------------//
@@ -983,9 +952,7 @@ function displayResults(resultData) {
 let userManuallyChanged65Plus = false;
 let dependentBizMap = {};
 let dependentsStore = {};
-let lastManualAdjustment = {};
 let w2Counter = 0;
-let businessCounter = 0;
 let businessUniqueId = 1;
 let w2WageMap = {};
 
@@ -5035,70 +5002,6 @@ function checkSCorpReasonableComp(businessIndex) {
     }
 }
 
-function updateBusinessOwnerDropdowns(businessIndex) {
-    const ownerSelects = document.querySelectorAll(
-      `#dynamicOwnerFields${businessIndex} select[id^="business${businessIndex}OwnerName"]`
-    );
-    if (!ownerSelects.length) return;
-  
-    const filingStatus = document.getElementById('filingStatus').value;
-    const clientFirstName = document.getElementById('firstName').value.trim() || 'Client 1';
-    const spouseFirstName = document.getElementById('spouseFirstName').value.trim() || 'Client 2';
-  
-    let baseOptions;
-    if (filingStatus === 'Married Filing Jointly') {
-      baseOptions = [clientFirstName, spouseFirstName, 'Other'];
-    } else {
-      baseOptions = [clientFirstName, 'Other'];
-    }
-  
-    // Gather selected names from the dropdowns
-    const selectedNames = [];
-    ownerSelects.forEach(select => {
-      if (select.value && baseOptions.includes(select.value)) {
-        selectedNames.push(select.value);
-      }
-    });
-  
-    ownerSelects.forEach(select => {
-      // Skip auto‐filled dropdown for Client 1 (assumed to be owner 1)
-      if (select.id.endsWith('OwnerName1')) return;
-  
-      const currentVal = select.value;
-      while (select.firstChild) {
-        select.removeChild(select.firstChild);
-      }
-      const pleaseOpt = document.createElement('option');
-      pleaseOpt.value = 'Please Select';
-      pleaseOpt.textContent = 'Please Select';
-      pleaseOpt.disabled = true;
-      select.appendChild(pleaseOpt);
-  
-      baseOptions.forEach(name => {
-        const isTakenElsewhere = (selectedNames.includes(name) && name !== currentVal);
-        if (!isTakenElsewhere) {
-          const opt = document.createElement('option');
-          opt.value = name;
-          opt.textContent = name;
-          select.appendChild(opt);
-        }
-      });
-  
-      if ([...select.options].some(opt => opt.value === currentVal)) {
-        select.value = currentVal;
-      } else {
-        select.value = 'Please Select';
-        select.disabled = true;
-      }
-    });
-  
-    // Optionally update the business header as well
-    const header = document.getElementById(`businessNameHeading${businessIndex}`);
-    if (header) {
-      header.textContent = updateBusinessHeader(businessIndex);
-    }
-}
-
 function incrementCcorpTaxDue(businessIndex) {
     const key = `ccorpTaxDue-biz${businessIndex}`;
     const baseAmount = getBaseCcorpTaxDue(businessIndex);
@@ -5324,17 +5227,6 @@ function updateScheduleENet(index, opts = {}) {
     }
 }
 
-function calcAutoUnrecaptured1250() {
-  let total = 0;
-  const dispCount = parseInt(document.getElementById('numPropertyDisps')?.value || '0', 10);
-  for (let i = 1; i <= dispCount; i++) {
-    const ltGain  = unformatCurrency(document.getElementById(`disp${i}LTGain`)?.value || '0');
-    const deprec  = unformatCurrency(document.getElementById(`disp${i}AccumDep`)?.value || '0');
-    total += Math.max(0, Math.min(ltGain, deprec));
-  }
-  return total;
-}
-
 /**
  * Computes your 3.8% Net Investment Income Tax.
  * NIIT = 3.8% × min( netInvIncome, max(0, MAGI − threshold) )
@@ -5385,24 +5277,6 @@ function updateNetInvestmentTax() {
   // 4) NIIT = 3.8% of that base, rounded to the dollar
   const niit = Math.round(taxableBase * 0.038);
   document.getElementById('netInvestmentTax').value = formatCurrency(String(niit));
-}
-
-function addNewSCorpBusinessWithName(baseName) {
-  // Increment count to create a fresh block, then configure it.
-  const nEl = document.getElementById('numOfBusinesses');
-  let n = parseInt(nEl.value || '0', 10) || 0;
-  nEl.value = ++n;
-  nEl.dispatchEvent(new Event('input'));    // builds the new block
-
-  const idx = n; // new business index
-  const nameField = document.getElementById(`businessName_${idx}`);
-  const typeField = document.getElementById(`business${idx}Type`);
-  // Name: reuse + append "(S-Corp)" if the old one didn't already end that way
-  const newName = /\(S-?Corp\)$/i.test(baseName) ? baseName : `${baseName} (S-Corp)`;
-  if (nameField) { nameField.value = newName; nameField.dispatchEvent(new Event('input')); }
-  if (typeField)  { typeField.value = 'S-Corp'; typeField.dispatchEvent(new Event('change')); }
-
-  return { idx, newName };
 }
 
 function getScheduleCOwner(srcIdx) {
@@ -6169,11 +6043,6 @@ document.getElementById('taxForm').addEventListener('keydown', function (e) {
 //--------------------------//
 // 18. COLLAPSIBLE SECTIONS //
 //--------------------------//
-
-function toggleCollapsible(sectionId) {
-    const section = document.getElementById(sectionId);
-    section.classList.toggle('active');
-}
 
 //-------------------//
 // 19. SHOW RED DISCLAIMER //
@@ -8582,14 +8451,6 @@ function setStateButtonDirty(dirty) {
   }
 }
 
-function attachStateDirtyListeners() {
-  STATE_EDITABLE_IDS.forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.addEventListener('input', () => setStateButtonDirty(true));
-  });
-}
-
 function toggleStateLoader(on) {
   // Drive the in-button animation
   showStateLoader(on);
@@ -8809,10 +8670,13 @@ async function updateStateInputsForState(stateName) {
       readKeys: tmpl.fields.map(f => f.key)
     };
 
+    const rawFS   = document.getElementById('filingStatus').value || undefined;
+    const codedFS = rawFS && FS_MAP[rawFS] ? FS_MAP[rawFS] : rawFS;  // reuse your FS_MAP
+
     const payload = {
       state: stateName,
       year: Number(document.getElementById('year').value) || undefined,
-      filingStatus: document.getElementById('filingStatus').value || undefined,
+      filingStatus: codedFS,   // <— use coded value
       agi: typeof agi === 'number' ? agi : undefined,
       taxableIncome: typeof taxableIncome === 'number' ? taxableIncome : undefined,
       inputs,
@@ -9466,13 +9330,6 @@ function renderOutlierUI(stateName) {
   if (stateName === 'New York') {
     applyNYToggleVisibility();
   }
-}
-
-function moveFormGroupByFieldId(fieldId, targetContainer) {
-  const field = document.getElementById(fieldId);
-  if (!field) return;
-  const group = field.closest('.form-group') || field;
-  targetContainer.appendChild(group);
 }
 
 // Move the common state adjustment block (Optional + refund/balance)
