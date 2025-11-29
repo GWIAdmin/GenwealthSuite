@@ -713,7 +713,6 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
       { id: 'totalFederalTax',   label: 'Total Tax' } // federal in this band to match sheet
     ]},
     { title: 'Payments', rows: [
-      { id: 'estimatedRefundOverpayment', label: 'Overpayment' },
       { id: 'estimatedRefundOverpayment', label: 'Estimated Refund' },   // same field, alt label for visual parity
       { id: 'estimatedBalanceDue',        label: 'Estimated Balance Due' }
     ]},
@@ -759,6 +758,7 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
 
   /** Lookup by id for labels (easy when mapping writes → values) */
   const LABEL_BY_ID = (() => {
+    
     const m = {};
     ROW_GROUPS.forEach(g => g.rows.forEach(r => { m[r.id] = r.label; }));
     return m;
