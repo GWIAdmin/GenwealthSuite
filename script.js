@@ -1023,45 +1023,38 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
     const modal = document.getElementById('gwExcelPreview');
     const close = document.getElementById('gwPreviewClose');
 
-  if (btn) btn.addEventListener('click', async () => {
-    // 1) Try the normal path (saves and persists a run). If it works, open preview.
-    try {
-      const result = await saveToExcelAndPersist({ validate: false, showAlerts: false });
-      if (result && result.ok) {
-        openPreview();
-        return;
-      }
-    } catch (_) {
-      // swallow and fall through to preview-only path
-    }
+    // Preview should ONLY build an in-memory run and open the modal
+    if (btn) btn.addEventListener('click', () => {
+      const writes = buildQuickWritesForPreview();
+      const year = parseInt(document.getElementById('year')?.value || '', 10) || '';
+      const analysisType = (document.getElementById('typeOfAnalysis')?.value || '').trim();
 
-    // 2) Fallback: build a local, validation-free preview from whatever is on screen.
-    const writes = buildQuickWritesForPreview();
-    const year = parseInt(document.getElementById('year')?.value || '', 10) || '';
-    const analysisType = (document.getElementById('typeOfAnalysis')?.value || '').trim();
+      // Persist this run only into the in-memory preview store (no Excel export)
+      persistExcelRun({
+        writes,
+        analysisType,
+        year,
+        server: { column: '', worksheet: '', filePath: '' } // preview-only context
+      });
 
-    // Persist a purely local run so the grid has something to render
-    persistExcelRun({
-      writes,
-      analysisType,
-      year,
-      server: { column: '', worksheet: '', filePath: '' } // preview-only, no server context
+      openPreview();
     });
-
-    openPreview();
-  });
 
     if (close) close.addEventListener('click', () => showModal(modal, false));
     if (modal) {
       modal.addEventListener('click', (e) => {
-        if (e.target && e.target.getAttribute('data-close') === '1') showModal(modal, false);
+        if (e.target && e.target.getAttribute('data-close') === '1') {
+          showModal(modal, false);
+        }
       });
       document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !modal.classList.contains('hidden')) showModal(modal, false);
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+          showModal(modal, false);
+        }
       });
     }
   });
-})();
+} ());
 
 //-----------------------//
 // 1.1. Global Variables //
