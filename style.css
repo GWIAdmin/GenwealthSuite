@@ -1275,11 +1275,6 @@ body.dark-mode .adj-row .del-btn:hover { background: #ff0000; }
   background: var(--gw-bg-zebra);
 }
 
-/* Hover state for data rows */
-.gw-grid tbody tr:hover td:not(.col-label) {
-  background: #f0ebff;
-}
-
 /* Left-align row labels */
 .gw-grid .col-label {
   text-align: left !important;
@@ -1289,9 +1284,9 @@ body.dark-mode .adj-row .del-btn:hover { background: #ff0000; }
 .gw-grid .section-row td {
   background: linear-gradient(
     90deg,
-    #4a1f7a 0%,
-    #6132a6 40%,
-    #b18cf4 100%
+    #b18cf4 0%,
+    #6132a6 60%,
+    #4a1f7a 100%
   );
   color: #ffffff;
   font-weight: 800;
@@ -1369,17 +1364,13 @@ body.dark-mode .gw-grid tbody tr:nth-child(even):not(.section-row):not(.spacer) 
   background: #2b2440;
 }
 
-body.dark-mode .gw-grid tbody tr:hover td:not(.col-label) {
-  background: #33274f;
-}
-
 /* Dark mode – matching gradient, tuned for low-light */
 body.dark-mode .gw-grid .section-row td {
   background: linear-gradient(
     90deg,
-    #26193d 0%,
-    #443068 45%,
-    #7a56c0 100%
+    #7a56c0 0%,
+    #443068 60%,
+    #26193d 100%
   );
   color: #ffffff;
 
@@ -1402,6 +1393,30 @@ body.dark-mode .gw-grid .section-row td {
 
 body.dark-mode .gw-grid .section-row td + td {
   border-left: 0;
+}
+
+/* Visual divider between states */
+.state-divider-row td {
+    border: 0;
+    height: 12px;
+    background: linear-gradient(
+      90deg,
+      #6132a6 10%,
+      #b18cf4 50%,      
+      #4a1f7a 100%
+    ) !important;
+}
+
+body.dark-mode .state-divider-row td {
+    border: 0;
+    height: 12px;
+    background: linear-gradient(
+      90deg,
+
+      #443068 10%,
+      #7a56c0 50%,      
+      #26193d 100%
+    ) !important;
 }
 
 /* =======================================

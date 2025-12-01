@@ -729,6 +729,8 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
       { id: 'preview_state1_refund',  label: 'State 1 – Estimated Refund (Overpayment)' },
       { id: 'preview_state1_balance', label: 'State 1 – Estimated Balance Due' },
 
+      { id: '__divider__1' },   // <<< DIVIDER BEFORE NEXT STATE
+
       // Slot 2
       { id: 'preview_state2_taxable', label: 'State 2 – Taxable Income' },
       { id: 'preview_state2_local',   label: 'State 2 – Local tax after credits' },
@@ -736,12 +738,16 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
       { id: 'preview_state2_refund',  label: 'State 2 – Estimated Refund (Overpayment)' },
       { id: 'preview_state2_balance', label: 'State 2 – Estimated Balance Due' },
 
+      { id: '__divider__2' },   // <<< DIVIDER BEFORE NEXT STATE
+
       // Slot 3
       { id: 'preview_state3_taxable', label: 'State 3 – Taxable Income' },
       { id: 'preview_state3_local',   label: 'State 3 – Local tax after credits' },
       { id: 'preview_state3_total',   label: 'State 3 – Total Tax' },
       { id: 'preview_state3_refund',  label: 'State 3 – Estimated Refund (Overpayment)' },
       { id: 'preview_state3_balance', label: 'State 3 – Estimated Balance Due' },
+
+      { id: '__divider__3' },   // <<< DIVIDER BEFORE NEXT STATE
 
       // Slot 4
       { id: 'preview_state4_taxable', label: 'State 4 – Taxable Income' },
@@ -964,6 +970,15 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
       s.appendChild(c); tbody.appendChild(s);
 
       group.rows.forEach(r => {
+        if (r.id.startsWith('__divider__')) {
+            const sep = document.createElement('tr');
+            sep.className = 'state-divider-row';
+            const td = document.createElement('td');
+            td.colSpan = 1 + contextCol.length;
+            sep.appendChild(td);
+            tbody.appendChild(sep);
+            return;
+        }        
         const tr = document.createElement('tr');
         const labelCell = document.createElement('td'); labelCell.className = 'col-label'; labelCell.textContent = r.label;
         tr.appendChild(labelCell);
