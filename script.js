@@ -545,41 +545,125 @@ function buildQuickWritesForPreview() {
 }
 
 function buildDynamicBusinessMappings() {
-    const mappings = [];
-    const numBusinesses = parseInt(document.getElementById('numOfBusinesses')?.value || '0', 10);
-    let row = 39; // Immediately after B38 (Short-Term Gain)
+  const mappings = [];
 
-    for (let i = 1; i <= numBusinesses; i++) {
-        const nameField = document.getElementById(`businessName_${i}`);
-        const businessName = nameField?.value?.trim() || `Business ${i}`;
+  const numBusinesses = parseInt(
+    document.getElementById('numOfBusinesses')?.value || '0',
+    10
+  ) || 0;
 
-        const incomeLabel   = `Business ${i} Income - ${businessName}`;
-        const expenseLabel  = `Business ${i} Expenses - ${businessName}`;
+  // Slots in the Excel template
+  const entityRows = [      // S-Corp / Partnership / C-Corp
+    { incomeRow: 39, expenseRow: 40 }, // Business 1
+    { incomeRow: 41, expenseRow: 42 }  // Business 2
+  ];
+  const schedCRows = [      // Schedule-C
+    { incomeRow: 43, expenseRow: 44 }, // Schedule C-1
+    { incomeRow: 45, expenseRow: 46 }  // Schedule C-2
+  ];
+  const schedERows = [      // Schedule E
+    { incomeRow: 47, expenseRow: 48 }, // Schedule E-1
+    { incomeRow: 49, expenseRow: 50 }  // Schedule E-2
+  ];
 
-        // Income in Column B
-        mappings.push({
-            id: `business${i}Income`,
-            type: 'write',
-            cell: `B${row}`,
-            label: incomeLabel,
-            businessIndex: i,
-            businessName
-        });
-        row++;
+  const entityTypes = ['S-Corp', 'Partnership', 'C-Corp'];
 
-        // Expenses in Column B
-        mappings.push({
-            id: `business${i}Expenses`,
-            type: 'write',
-            cell: `B${row}`,
-            label: expenseLabel,
-            businessIndex: i,
-            businessName
-        });
-        row++;
+  const entityBusinesses = [];
+  const schedCBusinesses = [];
+
+  // Classify each Business block
+  for (let i = 1; i <= numBusinesses; i++) {
+    const typeEl = document.getElementById(`business${i}Type`);
+    const type   = (typeEl?.value || '').trim();
+    const nameEl = document.getElementById(`businessName_${i}`);
+    const name   = (nameEl?.value || '').trim() || `Business ${i}`;
+
+    if (entityTypes.includes(type)) {
+      entityBusinesses.push({ index: i, name });
+    } else if (type === 'Schedule-C') {
+      schedCBusinesses.push({ index: i, name });
     }
+  }
 
-    return mappings;
+  // 1) Map S-Corp / Partnership / C-Corp → Business 1 / Business 2
+  entityBusinesses.slice(0, entityRows.length).forEach((biz, slotIdx) => {
+    const slot = slotIdx + 1; // 1 or 2
+    const rows = entityRows[slotIdx];
+
+    const incomeLabel  = `Business ${slot} Income - ${biz.name}`;
+    const expenseLabel = `Business ${slot} Expenses - ${biz.name}`;
+
+    mappings.push({
+      id:   `business${biz.index}Income`,
+      type: 'write',
+      cell: `B${rows.incomeRow}`,
+      label: incomeLabel
+    });
+    mappings.push({
+      id:   `business${biz.index}Expenses`,
+      type: 'write',
+      cell: `B${rows.expenseRow}`,
+      label: expenseLabel
+    });
+  });
+
+  // 2) Map Schedule-C businesses → Schedule C-1 / Schedule C-2
+  schedCBusinesses.slice(0, schedCRows.length).forEach((biz, slotIdx) => {
+    const slot = slotIdx + 1; // 1 or 2
+    const rows = schedCRows[slotIdx];
+
+    const incomeLabel  = `Schedule C-${slot} Income - ${biz.name}`;
+    const expenseLabel = `Schedule C-${slot} Expenses - ${biz.name}`;
+
+    mappings.push({
+      id:   `business${biz.index}Income`,
+      type: 'write',
+      cell: `B${rows.incomeRow}`,
+      label: incomeLabel
+    });
+    mappings.push({
+      id:   `business${biz.index}Expenses`,
+      type: 'write',
+      cell: `B${rows.expenseRow}`,
+      label: expenseLabel
+    });
+  });
+
+  // 3) Map Schedule E entries → Schedule E-1 / Schedule E-2
+  const numScheduleEs = parseInt(
+    document.getElementById('numScheduleEs')?.value || '0',
+    10
+  ) || 0;
+
+  const scheduleEs = [];
+  for (let i = 1; i <= numScheduleEs; i++) {
+    const nameEl = document.getElementById(`scheduleE${i}Name`);
+    const name   = (nameEl?.value || '').trim() || `Schedule E-${i}`;
+    scheduleEs.push({ index: i, name });
+  }
+
+  scheduleEs.slice(0, schedERows.length).forEach((se, slotIdx) => {
+    const slot = slotIdx + 1; // 1 or 2
+    const rows = schedERows[slotIdx];
+
+    const incomeLabel  = `Schedule E-${slot} Income - ${se.name}`;
+    const expenseLabel = `Schedule E-${slot} Expenses - ${se.name}`;
+
+    mappings.push({
+      id:   `scheduleE${se.index}Income`,
+      type: 'write',
+      cell: `B${rows.incomeRow}`,
+      label: incomeLabel
+    });
+    mappings.push({
+      id:   `scheduleE${se.index}Expenses`,
+      type: 'write',
+      cell: `B${rows.expenseRow}`,
+      label: expenseLabel
+    });
+  });
+
+  return mappings;
 }
 
 async function saveToExcelAndPersist(options = {}) {
@@ -626,31 +710,31 @@ async function saveToExcelAndPersist(options = {}) {
 
   // Add dynamically generated business mappings
   const bizMappings = buildDynamicBusinessMappings();
-  
+
   bizMappings.forEach(m => {
     const el = document.getElementById(m.id);
     if (!el) return;
-  
+
     let raw = el.value;
-  
+
     // Convert currency → number
     if (typeof raw === 'string' && /[$,()]/.test(raw)) {
       raw = unformatCurrency(raw);
     }
-  
+
     // Force expenses negative
     if (m.id.toLowerCase().includes('expenses')) {
       raw = -Math.abs(Number(raw) || 0);
     } else {
       raw = Number(raw) || 0;
     }
-  
+
     // 1) Column B: numeric amount
     writes.push({
       cell: m.cell,          // e.g. "B39"
       value: raw             // plain number, positive or negative
     });
-  
+
     // 2) Column A: dynamic label "Business n Income/Expenses - [Name]"
     const rowNumber = parseInt(m.cell.slice(1), 10);   // "B39" → 39
     if (!isNaN(rowNumber) && m.label) {
