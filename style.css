@@ -1196,11 +1196,31 @@ body.dark-mode .adj-row .del-btn:hover { background: #ff0000; }
   pointer-events: none;
 }
 
-/* Close button kept generic so it adapts to your button styles */
+/* Button Group */
+.gw-modal__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;                     /* spacing between buttons */
+  margin-left: auto;            /* pushes group to the right */
+}
+
+/* Button styling parity */
+.gw-modal__submit,
 .gw-modal__close {
   padding: 6px 14px;
   width: auto;
-  border-radius: 999px;
+  border-radius: 8px;
+  background-color: #552583;
+  color: #fff;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.gw-modal__submit:hover,
+.gw-modal__close:hover {
+  background-color: var(--accent);
+  color: #552583;
 }
 
 /* Body */

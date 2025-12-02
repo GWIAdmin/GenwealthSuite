@@ -941,7 +941,7 @@
       </section>
 
       <!-- Submit Button -->
-      <button type="submit" id="submitButton">Submit</button>
+      <!-- <button type="submit" id="submitButton">Submit</button> -->
       <div id="results" class="hidden"></div>
 
       <!-- NEW: Excel Preview button (in-page modal) -->
@@ -961,21 +961,31 @@
     <!-- Back to Top Button -->
     <button id="backToTopBtn" title="Go to top"><i class="fas fa-arrow-up"></i></button>
   </div>
-
+      <!-- <button type="submit" id="submitButton">Submit</button> -->
   <!-- Excel Preview Modal -->
   <div id="gwExcelPreview" class="gw-modal hidden" aria-hidden="true">
     <div class="gw-modal__overlay" data-close="1"></div>
     <div class="gw-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="gwPreviewTitle">
+      
       <div class="gw-modal__header">
         <h3 id="gwPreviewTitle">Genwealth 360 | Excel Preview</h3>
-        <button type="button" id="gwPreviewClose" class="gw-modal__close">Close</button>
+
+        <div class="gw-modal__actions">
+          <button type="submit" id="submitButton" class="gw-modal__submit">Submit to Excel</button>
+          <button type="button" id="gwPreviewClose" class="gw-modal__close">Close</button>
+        </div>
       </div>
+
       <div class="gw-modal__body">
-        <div id="gwPreviewEmpty" class="gw-modal__empty hidden">No saved columns yet</div>
+        <div id="gwPreviewEmpty" class="gw-modal__empty hidden">
+          No saved columns yet
+        </div>
+
         <div id="gwPreviewGridWrapper" class="gw-gridwrap">
           <table id="gwPreviewGrid" class="gw-grid" aria-describedby="gwPreviewTitle"></table>
         </div>
       </div>
+
     </div>
   </div>
 
