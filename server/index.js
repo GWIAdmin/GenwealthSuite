@@ -360,10 +360,20 @@ function colNumber(letter) {
   }
   return n;
 }
+
 function swapToColumn(cellAddr, targetColLetter) {
   const m = /^([A-Z]+)(\d+)$/.exec(cellAddr);
   if (!m) return cellAddr;
-  return `${targetColLetter}${m[2]}`;
+
+  const [, col, row] = m;
+
+  // Keep Column A fixed for labels
+  if (col === 'A') {
+    return cellAddr;           // e.g. "A39" stays "A39"
+  }
+
+  // Shift everything else (B..Z, AA.. etc.) into the target data column
+  return `${targetColLetter}${row}`;  // e.g. "B39" → "C39"
 }
 
 /**

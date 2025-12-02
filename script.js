@@ -553,21 +553,28 @@ function buildDynamicBusinessMappings() {
         const nameField = document.getElementById(`businessName_${i}`);
         const businessName = nameField?.value?.trim() || `Business ${i}`;
 
-        // Income
+        const incomeLabel   = `Business ${i} Income - ${businessName}`;
+        const expenseLabel  = `Business ${i} Expenses - ${businessName}`;
+
+        // Income in Column B
         mappings.push({
             id: `business${i}Income`,
             type: 'write',
             cell: `B${row}`,
-            label: `${businessName} - Income`
+            label: incomeLabel,
+            businessIndex: i,
+            businessName
         });
         row++;
 
-        // Expenses
+        // Expenses in Column B
         mappings.push({
             id: `business${i}Expenses`,
             type: 'write',
             cell: `B${row}`,
-            label: `${businessName} - Expenses`
+            label: expenseLabel,
+            businessIndex: i,
+            businessName
         });
         row++;
     }
@@ -619,16 +626,39 @@ async function saveToExcelAndPersist(options = {}) {
 
   // Add dynamically generated business mappings
   const bizMappings = buildDynamicBusinessMappings();
+  
   bizMappings.forEach(m => {
-      const el = document.getElementById(m.id);
-      if (!el) return;
-
-      let raw = el.value;
-      if (/[$,()]/.test(raw)) {
-          raw = unformatCurrency(raw);
-      }
-
-      writes.push({ cell: m.cell, value: raw });
+    const el = document.getElementById(m.id);
+    if (!el) return;
+  
+    let raw = el.value;
+  
+    // Convert currency → number
+    if (typeof raw === 'string' && /[$,()]/.test(raw)) {
+      raw = unformatCurrency(raw);
+    }
+  
+    // Force expenses negative
+    if (m.id.toLowerCase().includes('expenses')) {
+      raw = -Math.abs(Number(raw) || 0);
+    } else {
+      raw = Number(raw) || 0;
+    }
+  
+    // 1) Column B: numeric amount
+    writes.push({
+      cell: m.cell,          // e.g. "B39"
+      value: raw             // plain number, positive or negative
+    });
+  
+    // 2) Column A: dynamic label "Business n Income/Expenses - [Name]"
+    const rowNumber = parseInt(m.cell.slice(1), 10);   // "B39" → 39
+    if (!isNaN(rowNumber) && m.label) {
+      writes.push({
+        cell: `A${rowNumber}`, // e.g. "A39"
+        value: m.label         // "Business 1 Income - GWI"
+      });
+    }
   });
 
   appendExtraStateLabels(writes);
