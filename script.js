@@ -450,7 +450,7 @@ function expandSectionFor(el) {
 }
 
 // Validate only what matters (and only if visible)
-function validateBeforeSubmit() {
+function validateBeforeSubmit(opts = {}) {
   const problems = [];
 
   // Core required fields at the top of the form
@@ -544,6 +544,37 @@ function buildQuickWritesForPreview() {
   return writes;
 }
 
+function buildDynamicBusinessMappings() {
+    const mappings = [];
+    const numBusinesses = parseInt(document.getElementById('numOfBusinesses')?.value || '0', 10);
+    let row = 39; // Immediately after B38 (Short-Term Gain)
+
+    for (let i = 1; i <= numBusinesses; i++) {
+        const nameField = document.getElementById(`businessName_${i}`);
+        const businessName = nameField?.value?.trim() || `Business ${i}`;
+
+        // Income
+        mappings.push({
+            id: `business${i}Income`,
+            type: 'write',
+            cell: `B${row}`,
+            label: `${businessName} - Income`
+        });
+        row++;
+
+        // Expenses
+        mappings.push({
+            id: `business${i}Expenses`,
+            type: 'write',
+            cell: `B${row}`,
+            label: `${businessName} - Expenses`
+        });
+        row++;
+    }
+
+    return mappings;
+}
+
 async function saveToExcelAndPersist(options = {}) {
   const { validate = true, showAlerts = true } = options;
   if (validate && !validateBeforeSubmit({ showAlert: showAlerts })) {
@@ -586,6 +617,20 @@ async function saveToExcelAndPersist(options = {}) {
     writes.push({ cell: m.cell, value: raw });
   });
 
+  // Add dynamically generated business mappings
+  const bizMappings = buildDynamicBusinessMappings();
+  bizMappings.forEach(m => {
+      const el = document.getElementById(m.id);
+      if (!el) return;
+
+      let raw = el.value;
+      if (/[$,()]/.test(raw)) {
+          raw = unformatCurrency(raw);
+      }
+
+      writes.push({ cell: m.cell, value: raw });
+  });
+
   appendExtraStateLabels(writes);
 
   if (!Array.isArray(writes) || writes.length === 0) {
@@ -625,7 +670,6 @@ if (window.__LOCAL_PREVIEW_ONLY__ === true) {
 
   return { ok: true, info: { localOnly: true } };
 }
-
 
   try {
     const resp = await fetch('/api/submitRunLocal', {
@@ -713,7 +757,7 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
       { id: 'totalFederalTax',   label: 'Total Tax' } // federal in this band to match sheet
     ]},
     { title: 'Payments', rows: [
-      { id: 'estimatedRefundOverpayment', label: 'Estimated Refund' },   // same field, alt label for visual parity
+      { id: 'estimatedRefundOverpayment', label: 'Estimated Refund' },
       { id: 'estimatedBalanceDue',        label: 'Estimated Balance Due' }
     ]},
     { title: 'Employer/Employee Taxes', rows: [
@@ -825,14 +869,16 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
     try {
       const cellToId = asCellToId();
       const values = {};
+
+      // Apply dynamic labels (e.g., Business Name - Income)
       (writes || []).forEach(w => {
-        const id = cellToId[w.cell] || w.cell;
-        let label = LABEL_BY_ID[id];
-        if (!label && /^B([1-9]|1[0-9])$/.test(w.cell)) {
-          const cellMap = { B1: 'Year', B2: 'Filing Status', B3: 'State', B4: 'Resident in State' };
-          label = cellMap[w.cell] || w.cell;
-        }
-        values[id] = { label: label || id, display: displayFor(label, w.value), raw: w.value, cell: w.cell };
+          const id = cellToId[w.cell] || w.cell;
+          const mapping = (window.mappingsTotal || []).concat(window.mappings || [])
+                            .find(m => m.cell === w.cell);
+      
+          if (mapping && mapping.label && values[id]) {
+              values[id].label = mapping.label;  // <-- THIS IS THE LINE YOU NEED
+          }
       });
 
       // Ensure every row in the preview has something if it exists on the page
@@ -8490,6 +8536,9 @@ const mappingsTotal = [
   { id: 'pensions',                     type: 'write', cell: 'B36' },
   { id: 'longTermCapitalGains',         type: 'write', cell: 'B37' },
   { id: 'shortTermCapitalGains',        type: 'write', cell: 'B38' },
+
+  // INSERT BUSINESS ROWS HERE
+
   { id: 'otherIncome',                  type: 'write', cell: 'B51' },
   { id: 'interestPrivateBonds',         type: 'write', cell: 'B52' },
   { id: 'passiveActivityLossAdjustments', type: 'write', cell: 'B54' },
