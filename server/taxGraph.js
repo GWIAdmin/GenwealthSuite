@@ -354,6 +354,129 @@ function norm(s) {
   return (s ?? '').toString().trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
+/**
+ * Map of front-end IDs → Column A labels on the 1040 sheet.
+ * You can extend this over time; start with the fields you export now.
+ */
+const FORM1040_LABELS = {
+  // Top meta (row 1–4, 11–12)
+  year:                 'Year:',
+  filingStatus:         'Filing Status:',
+  state:                'State:',
+  residentInState:      'Resident in State',
+  olderthan65:          'How many 65 or older:',
+  blind:                'How many blind:',
+
+  // Income section
+  wages:                      'Wages, salaries, tips -',
+  taxExemptInterest:          'Tax-exempt interest',
+  taxableInterest:            'Taxable interest',
+  taxableIRA:                 'Taxable IRA',
+  taxableDividends:           'Taxable Ordinary Dividends',
+  qualifiedDividends:         'Qualified Dividends',
+  iraDistributions:           'IRA distributions',
+  pensions:                   'Taxable pensions and annuities',
+  longTermCapitalGains:       'Long Term Capital Gain or Loss',
+  shortTermCapitalGains:      'Short Term Capital Gain or Loss',
+  otherIncome:                'Other Income (loss carryforward)',
+  interestPrivateBonds:       'Interest from Private Activity Bonds',
+  passiveActivityLossAdjustments: 'Passive Activity Loss Adjustments',
+  qualifiedBusinessDeduction: 'Qualified Business Deduction',
+  totalIncome:                'Total Personal Income',
+
+  // AGI section
+  totalOfAllIncome:           'Total of all Income:',
+  halfSETax:                  'Half of Self-Employemnt Tax:',
+  retirementDeduction:        'Retirement Deduction:',
+  medicalReimbursementPlan:   'Medical Reimbursement Plan:',
+  SEHealthInsurance:          'Self-Employed Health Insurance:',
+  alimonyPaid:                'Alimony Paid:',
+  otherAdjustments:           'Other Adjustments:',
+  totalAdjustedGrossIncome:   'Total Adjusted Gross Income:',
+
+  // Deductions
+  medical:                    'Medical:',
+  stateAndLocalTaxes:         'State and Local taxes:',
+  otherTaxesFromSchK_1:       'Other Taxes from Schedule K-1:',
+  interest:                   'Interest:',
+  contributions:              'Contributions:',
+  otherDeductions:            'Other Deductions:',
+  carryoverLoss:              'Carryover Loss:',
+  casualtyAndTheftLosses:     'Casualty and Theft Losses:',
+  miscellaneousDeductions:    'Miscellaneous Deductions:',
+  standardOrItemizedDeduction:'Standard or Itemized Deduction:',
+  totalDeductions:            'Total Deductions:',
+
+  // Tax & Credits
+  taxableIncome:              'Taxable Income:',
+  tax:                        'Tax:',
+  additionalMedicareTax:      'Additional Medicare Tax:',
+  netInvestmentTax:           'Net Investment Tax:',
+  selfEmploymentTax:          'Self-Employment Tax:',
+  otherTaxes:                 'Other Taxes:',
+  foreignTaxCredit:           'Foreign Tax Credit:',
+  AMT:                        'AMT:',
+  creditForChildAndDependentCareExpenses:
+                              'Credit for Child and Dependent Care Expenses:',
+  generalBusinessCredit:      'General Business Credit:',
+  childTaxCredit:             'Child Tax Credit:',
+  otherCredits:               'Other Credits:',
+  educationCredits:           'Education Credits:',
+  totalFederalTax:            'Total Federal Tax:',
+
+  // Payments
+  withholdings:               'Withholdings:',
+  withholdingsOnAdditionalMedicareWages:
+                              'Withholdings on Additional Medicare Wages:',
+  estimatedTaxPayments:       'Estimated Tax Payments:',
+  otherPaymentsAndCredits:    'Other Payments and Credits:',
+  penalty:                    'Penalty:',
+  estimatedRefundOverpayment: 'Estimated Refund (Overpayment):',
+  estimatedBalanceDue:        'Estimated Balance Due:',
+
+  // Employer/Employee taxes
+  employeeTaxes:              'Employee Taxes:',
+  employerTaxes:              'Employer Taxes:',
+  staticUnemployment2022_2025:'Unemployment 2022 - 2025:',
+  staticFUTA:                 'FUTA:',
+
+  // State summary + total tax
+  totalStateTax:              'Total State Tax:',
+  totalTax:                   'Total Tax:'
+};
+
+/**
+ * Scan Column A of the 1040 sheet for the labels in FORM1040_LABELS
+ * and return a runtime mapping: { id -> "B<row>" }.
+ *
+ * This lets us survive row insertions: as long as the label text
+ * stays with the row, we will always find the correct B-cell.
+ */
+async function build1040Mappings(headers) {
+  // Adjust the range if your 1040 runs beyond row 300
+  const startRow = 1;
+  const endRow   = 400; // plenty of room above the state sections
+  const values2D = await fetchRange(`A${startRow}:A${endRow}`, headers);
+  const labels   = values2D.map(r => (r[0] || '').toString());
+
+  const map = {};
+
+  for (const [id, labelText] of Object.entries(FORM1040_LABELS)) {
+    const wanted = norm(labelText);
+    const idx = labels.findIndex(v => norm(v) === wanted);
+    if (idx === -1) {
+      console.warn(`[1040-map] Label not found for id="${id}", label="${labelText}"`);
+      continue; // or throw if you want to be strict
+    }
+    const row = startRow + idx;
+    map[id] = `B${row}`;
+  }
+
+  return map; // e.g. { wages: 'B26', taxableInterest: 'B31', ... }
+}
+
+module.exports.build1040Mappings = build1040Mappings;
+
 async function findRowsByLabels(state, labels, headers) {
   const startRow = 892;
   const colAValues = await fetchRange(`A${startRow}:A2900`, headers);
@@ -552,5 +675,6 @@ module.exports = {
   upsertStateInputsAndRead,
   // outlier schema flow (the 11 states)
   upsertStateInputsAndReadFlex,
-  findRowsByLabels
+  findRowsByLabels,
+  build1040Mappings
 };

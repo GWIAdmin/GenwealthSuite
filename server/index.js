@@ -2,7 +2,7 @@ const fetch = require('node-fetch');
 global.fetch = fetch;
 const express = require('express');
 const path    = require('path');
-const { calculateMultiple, startSession, closeSession, writeStateDeductions, writeStateAGI, locateStateSection, SHEET_URL, refreshWorkbook, fetchStateSection, upsertStateInputsAndRead, upsertStateInputsAndReadFlex } = require('./taxGraph');
+const { calculateMultiple, startSession, closeSession, writeStateDeductions, writeStateAGI, locateStateSection, SHEET_URL, refreshWorkbook, fetchStateSection, upsertStateInputsAndRead, upsertStateInputsAndReadFlex, build1040Mappings } = require('./taxGraph');
 
 require('dotenv').config({ path: __dirname + '/.env' });   // load server/.env for LOCAL_XLSX_PATH
 const XlsxPopulate = require('xlsx-populate');
@@ -425,6 +425,21 @@ async function resolveColumnForRun(headers, year, analysisType, scanRightmost='J
   return targetCol;
 }
 
+// 1040 mapping – column-A-label driven
+app.get('/api/1040Map', async (req, res) => {
+  let headers;
+  try {
+    headers = await startSession(false); // no persistence
+    const map = await build1040Mappings(headers);
+    res.json({ map });
+  } catch (err) {
+    console.error('1040Map error:', err);
+    res.status(500).json({ error: err.message || String(err) });
+  } finally {
+    if (headers) await closeSession(headers, true);
+  }
+});
+
 /**
  * Persist the mapped writes into the resolved column and recalc.
  * Body: { year, analysisType, writes:[{cell:'B1', value:…}, …] }
@@ -615,6 +630,166 @@ app.post('/api/submitRunLocal', async (req, res) => {
     });
   } catch (err) {
     console.error('submitRunLocal error:', err);
+    return res.status(500).json({ error: err.message || String(err) });
+  }
+});
+
+app.post('/api/submitRunLocalDynamic', async (req, res) => {
+  const filePath  = process.env.LOCAL_XLSX_PATH;
+  const sheetName = process.env.LOCAL_WORKSHEET || process.env.WORKSHEET;
+  if (!filePath) {
+    return res.status(400).json({
+      error: 'LOCAL_XLSX_PATH is not set. Add it to server/.env (absolute path to your local .xlsx).'
+    });
+  }
+  if (!sheetName) {
+    return res.status(400).json({
+      error: 'Set LOCAL_WORKSHEET or WORKSHEET in .env so we know which tab to write.'
+    });
+  }
+
+  const year         = Number(req.body.year);
+  const analysisType = (req.body.analysisType || '').toString().trim();
+  const fields       = Array.isArray(req.body.fields) ? req.body.fields : [];
+  const layout       = req.body.businessLayout || {};
+  const bizLabels    = Array.isArray(req.body.businessLabels) ? req.body.businessLabels : [];
+  const clientFirstName = (req.body.clientFirstName || '').toString().trim();
+  const clientLastName  = (req.body.clientLastName  || '').toString().trim();
+
+  if (!year || !analysisType) {
+    return res.status(400).json({ error: 'year and analysisType are required.' });
+  }
+  if (!fields.length && !layout.entities?.length) {
+    return res.status(400).json({ error: 'No fields or business layout supplied.' });
+  }
+
+  try { await fs.access(filePath); }
+  catch {
+    return res.status(404).json({
+      error: `Template Excel not found at ${filePath}. Create/copy your template and set LOCAL_XLSX_PATH.`
+    });
+  }
+
+  // Compute client-named output path as in submitRunLocal
+  const outDir  = process.env.LOCAL_OUTPUT_DIR || path.dirname(filePath);
+  const slug = s => s
+    .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  const namePart  = [clientLastName, clientFirstName].filter(Boolean).map(slug).join('_') || 'Client';
+  const baseFile  = `${namePart}.xlsm`;
+  const targetPath = path.join(outDir, baseFile);
+
+  let createdCopy = false;
+  try {
+    await fs.access(targetPath);
+  } catch {
+    await fs.copyFile(filePath, targetPath);
+    createdCopy = true;
+  }
+
+  try {
+    const wb  = await XlsxPopulate.fromFileAsync(targetPath);
+    const sht = wb.sheet(sheetName);
+    if (!sht) {
+      return res.status(400).json({ error: `Worksheet "${sheetName}" not found in ${targetPath}.` });
+    }
+
+    // 1) Determine how many Business slots we need
+    const entities   = Array.isArray(layout.entities) ? layout.entities : [];
+    const numEntities = entities.length;
+    const baseBusinessRow = 39;
+    const baseBusinessRows = 2; // template has Business 1 (39/40), Business 2 (41/42)
+    const currentCapacity  = baseBusinessRows;
+    const neededCapacity   = numEntities;
+    const extraBusinesses  = Math.max(0, neededCapacity - currentCapacity);
+    const extraRows        = extraBusinesses * 2; // 2 rows per business
+
+    if (extraRows > 0) {
+      // Insert rows *just before* the Schedule C block (originally at 43..46)
+      const insertAt = baseBusinessRow + currentCapacity * 2 + 1; // row after Business 2 block
+      sht.row(insertAt).insert(extraRows);
+    }
+
+    // 2) Build a fresh label-driven mapping from the *local* workbook
+    //    We re-use build1040Mappings, but here we do it on the local copy using XlsxPopulate.
+
+    // Simple local mapping: read Column A via XlsxPopulate
+    const startRow = 24;
+    const endRow   = 400;
+    const colAvals = sht.range(`A${startRow}:A${endRow}`).value().map(r => (r[0] || '').toString());
+    const map = {};
+    for (const [id, labelText] of Object.entries(FORM1040_LABELS)) {
+      const wanted = labelText.toLowerCase().trim();
+      const idx = colAvals.findIndex(v => v.toLowerCase().trim() === wanted);
+      if (idx === -1) continue;
+      const row = startRow + idx;
+      map[id] = `B${row}`;
+    }
+
+    // 3) Resolve column for this run just like submitRunLocal does
+    const headerRow       = 24;
+    const startColLetter  = 'B';
+    const scanRightmost   = 'J';
+    const rng             = sht.range(`${startColLetter}${headerRow}:${scanRightmost}${headerRow}`);
+    const values          = rng.value();
+    const rowVals         = Array.isArray(values) && values.length ? values[0].map(v => (v ?? '').toString()) : [];
+    const label           = `${year} ${analysisType}`;
+
+    let idx = rowVals.findIndex(v => v === label);
+    if (idx < 0) {
+      idx = rowVals.findIndex(v => v === '' || v == null);
+      if (idx < 0) {
+        return res.status(400).json({
+          error: `No free column found between ${startColLetter}${headerRow} and ${scanRightmost}${headerRow}.`
+        });
+      }
+      const targetCol = String.fromCharCode(startColLetter.charCodeAt(0) + idx);
+      sht.cell(`${targetCol}${headerRow}`).value(label);
+    }
+    const targetCol = String.fromCharCode(startColLetter.charCodeAt(0) + idx);
+
+    // 4) Write 1040 core fields using the label-driven mapping
+    for (const { id, value } of fields) {
+      const cell = map[id];
+      if (!cell) continue;
+      const targetCell = swapToColumn(cell, targetCol);
+      sht.cell(targetCell).value(value);
+    }
+
+    // 5) Write Business block based on dynamic rows (39+ 2*i) into the same column
+    entities.forEach((biz, i) => {
+      const businessNumber = i + 1;
+      const incomeRow  = baseBusinessRow + i * 2;
+      const expenseRow = incomeRow + 1;
+
+      const incomeCell = swapToColumn(`B${incomeRow}`, targetCol);
+      const expenseCell = swapToColumn(`B${expenseRow}`, targetCol);
+
+      // Income positive, Expenses negative
+      sht.cell(incomeCell).value(biz.income);
+      sht.cell(expenseCell).value(-Math.abs(biz.expenses || 0));
+
+      // Column A labels (do not shift column)
+      sht.cell(`A${incomeRow}`).value(`Business ${businessNumber} Income - ${biz.name}`);
+      sht.cell(`A${expenseRow}`).value(`Business ${businessNumber} Expenses - ${biz.name}`);
+    });
+
+    // 6) Optionally write any extra labels/values you passed in bizLabels (if you want parity with preview)
+
+    await wb.toFileAsync(targetPath);
+    return res.json({
+      ok: true,
+      mode: 'local-dynamic',
+      createdCopy,
+      column: targetCol,
+      label,
+      filePath: targetPath,
+      worksheet: sheetName,
+      template: filePath
+    });
+  } catch (err) {
+    console.error('submitRunLocalDynamic error:', err);
     return res.status(500).json({ error: err.message || String(err) });
   }
 });

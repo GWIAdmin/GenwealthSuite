@@ -277,8 +277,41 @@ function getCurrentAutoRatePercent() {
   const taxableIncome = getFieldValue('taxableIncome'); // already unformats currency
   return getMarginalOrdinaryRatePercent(taxableIncome, filingStatus, year);
 }
+
+async function load1040Mappings() {
+  try {
+    const resp = await fetch('/api/1040Map');
+    if (!resp.ok) {
+      console.error('1040Map fetch failed:', await resp.text());
+      return;
+    }
+    const { map } = await resp.json();
+    if (!map) return;
+
+    const mappings = [];
+
+    FORM1040_IDS.forEach(id => {
+      const cell = map[id];
+      if (!cell) {
+        console.warn(`[1040Map] No cell mapping for id="${id}"`);
+        return;
+      }
+      mappings.push({ id, type: 'write', cell });
+    });
+
+    // Expose as the global you use elsewhere
+    window.mappingsTotal = mappings;
+    console.log('[1040Map] Loaded mappingsTotal:', mappings);
+  } catch (e) {
+    console.error('load1040Mappings error:', e);
+  }
+}
   
 window.addEventListener('DOMContentLoaded', async () => {
+    // 1) Build mappingsTotal from live Excel labels
+    await load1040Mappings();
+
+    // 2) Existing init work
     initCollapsibles();
     initUI();
 
@@ -546,124 +579,146 @@ function buildQuickWritesForPreview() {
 
 function buildDynamicBusinessMappings() {
   const mappings = [];
+  const { entities, schedC, scheduleE } = classifyBusinessesForExport();
 
+  // ===== Business (S-Corp / Partnership / C-Corp) =====
+  const baseBusinessRow = 39;   // Business 1 Income at B39
+  const maxBusinesses   = 10;   // you preallocated 10 slots
+
+  entities.slice(0, maxBusinesses).forEach((biz, idx) => {
+    const businessNumber = idx + 1;          // Business 1..10
+    const incomeRow      = baseBusinessRow + idx * 2;
+    const expenseRow     = incomeRow + 1;
+
+    mappings.push({
+      id:   `business${biz.index}Income`,
+      type: 'write',
+      cell: `B${incomeRow}`,
+      label: `Business ${businessNumber} Income - ${biz.name}`
+    });
+    mappings.push({
+      id:   `business${biz.index}Expenses`,
+      type: 'write',
+      cell: `B${expenseRow}`,
+      label: `Business ${businessNumber} Expenses - ${biz.name}`
+    });
+  });
+
+  // ===== Schedule C =====
+  const baseSchedCRow = 57;    // Schedule C-1 Income at B57
+  const maxSchedC     = 10;
+
+  schedC.slice(0, maxSchedC).forEach((biz, idx) => {
+    const slotNumber = idx + 1;          // Schedule C-1..C-10
+    const incomeRow  = baseSchedCRow + idx * 2;
+    const expenseRow = incomeRow + 1;
+
+    mappings.push({
+      id:   `business${biz.index}Income`,
+      type: 'write',
+      cell: `B${incomeRow}`,
+      label: `Schedule C-${slotNumber} Income - ${biz.name}`
+    });
+    mappings.push({
+      id:   `business${biz.index}Expenses`,
+      type: 'write',
+      cell: `B${expenseRow}`,
+      label: `Schedule C-${slotNumber} Expenses - ${biz.name}`
+    });
+  });
+
+  // ===== Schedule E =====
+  const baseSchedERow = 77;    // Schedule E-1 Income at B77
+  const maxSchedE     = 10;
+
+  scheduleE.slice(0, maxSchedE).forEach((se, idx) => {
+    const slotNumber = idx + 1;         // Schedule E-1..E-10
+    const incomeRow  = baseSchedERow + idx * 2;
+    const expenseRow = incomeRow + 1;
+
+    mappings.push({
+      id:   `scheduleE${se.index}Income`,
+      type: 'write',
+      cell: `B${incomeRow}`,
+      label: `Schedule E-${slotNumber} Income - ${se.name}`
+    });
+    mappings.push({
+      id:   `scheduleE${se.index}Expenses`,
+      type: 'write',
+      cell: `B${expenseRow}`,
+      label: `Schedule E-${slotNumber} Expenses - ${se.name}`
+    });
+  });
+
+  return mappings;
+}
+
+function classifyBusinessesForExport() {
   const numBusinesses = parseInt(
     document.getElementById('numOfBusinesses')?.value || '0',
     10
   ) || 0;
 
-  // Slots in the Excel template
-  const entityRows = [      // S-Corp / Partnership / C-Corp
-    { incomeRow: 39, expenseRow: 40 }, // Business 1
-    { incomeRow: 41, expenseRow: 42 }  // Business 2
-  ];
-  const schedCRows = [      // Schedule-C
-    { incomeRow: 43, expenseRow: 44 }, // Schedule C-1
-    { incomeRow: 45, expenseRow: 46 }  // Schedule C-2
-  ];
-  const schedERows = [      // Schedule E
-    { incomeRow: 47, expenseRow: 48 }, // Schedule E-1
-    { incomeRow: 49, expenseRow: 50 }  // Schedule E-2
-  ];
-
   const entityTypes = ['S-Corp', 'Partnership', 'C-Corp'];
 
-  const entityBusinesses = [];
-  const schedCBusinesses = [];
+  const entities = [];   // S-Corp / Partnership / C-Corp
+  const schedC  = [];    // Schedule-C
 
-  // Classify each Business block
   for (let i = 1; i <= numBusinesses; i++) {
     const typeEl = document.getElementById(`business${i}Type`);
     const type   = (typeEl?.value || '').trim();
     const nameEl = document.getElementById(`businessName_${i}`);
     const name   = (nameEl?.value || '').trim() || `Business ${i}`;
 
+    const incomeEl   = document.getElementById(`business${i}Income`);
+    const expensesEl = document.getElementById(`business${i}Expenses`);
+
+    const incomeVal   = incomeEl ? unformatCurrency(incomeEl.value || '0')   : 0;
+    const expensesVal = expensesEl ? unformatCurrency(expensesEl.value || '0') : 0;
+
     if (entityTypes.includes(type)) {
-      entityBusinesses.push({ index: i, name });
+      entities.push({
+        index: i,
+        type,
+        name,
+        income: incomeVal,
+        expenses: expensesVal
+      });
     } else if (type === 'Schedule-C') {
-      schedCBusinesses.push({ index: i, name });
+      schedC.push({
+        index: i,
+        type,
+        name,
+        income: incomeVal,
+        expenses: expensesVal
+      });
     }
   }
 
-  // 1) Map S-Corp / Partnership / C-Corp → Business 1 / Business 2
-  entityBusinesses.slice(0, entityRows.length).forEach((biz, slotIdx) => {
-    const slot = slotIdx + 1; // 1 or 2
-    const rows = entityRows[slotIdx];
-
-    const incomeLabel  = `Business ${slot} Income - ${biz.name}`;
-    const expenseLabel = `Business ${slot} Expenses - ${biz.name}`;
-
-    mappings.push({
-      id:   `business${biz.index}Income`,
-      type: 'write',
-      cell: `B${rows.incomeRow}`,
-      label: incomeLabel
-    });
-    mappings.push({
-      id:   `business${biz.index}Expenses`,
-      type: 'write',
-      cell: `B${rows.expenseRow}`,
-      label: expenseLabel
-    });
-  });
-
-  // 2) Map Schedule-C businesses → Schedule C-1 / Schedule C-2
-  schedCBusinesses.slice(0, schedCRows.length).forEach((biz, slotIdx) => {
-    const slot = slotIdx + 1; // 1 or 2
-    const rows = schedCRows[slotIdx];
-
-    const incomeLabel  = `Schedule C-${slot} Income - ${biz.name}`;
-    const expenseLabel = `Schedule C-${slot} Expenses - ${biz.name}`;
-
-    mappings.push({
-      id:   `business${biz.index}Income`,
-      type: 'write',
-      cell: `B${rows.incomeRow}`,
-      label: incomeLabel
-    });
-    mappings.push({
-      id:   `business${biz.index}Expenses`,
-      type: 'write',
-      cell: `B${rows.expenseRow}`,
-      label: expenseLabel
-    });
-  });
-
-  // 3) Map Schedule E entries → Schedule E-1 / Schedule E-2
+  // Schedule E entities (already managed via numScheduleEs)
   const numScheduleEs = parseInt(
     document.getElementById('numScheduleEs')?.value || '0',
     10
   ) || 0;
-
-  const scheduleEs = [];
+  const scheduleE = [];
   for (let i = 1; i <= numScheduleEs; i++) {
     const nameEl = document.getElementById(`scheduleE${i}Name`);
     const name   = (nameEl?.value || '').trim() || `Schedule E-${i}`;
-    scheduleEs.push({ index: i, name });
+
+    const incEl  = document.getElementById(`scheduleE${i}Income`);
+    const expEl  = document.getElementById(`scheduleE${i}Expenses`);
+    const incVal = incEl ? unformatCurrency(incEl.value || '0') : 0;
+    const expVal = expEl ? unformatCurrency(expEl.value || '0') : 0;
+
+    scheduleE.push({
+      index: i,
+      name,
+      income: incVal,
+      expenses: expVal
+    });
   }
 
-  scheduleEs.slice(0, schedERows.length).forEach((se, slotIdx) => {
-    const slot = slotIdx + 1; // 1 or 2
-    const rows = schedERows[slotIdx];
-
-    const incomeLabel  = `Schedule E-${slot} Income - ${se.name}`;
-    const expenseLabel = `Schedule E-${slot} Expenses - ${se.name}`;
-
-    mappings.push({
-      id:   `scheduleE${se.index}Income`,
-      type: 'write',
-      cell: `B${rows.incomeRow}`,
-      label: incomeLabel
-    });
-    mappings.push({
-      id:   `scheduleE${se.index}Expenses`,
-      type: 'write',
-      cell: `B${rows.expenseRow}`,
-      label: expenseLabel
-    });
-  });
-
-  return mappings;
+  return { entities, schedC, scheduleE };
 }
 
 async function saveToExcelAndPersist(options = {}) {
@@ -815,6 +870,45 @@ if (window.__LOCAL_PREVIEW_ONLY__ === true) {
     resultsDiv.innerHTML = `<p class="red-disclaimer">Excel save failed: ${err.message || err}</p>`;
     return { ok: false, error: err };
   }
+}
+
+function collect1040FieldsForExport() {
+  // Same normalization as saveToExcelAndPersist, but keyed by id.
+  function normalizeValue(id, raw) {
+    if (raw == null || raw === '' || raw === 'please select' || raw === 'Please Select') {
+      return null;
+    }
+    if (id === 'state') {
+      return `${raw} Taxes`;
+    }
+    if (id === 'filingStatus') {
+      return (FS_MAP && FS_MAP[raw]) ? FS_MAP[raw] : raw;
+    }
+    if (id === 'blind') {
+      const map = { 'Zero': 0, 'One': 1, 'Two': 2, '0': 0, '1': 1, '2': 2 };
+      return Object.prototype.hasOwnProperty.call(map, raw) ? map[raw] : 0;
+    }
+    if (typeof raw === 'string' && /[$,()]/.test(raw)) {
+      return unformatCurrency(raw);
+    }
+    if (!isNaN(+raw)) {
+      return +raw;
+    }
+    return raw;
+  }
+
+  const out = [];
+
+  (Array.isArray(window.mappingsTotal) ? window.mappingsTotal : []).forEach(m => {
+    if (!m || !m.id) return;
+    const el = document.getElementById(m.id);
+    if (!el) return;
+    const v = normalizeValue(m.id, el.value);
+    if (v == null) return;
+    out.push({ id: m.id, value: v });
+  });
+
+  return out;
 }
 
 document.getElementById('taxForm').addEventListener('submit', async function (e) {
@@ -1990,11 +2084,6 @@ function appendExtraStateLabels(writes) {
 
     const cell = EXTRA_STATE_LABEL_CELLS[i - 1];
     const label = `${stateName} Taxes`;
-
-    // Do not double-write the same cell if something already added it
-    if (!writes.some(w => w && w.cell === cell)) {
-      writes.push({ cell, value: label });
-    }
   }
 }
 
@@ -8630,98 +8719,184 @@ const mappings = [
     { id: 'totalTax',                               type: 'read', cell: 'B117' },
 ];
 
-const mappingsTotal = [
-  // ------- TOP META -------
-  { id: 'year',                 type: 'write', cell: 'B1'  },
-  { id: 'filingStatus',         type: 'write', cell: 'B2'  },
-  { id: 'state',                type: 'write', cell: 'B3'  }, // normalized to "<State> Taxes"
-  { id: 'residentInState',      type: 'write', cell: 'B4'  },
-  { id: 'olderthan65',          type: 'write', cell: 'B11' },
-  { id: 'blind',                type: 'write', cell: 'B12' },
+// IDs we want to export for the 1040 sheet, aligned with FORM1040_LABELS on the server.
+const FORM1040_IDS = [
+  // Meta
+  'year',
+  'filingStatus',
+  'state',
+  'residentInState',
+  'olderthan65',
+  'blind',
 
-  // ------- INCOME (partial demo – expand as desired) -------
-  { id: 'wages',                        type: 'write', cell: 'B26' },
-  { id: 'taxExemptInterest',            type: 'write', cell: 'B30' },
-  { id: 'taxableInterest',              type: 'write', cell: 'B31' },
-  { id: 'taxableIRA',                   type: 'write', cell: 'B32' },
-  { id: 'taxableDividends',             type: 'write', cell: 'B33' },
-  { id: 'qualifiedDividends',           type: 'write', cell: 'B34' },
-  { id: 'iraDistributions',             type: 'write', cell: 'B35' },
-  { id: 'pensions',                     type: 'write', cell: 'B36' },
-  { id: 'longTermCapitalGains',         type: 'write', cell: 'B37' },
-  { id: 'shortTermCapitalGains',        type: 'write', cell: 'B38' },
+  // Income
+  'wages',
+  'taxExemptInterest',
+  'taxableInterest',
+  'taxableIRA',
+  'taxableDividends',
+  'qualifiedDividends',
+  'iraDistributions',
+  'pensions',
+  'longTermCapitalGains',
+  'shortTermCapitalGains',
+  'otherIncome',
+  'interestPrivateBonds',
+  'passiveActivityLossAdjustments',
+  'qualifiedBusinessDeduction',
+  'totalIncome',
 
-  // INSERT BUSINESS ROWS HERE
+  // AGI
+  'totalOfAllIncome',
+  'halfSETax',
+  'retirementDeduction',
+  'medicalReimbursementPlan',
+  'SEHealthInsurance',
+  'alimonyPaid',
+  'otherAdjustments',
+  'totalAdjustedGrossIncome',
 
-  { id: 'otherIncome',                  type: 'write', cell: 'B51' },
-  { id: 'interestPrivateBonds',         type: 'write', cell: 'B52' },
-  { id: 'passiveActivityLossAdjustments', type: 'write', cell: 'B54' },
-  // { id: 'qualifiedBusinessDeduction',   type: 'write', cell: 'B55' },
-  // { id: 'totalIncome',                  type: 'write', cell: 'B56' },
+  // Deductions
+  'medical',
+  'stateAndLocalTaxes',
+  'otherTaxesFromSchK_1',
+  'interest',
+  'contributions',
+  'otherDeductions',
+  'carryoverLoss',
+  'casualtyAndTheftLosses',
+  'miscellaneousDeductions',
+  'standardOrItemizedDeduction',
+  'totalDeductions',
 
-  // ------- ADJUSTED GROSS INCOME -------
-  // { id: 'halfSETax',                    type: 'write', cell: 'B59' },
-  { id: 'retirementDeduction',          type: 'write', cell: 'B60' },
-  { id: 'medicalReimbursementPlan',     type: 'write', cell: 'B61' },
-  { id: 'SEHealthInsurance',            type: 'write', cell: 'B62' },
-  { id: 'alimonyPaid',                  type: 'write', cell: 'B63' },
-  { id: 'otherAdjustments',             type: 'write', cell: 'B64' },
-  // { id: 'totalAdjustedGrossIncome',     type: 'write', cell: 'B65' },
+  // Tax & Credits
+  'taxableIncome',
+  'tax',
+  'additionalMedicareTax',
+  'netInvestmentTax',
+  'selfEmploymentTax',
+  'otherTaxes',
+  'foreignTaxCredit',
+  'AMT',
+  'creditForChildAndDependentCareExpenses',
+  'generalBusinessCredit',
+  'childTaxCredit',
+  'otherCredits',
+  'educationCredits',
+  'totalFederalTax',
 
-  // ------- DEDUCTIONS (partial) -------
-  { id: 'medical',                      type: 'write', cell: 'B68' },
-  { id: 'stateAndLocalTaxes',           type: 'write', cell: 'B69' },
-  { id: 'otherTaxesFromSchK-1',         type: 'write', cell: 'B70' },
-  { id: 'interest',                     type: 'write', cell: 'B71' },
-  { id: 'contributions',                type: 'write', cell: 'B72' },
-  { id: 'otherDeductions',              type: 'write', cell: 'B73' },
-  { id: 'carryoverLoss',                type: 'write', cell: 'B74' },
-  { id: 'casualtyAndTheftLosses',       type: 'write', cell: 'B75' },
-  { id: 'miscellaneousDeductions',      type: 'write', cell: 'B76' },
-  // { id: 'totalDeductions',              type: 'write', cell: 'B77' },
+  // Payments
+  'withholdings',
+  'withholdingsOnAdditionalMedicareWages',
+  'estimatedTaxPayments',
+  'otherPaymentsAndCredits',
+  'penalty',
+  'estimatedRefundOverpayment',
+  'estimatedBalanceDue',
 
-  // ------- TAX & CREDITS (partial) -------
-  // { id: 'taxableIncome',                type: 'write', cell: 'B80' },
-  // { id: 'tax',                          type: 'write', cell: 'B81' },
-  // { id: 'additionalMedicareTax',        type: 'write', cell: 'B82' },
-  // { id: 'netInvestmentTax',             type: 'write', cell: 'B83' },
-  // { id: 'selfEmploymentTax',            type: 'write', cell: 'B84' },
-  { id: 'otherTaxes',                   type: 'write', cell: 'B85' },
-  { id: 'foreignTaxCredit',             type: 'write', cell: 'B86' },
-  { id: 'AMT',                          type: 'write', cell: 'B87' },
-  { id: 'creditForChildAndDependentCareExpenses', type: 'write', cell: 'B88' },
-  { id: 'generalBusinessCredit',        type: 'write', cell: 'B89' },
-  { id: 'otherCredits',                 type: 'write', cell: 'B91' },
-  // { id: 'educationCredits',             type: 'write', cell: 'B92' },
+  // Employer/Employee
+  'employeeTaxes',
+  'employerTaxes',
+  'staticUnemployment2022_2025',
+  'staticFUTA',
 
-  // ------- PAYMENTS -------
-  { id: 'withholdings',                 type: 'write', cell: 'B96' },
-  { id: 'withholdingsOnAdditionalMedicareWages', type: 'write', cell: 'B97' },
-  { id: 'estimatedTaxPayments',         type: 'write', cell: 'B98' },
-  { id: 'otherPaymentsAndCredits',      type: 'write', cell: 'B99' },
-  { id: 'penalty',                      type: 'write', cell: 'B100' },
-  // { id: 'estimatedRefundOverpayment',   type: 'write', cell: 'B101' },
-  // { id: 'estimatedBalanceDue',          type: 'write', cell: 'B102' },
-
-  // ------- EMPLOYEE/EMPLOYER TAXES -------
-  // { id: 'employeeTaxes',                type: 'write', cell: 'B104' },
-  // { id: 'employerTaxes',                type: 'write', cell: 'B105' },
-
-  // ------- STATE TAX BLOCK (front-end inputs only) -------
-  { id: 'localTaxAfterCredits',         type: 'write', cell: 'B109' },
-  { id: 'stateWithholdings',            type: 'write', cell: 'B111' },
-  { id: 'statePaymentsAndCredits',      type: 'write', cell: 'B112' },
-  { id: 'stateInterest',                type: 'write', cell: 'B113' },
-  { id: 'statePenalty',                 type: 'write', cell: 'B114' },
-  { id: 'stateEstimatedRefundOverpayment', type: 'write', cell: 'B115' },
-  { id: 'stateEstimatedBalanceDue',     type: 'write', cell: 'B116' },
-
-  // ------- GRAND TOTAL -------
-  // { id: 'totalTax',                     type: 'write', cell: 'B147' },
+  // State & total tax summary rows
+  'totalStateTax',
+  'totalTax'
 ];
 
+// const mappingsTotal = [
+//   // ------- TOP META -------
+//   { id: 'year',                 type: 'write', cell: 'B1'  },
+//   { id: 'filingStatus',         type: 'write', cell: 'B2'  },
+//   { id: 'state',                type: 'write', cell: 'B3'  }, // normalized to "<State> Taxes"
+//   { id: 'residentInState',      type: 'write', cell: 'B4'  },
+//   { id: 'olderthan65',          type: 'write', cell: 'B11' },
+//   { id: 'blind',                type: 'write', cell: 'B12' },
+
+//   // ------- INCOME (partial demo – expand as desired) -------
+//   { id: 'wages',                        type: 'write', cell: 'B26' },
+//   { id: 'taxExemptInterest',            type: 'write', cell: 'B30' },
+//   { id: 'taxableInterest',              type: 'write', cell: 'B31' },
+//   { id: 'taxableIRA',                   type: 'write', cell: 'B32' },
+//   { id: 'taxableDividends',             type: 'write', cell: 'B33' },
+//   { id: 'qualifiedDividends',           type: 'write', cell: 'B34' },
+//   { id: 'iraDistributions',             type: 'write', cell: 'B35' },
+//   { id: 'pensions',                     type: 'write', cell: 'B36' },
+//   { id: 'longTermCapitalGains',         type: 'write', cell: 'B37' },
+//   { id: 'shortTermCapitalGains',        type: 'write', cell: 'B38' },
+
+//   // INSERT BUSINESS ROWS HERE
+
+//   { id: 'otherIncome',                  type: 'write', cell: 'B51' },
+//   { id: 'interestPrivateBonds',         type: 'write', cell: 'B52' },
+//   { id: 'passiveActivityLossAdjustments', type: 'write', cell: 'B54' },
+//   // { id: 'qualifiedBusinessDeduction',   type: 'write', cell: 'B55' },
+//   // { id: 'totalIncome',                  type: 'write', cell: 'B56' },
+
+//   // ------- ADJUSTED GROSS INCOME -------
+//   // { id: 'halfSETax',                    type: 'write', cell: 'B59' },
+//   { id: 'retirementDeduction',          type: 'write', cell: 'B60' },
+//   { id: 'medicalReimbursementPlan',     type: 'write', cell: 'B61' },
+//   { id: 'SEHealthInsurance',            type: 'write', cell: 'B62' },
+//   { id: 'alimonyPaid',                  type: 'write', cell: 'B63' },
+//   { id: 'otherAdjustments',             type: 'write', cell: 'B64' },
+//   // { id: 'totalAdjustedGrossIncome',     type: 'write', cell: 'B65' },
+
+//   // ------- DEDUCTIONS (partial) -------
+//   { id: 'medical',                      type: 'write', cell: 'B68' },
+//   { id: 'stateAndLocalTaxes',           type: 'write', cell: 'B69' },
+//   { id: 'otherTaxesFromSchK-1',         type: 'write', cell: 'B70' },
+//   { id: 'interest',                     type: 'write', cell: 'B71' },
+//   { id: 'contributions',                type: 'write', cell: 'B72' },
+//   { id: 'otherDeductions',              type: 'write', cell: 'B73' },
+//   { id: 'carryoverLoss',                type: 'write', cell: 'B74' },
+//   { id: 'casualtyAndTheftLosses',       type: 'write', cell: 'B75' },
+//   { id: 'miscellaneousDeductions',      type: 'write', cell: 'B76' },
+//   // { id: 'totalDeductions',              type: 'write', cell: 'B77' },
+
+//   // ------- TAX & CREDITS (partial) -------
+//   // { id: 'taxableIncome',                type: 'write', cell: 'B80' },
+//   // { id: 'tax',                          type: 'write', cell: 'B81' },
+//   // { id: 'additionalMedicareTax',        type: 'write', cell: 'B82' },
+//   // { id: 'netInvestmentTax',             type: 'write', cell: 'B83' },
+//   // { id: 'selfEmploymentTax',            type: 'write', cell: 'B84' },
+//   { id: 'otherTaxes',                   type: 'write', cell: 'B85' },
+//   { id: 'foreignTaxCredit',             type: 'write', cell: 'B86' },
+//   { id: 'AMT',                          type: 'write', cell: 'B87' },
+//   { id: 'creditForChildAndDependentCareExpenses', type: 'write', cell: 'B88' },
+//   { id: 'generalBusinessCredit',        type: 'write', cell: 'B89' },
+//   { id: 'otherCredits',                 type: 'write', cell: 'B91' },
+//   // { id: 'educationCredits',             type: 'write', cell: 'B92' },
+
+//   // ------- PAYMENTS -------
+//   { id: 'withholdings',                 type: 'write', cell: 'B96' },
+//   { id: 'withholdingsOnAdditionalMedicareWages', type: 'write', cell: 'B97' },
+//   { id: 'estimatedTaxPayments',         type: 'write', cell: 'B98' },
+//   { id: 'otherPaymentsAndCredits',      type: 'write', cell: 'B99' },
+//   { id: 'penalty',                      type: 'write', cell: 'B100' },
+//   // { id: 'estimatedRefundOverpayment',   type: 'write', cell: 'B101' },
+//   // { id: 'estimatedBalanceDue',          type: 'write', cell: 'B102' },
+
+//   // ------- EMPLOYEE/EMPLOYER TAXES -------
+//   // { id: 'employeeTaxes',                type: 'write', cell: 'B104' },
+//   // { id: 'employerTaxes',                type: 'write', cell: 'B105' },
+
+//   // ------- STATE TAX BLOCK (front-end inputs only) -------
+//   { id: 'localTaxAfterCredits',         type: 'write', cell: 'B109' },
+//   { id: 'stateWithholdings',            type: 'write', cell: 'B111' },
+//   { id: 'statePaymentsAndCredits',      type: 'write', cell: 'B112' },
+//   { id: 'stateInterest',                type: 'write', cell: 'B113' },
+//   { id: 'statePenalty',                 type: 'write', cell: 'B114' },
+//   { id: 'stateEstimatedRefundOverpayment', type: 'write', cell: 'B115' },
+//   { id: 'stateEstimatedBalanceDue',     type: 'write', cell: 'B116' },
+
+//   // ------- GRAND TOTAL -------
+//   // { id: 'totalTax',                     type: 'write', cell: 'B147' },
+// ];
+
 window.mappings = mappings;
-window.mappingsTotal = mappingsTotal;
+// window.mappingsTotal = mappingsTotal;
 
 // --- Dynamic State Taxes button + loader helpers ---
 const STATE_EDITABLE_IDS = [
