@@ -949,69 +949,171 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
   }
 
   const ROW_GROUPS = [
-    { title: 'Incomes', rows: [
-      { id: 'totalOfAllIncome', label: 'Total Income' }
-    ]},
-    { title: 'Adjusted Gross Income', rows: [
-      { id: 'totalAdjustedGrossIncome', label: 'Total Adjusted Gross Income' }
-    ]},
-    { title: 'Deductions', rows: [
-      { id: 'standardOrItemizedDeduction', label: 'Standard or Itemized Deductions' },
-      { id: 'totalDeductions',             label: 'Total Deductions' }
-    ]},
-    { title: 'Tax & Credits', rows: [
-      { id: 'taxableIncome',     label: 'Taxable Income' },
-      { id: 'tax',               label: 'Tax' },
-      { id: 'totalFederalTax',   label: 'Total Tax' } // federal in this band to match sheet
-    ]},
-    { title: 'Payments', rows: [
-      { id: 'estimatedRefundOverpayment', label: 'Estimated Refund' },
-      { id: 'estimatedBalanceDue',        label: 'Estimated Balance Due' }
-    ]},
-    { title: 'Employer/Employee Taxes', rows: [
-      { id: 'employeeTaxes', label: 'Employee Taxes' },
-      { id: 'employerTaxes', label: 'Employer Taxes' }
-    ]},
-    // NEW: per-state detail for all states (preview only)
-    { title: 'State Details (All States)', rows: [
-      // Slot 1
-      { id: 'preview_state1_taxable', label: 'State 1 – Taxable Income' },
-      { id: 'preview_state1_local',   label: 'State 1 – Local tax after credits' },
-      { id: 'preview_state1_total',   label: 'State 1 – Total Tax' },
-      { id: 'preview_state1_refund',  label: 'State 1 – Estimated Refund (Overpayment)' },
-      { id: 'preview_state1_balance', label: 'State 1 – Estimated Balance Due' },
+    {
+      title: 'Incomes',
+      rows: [
+        // Core income components
+        { id: 'wages',                     label: 'Wages, Salaries, Tips' },
+        { id: 'taxExemptInterest',         label: 'Tax-Exempt Interest' },
+        { id: 'taxableInterest',           label: 'Taxable Interest' },
+        { id: 'taxableIRA',                label: 'Taxable IRA' },
+        { id: 'taxableDividends',          label: 'Taxable Ordinary Dividends' },
+        { id: 'qualifiedDividends',        label: 'Qualified Dividends' },
+        { id: 'iraDistributions',          label: 'IRA Distributions' },
+        { id: 'pensions',                  label: 'Taxable Pensions and Annuities' },
+        { id: 'longTermCapitalGains',      label: 'Long-Term Capital Gain (Loss)' },
+        { id: 'shortTermCapitalGains',     label: 'Short-Term Capital Gain (Loss)' },
 
-      { id: '__divider__1' },   // <<< DIVIDER BEFORE NEXT STATE
+        // Schedule D special-rate items
+        { id: 'unrecapturedSection1250Gain', label: 'Unrecaptured §1250 Gain (25% Rate)' },
+        { id: 'collectiblesGain',           label: '28% Rate Gain (Collectibles / §1202)' },
 
-      // Slot 2
-      { id: 'preview_state2_taxable', label: 'State 2 – Taxable Income' },
-      { id: 'preview_state2_local',   label: 'State 2 – Local tax after credits' },
-      { id: 'preview_state2_total',   label: 'State 2 – Total Tax' },
-      { id: 'preview_state2_refund',  label: 'State 2 – Estimated Refund (Overpayment)' },
-      { id: 'preview_state2_balance', label: 'State 2 – Estimated Balance Due' },
+        // Pass-through / other income
+        { id: 'netTotalBusinesses',        label: 'Net Total of All Businesses' },
+        { id: 'otherIncome',               label: 'Other Income (Loss Carryforward)' },
+        { id: 'interestPrivateBonds',      label: 'Interest from Private Activity Bonds' },
+        { id: 'passiveActivityLossAdjustments', label: 'Passive Activity Loss Adjustments' },
 
-      { id: '__divider__2' },   // <<< DIVIDER BEFORE NEXT STATE
+        // Summary income
+        { id: 'totalIncome',               label: 'Total Personal Income' },
+        { id: 'totalOfAllIncome',          label: 'Total of All Income' }
+      ]
+    },
 
-      // Slot 3
-      { id: 'preview_state3_taxable', label: 'State 3 – Taxable Income' },
-      { id: 'preview_state3_local',   label: 'State 3 – Local tax after credits' },
-      { id: 'preview_state3_total',   label: 'State 3 – Total Tax' },
-      { id: 'preview_state3_refund',  label: 'State 3 – Estimated Refund (Overpayment)' },
-      { id: 'preview_state3_balance', label: 'State 3 – Estimated Balance Due' },
+    {
+      title: 'Adjusted Gross Income',
+      rows: [
+        { id: 'totalOfAllIncome',          label: 'Total of All Income' },
+        { id: 'halfSETax',                 label: 'Half of Self-Employment Tax' },
+        { id: 'retirementDeduction',       label: 'Retirement Deduction (Above-the-Line)' },
+        { id: 'medicalReimbursementPlan',  label: 'Medical Reimbursement Plan (Section 105)' },
+        { id: 'SEHealthInsurance',         label: 'Self-Employed Health Insurance' },
+        { id: 'alimonyPaid',               label: 'Alimony Paid' },
+        { id: 'otherAdjustments',          label: 'Other Adjustments' },
+        { id: 'totalAdjustedGrossIncome',  label: 'Total Adjusted Gross Income (AGI)' }
+      ]
+    },
 
-      { id: '__divider__3' },   // <<< DIVIDER BEFORE NEXT STATE
+    {
+      title: 'Deductions',
+      rows: [
+        // Itemized detail lines
+        { id: 'medical',                   label: 'Medical Expenses' },
+        { id: 'stateAndLocalTaxes',        label: 'State and Local Taxes (SALT)' },
+        { id: 'otherTaxesFromSchK-1',      label: 'Other Taxes from Schedule K-1' },
+        { id: 'interest',                  label: 'Mortgage / Investment Interest' },
+        { id: 'contributions',             label: 'Charitable Contributions' },
+        { id: 'carryoverLoss',             label: 'Carryover Loss' },
+        { id: 'casualtyAndTheftLosses',    label: 'Casualty and Theft Losses' },
+        { id: 'miscellaneousDeductions',   label: 'Miscellaneous Deductions' },
+        { id: 'otherDeductions',           label: 'Other Deductions' },
 
-      // Slot 4
-      { id: 'preview_state4_taxable', label: 'State 4 – Taxable Income' },
-      { id: 'preview_state4_local',   label: 'State 4 – Local tax after credits' },
-      { id: 'preview_state4_total',   label: 'State 4 – Total Tax' },
-      { id: 'preview_state4_refund',  label: 'State 4 – Estimated Refund (Overpayment)' },
-      { id: 'preview_state4_balance', label: 'State 4 – Estimated Balance Due' }
-    ]},
+        // Standard vs itemized
+        { id: 'standardOrItemizedDeduction', label: 'Standard or Itemized Deduction' },
 
-    { title: 'Summary', rows: [
-      { id: 'totalTax', label: 'Total Estimated Difference in Federal & State Taxes Saved' }
-    ]}
+        // Summary
+        { id: 'totalDeductions',             label: 'Total Deductions' }
+      ]
+    },
+
+    {
+      title: 'Tax & Credits',
+      rows: [
+        // Base tax
+        { id: 'taxableIncome',     label: 'Taxable Income' },
+        { id: 'tax',               label: 'Income Tax (Including Sch D)' },
+
+        // Additional taxes
+        { id: 'AMT',               label: 'Alternative Minimum Tax (AMT)' },
+        { id: 'additionalMedicareTax', label: 'Additional Medicare Tax' },
+        { id: 'netInvestmentTax',      label: 'Net Investment Income Tax (NIIT)' },
+        { id: 'selfEmploymentTax',     label: 'Self-Employment Tax' },
+        { id: 'otherTaxes',            label: 'Other Taxes' },
+
+        // Credits
+        { id: 'foreignTaxCredit',                     label: 'Foreign Tax Credit' },
+        { id: 'creditForChildAndDependentCareExpenses', label: 'Credit for Child and Dependent Care Expenses' },
+        { id: 'generalBusinessCredit',                label: 'General Business Credit(s)' },
+        { id: 'childTaxCredit',                       label: 'Child Tax Credit / Credit for Other Dependents' },
+        { id: 'educationCredits',                     label: 'Education Credits' },
+        { id: 'otherCredits',                         label: 'Other Credits' },
+
+        // Federal total
+        { id: 'totalFederalTax',   label: 'Total Federal Tax' }
+      ]
+    },
+
+    {
+      title: 'Payments',
+      rows: [
+        { id: 'withholdings',                      label: 'Federal Withholdings' },
+        { id: 'withholdingsOnAdditionalMedicareWages', label: 'Withholdings on Additional Medicare Wages' },
+        { id: 'estimatedTaxPayments',              label: 'Estimated Tax Payments' },
+        { id: 'otherPaymentsAndCredits',           label: 'Other Payments and Credits' },
+        { id: 'penalty',                           label: 'Estimated Penalty' },
+        { id: 'estimatedRefundOverpayment',        label: 'Estimated Refund (Overpayment)' },
+        { id: 'estimatedBalanceDue',               label: 'Estimated Balance Due' }
+      ]
+    },
+
+    {
+      title: 'Employer/Employee Taxes',
+      rows: [
+        { id: 'employeeTaxes',             label: 'Employee Payroll Taxes (W-2, FICA)' },
+        { id: 'employerTaxes',             label: 'Employer Payroll Taxes (on Reasonable Comp)' },
+        { id: 'staticUnemployment2022_2025', label: 'Employer State Unemployment (All Years 2022–2025)' },
+        { id: 'staticFUTA',                label: 'Employer FUTA (Federal Unemployment)' }
+      ]
+    },
+
+    // Per-state detail for ALL states – preview-only rows (snapshots)
+    {
+      title: 'State Details (All States)',
+      rows: [
+
+        // ---------- Snapshot rows for all states (1–4) ----------
+        // Slot 1
+        { id: 'preview_state1_taxable', label: 'State 1 – Taxable Income' },
+        { id: 'preview_state1_local',   label: 'State 1 – Local tax after credits' },
+        { id: 'preview_state1_total',   label: 'State 1 – Total Tax' },
+        { id: 'preview_state1_refund',  label: 'State 1 – Estimated Refund (Overpayment)' },
+        { id: 'preview_state1_balance', label: 'State 1 – Estimated Balance Due' },
+
+        { id: '__divider__1' },   // <<< DIVIDER BEFORE NEXT STATE
+
+        // Slot 2
+        { id: 'preview_state2_taxable', label: 'State 2 – Taxable Income' },
+        { id: 'preview_state2_local',   label: 'State 2 – Local tax after credits' },
+        { id: 'preview_state2_total',   label: 'State 2 – Total Tax' },
+        { id: 'preview_state2_refund',  label: 'State 2 – Estimated Refund (Overpayment)' },
+        { id: 'preview_state2_balance', label: 'State 2 – Estimated Balance Due' },
+
+        { id: '__divider__2' },   // <<< DIVIDER BEFORE NEXT STATE
+
+        // Slot 3
+        { id: 'preview_state3_taxable', label: 'State 3 – Taxable Income' },
+        { id: 'preview_state3_local',   label: 'State 3 – Local tax after credits' },
+        { id: 'preview_state3_total',   label: 'State 3 – Total Tax' },
+        { id: 'preview_state3_refund',  label: 'State 3 – Estimated Refund (Overpayment)' },
+        { id: 'preview_state3_balance', label: 'State 3 – Estimated Balance Due' },
+
+        { id: '__divider__3' },   // <<< DIVIDER BEFORE NEXT STATE
+
+        // Slot 4
+        { id: 'preview_state4_taxable', label: 'State 4 – Taxable Income' },
+        { id: 'preview_state4_local',   label: 'State 4 – Local tax after credits' },
+        { id: 'preview_state4_total',   label: 'State 4 – Total Tax' },
+        { id: 'preview_state4_refund',  label: 'State 4 – Estimated Refund (Overpayment)' },
+        { id: 'preview_state4_balance', label: 'State 4 – Estimated Balance Due' }
+      ]
+    },
+
+    {
+      title: 'Summary',
+      rows: [
+        { id: 'totalTax', label: 'Total Estimated Difference in Federal & State Taxes Saved' }
+      ]
+    }
   ];
 
   /** Lookup by id for labels (easy when mapping writes → values) */
@@ -1223,27 +1325,44 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
       const c = document.createElement('td'); c.colSpan = 1 + contextCol.length; c.textContent = group.title;
       s.appendChild(c); tbody.appendChild(s);
 
-      group.rows.forEach(r => {
-        if (r.id.startsWith('__divider__')) {
-            const sep = document.createElement('tr');
-            sep.className = 'state-divider-row';
-            const td = document.createElement('td');
-            td.colSpan = 1 + contextCol.length;
-            sep.appendChild(td);
-            tbody.appendChild(sep);
-            return;
-        }        
-        const tr = document.createElement('tr');
-        const labelCell = document.createElement('td'); labelCell.className = 'col-label'; labelCell.textContent = r.label;
-        tr.appendChild(labelCell);
-        contextCol.forEach(run => {
-          const td = document.createElement('td');
-          const entry = run.values?.[r.id];
-          td.textContent = (entry && entry.display != null) ? entry.display : '';
-          tr.appendChild(td);
-        });
-        tbody.appendChild(tr);
+    group.rows.forEach(r => {
+      if (r.id.startsWith('__divider__')) {
+        const sep = document.createElement('tr');
+        sep.className = 'state-divider-row';
+        const td = document.createElement('td');
+        td.colSpan = 1 + contextCol.length;
+        sep.appendChild(td);
+        tbody.appendChild(sep);
+        return;
+      }
+    
+      // NEW: determine whether any run has a non-empty value for this row
+      const hasValue = contextCol.some(run => {
+        const entry = run.values?.[r.id];
+        if (!entry) return false;
+        const val = entry.display;
+        return val !== null && val !== undefined && String(val).trim() !== '';
       });
+    
+      // If all 5 columns are empty → skip this row
+      if (!hasValue) return;
+    
+      const tr = document.createElement('tr');
+    
+      const labelCell = document.createElement('td');
+      labelCell.className = 'col-label';
+      labelCell.textContent = r.label;
+      tr.appendChild(labelCell);
+    
+      contextCol.forEach(run => {
+        const td = document.createElement('td');
+        const entry = run.values?.[r.id];
+        td.textContent = (entry && entry.display != null) ? entry.display : '';
+        tr.appendChild(td);
+      });
+    
+      tbody.appendChild(tr);
+    });
 
       if (gi < ROW_GROUPS.length - 1) {
         const sp = document.createElement('tr'); sp.className = 'spacer';
