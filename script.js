@@ -1424,27 +1424,41 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
         const th = document.createElement('th');
         th.colSpan = Math.max(1, group.columns.length);
 
-        const title = document.createElement('div');
-        title.className = 'gw-header-top';
+        // Wrapper: label + small icon buttons in one line
+        const headerRow = document.createElement('div');
+        headerRow.className = 'gw-header-top';
+
+        // Dynamic label: e.g. "Actual 2024 | Col B"
         const colText = group.run.meta?.column ? ` | Col ${group.run.meta.column}` : '';
-        title.textContent = `${group.run.meta?.analysisType || ORDER[groupIdx] || ''} ${group.run.meta?.year || ''}${colText}`.trim();
+        const labelSpan = document.createElement('span');
+        labelSpan.className = 'gw-header-label';
+        labelSpan.textContent = `${group.run.meta?.analysisType || ORDER[groupIdx] || ''} ${group.run.meta?.year || ''}${colText}`.trim();
 
-        const controls = document.createElement('div');
-        controls.className = 'gw-header-actions';
+        // Right-side action area (icon buttons)
+        const actions = document.createElement('div');
+        actions.className = 'gw-header-actions';
 
+        // Split button (icon only)
         const splitBtn = document.createElement('button');
         splitBtn.type = 'button';
-        splitBtn.className = 'gw-header-btn';
-        splitBtn.textContent = 'Split';
+        splitBtn.className = 'gw-header-btn gw-header-btn--icon';
+        splitBtn.title = 'Split this run into more columns';
+        splitBtn.textContent = '⇄'; // choose any symbol you like
+        splitBtn.style.fontSize = '1.1em';
         splitBtn.addEventListener('click', () => {
           setSplitCount(group.groupKey, group.columns.length + 1);
           renderGrid();
         });
 
+        // Merge button (icon only)
         const mergeBtn = document.createElement('button');
         mergeBtn.type = 'button';
-        mergeBtn.className = 'gw-header-btn subtle';
-        mergeBtn.textContent = 'Merge';
+        mergeBtn.className = 'gw-header-btn gw-header-btn--icon subtle';
+        mergeBtn.title = 'Merge this run into fewer columns';
+        mergeBtn.textContent = '⮆⮄'; // choose a different symbol if you prefer
+        mergeBtn.style.fontSize = '1em';
+        mergeBtn.style.color = 'rgba(0, 0, 0, 1)';
+        mergeBtn.style.fontWeight = 'bold';
         mergeBtn.disabled = group.columns.length <= 1;
         mergeBtn.addEventListener('click', () => {
           if (group.columns.length <= 1) return;
@@ -1452,14 +1466,23 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
           renderGrid();
         });
 
-        controls.appendChild(splitBtn);
-        if (group.columns.length > 1) {
-          controls.appendChild(mergeBtn);
+        // Only show Split when you WANT the user to split
+        if (group.columns.length < 4) {       // or whatever your max is
+          actions.appendChild(splitBtn);
         }
 
-        th.appendChild(title);
-        th.appendChild(controls);
+        // Only show Merge when more than one column exists
+        if (group.columns.length > 1) {
+          actions.appendChild(mergeBtn);
+        }
+
+        // Build header: [Actual 2024 | Col B]  [⇄ ⇆]
+        headerRow.appendChild(labelSpan);
+        headerRow.appendChild(actions);
+
+        th.appendChild(headerRow);
         hrow.appendChild(th);
+
       });
       thead.appendChild(hrow);
 

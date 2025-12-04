@@ -1235,7 +1235,7 @@ body.dark-mode .adj-row .del-btn:hover { background: #ff0000; }
 }
 
 :root {
-  --gw-preview-header-offset: 72px;
+  --gw-preview-header-offset: 40px;
 }
 
 /* ---------------------------------------------------------
@@ -1275,6 +1275,9 @@ body.dark-mode .adj-row .del-btn:hover { background: #ff0000; }
    Excel-Style Grid
    --------------------------------------------------------- */
 
+/* Makes the table behave like an Excel sheet.
+   Example: The entire preview grid stretches to the full modal
+   width and columns stay aligned because the table layout is fixed. */
 .gw-grid {
   width: 100%;
   border-collapse: separate;
@@ -1282,7 +1285,9 @@ body.dark-mode .adj-row .del-btn:hover { background: #ff0000; }
   table-layout: fixed;
 }
 
-/* Base cells */
+/* Base cell visuals for all cells (th + td).
+   Example: Every cell gets padding, a border, and centered text,
+   so rows line up neatly like Excel rows. */
 .gw-grid th,
 .gw-grid td {
   padding: 8px 10px;
@@ -1295,7 +1300,9 @@ body.dark-mode .adj-row .del-btn:hover { background: #ff0000; }
   transition: width 0.2s ease, min-width 0.2s ease;
 }
 
-/* Column headers */
+/* Sticky header row that stays visible while scrolling.
+   Example: When scrolling down a large Excel preview, the column
+   headers never disappear off the top. */
 .gw-grid thead th {
   position: sticky;
   top: 0;
@@ -1311,10 +1318,16 @@ body.dark-mode .adj-row .del-btn:hover { background: #ff0000; }
   letter-spacing: 0.01em;
 }
 
+/* Ensures the first row of headers stays above secondary headers.
+   Example: If you use split/merge features, the top header row always
+   stays visually on top of the form-picker row. */
 .gw-grid thead tr:first-child th {
   z-index: 3;
 }
 
+/* Sticky row for the form-picker (the dropdown row at top).
+   Example: When scrolling, the "1040 / 1120" dropdown row stays
+   below the main header and does not scroll away. */
 .gw-grid thead tr.form-row th {
   top: var(--gw-preview-header-offset);
   background: #f9f6ff;
@@ -1322,51 +1335,75 @@ body.dark-mode .adj-row .del-btn:hover { background: #ff0000; }
   z-index: 2;
 }
 
+/* Header row: label + icon buttons on one line
+   Example: Shows “Actual 2024 | Col B” with tiny ⇄ / ⇆ buttons to its right. */
 .gw-header-top {
   font-weight: 700;
   line-height: 1.2;
-}
-
-.gw-header-actions {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 6px;
-  margin-top: 6px;
-  flex-wrap: wrap;
+  gap: 8px;
 }
 
+/* Inline container for the Split/Merge icon buttons
+   Example: Keeps the icons snug to the right of the label, not underneath it. */
+.gw-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Small icon-style header buttons (override global button styles)
+   Example: “Split” and “Merge” now appear as small ⇄ / ⇆ icons instead of big pills. */
 .gw-header-btn {
-  background: #fff;
-  border: 1px solid var(--gw-purple);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;              /* override global button width: 100% */
+  padding: 2px 6px;
+  background: transparent;
+  border: none;
   color: var(--gw-purple);
-  padding: 4px 10px;
-  border-radius: 8px;
-  font-weight: 700;
+  font-size: 14px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  border-radius: 4px;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
+/* Hover effect for icon buttons
+   Example: Moving over the icon paints a small purple pill with white symbol. */
 .gw-header-btn:hover {
   background: var(--gw-purple);
   color: #fff;
 }
 
+/* Subtle variant in icon form (Merge)
+   Example: The Merge icon appears slightly muted until hovered. */
 .gw-header-btn.subtle {
-  border-color: var(--gw-border-soft);
-  color: #555;
+  opacity: 0.7;
 }
 
-.gw-header-btn.subtle:hover {
-  color: #fff;
-  background: #666;
-  border-color: #666;
+/* Dark-mode parity for icon buttons
+   Example: In dark mode the icons are light purple and invert on hover. */
+body.dark-mode .gw-header-btn {
+  color: #cab9ff;
 }
 
+body.dark-mode .gw-header-btn:hover {
+  background: #cab9ff;
+  color: #1b1726;
+}
+
+/* Background for dropdown cells in header.
+   Example: The form-picker row has a faint lavender background. */
 .form-picker-cell {
   background: #f9f6ff;
 }
 
+/* Dropdown styling for selecting form type.
+   Example: When changing a column from 1040 to 1120,
+   this is the styled dropdown you click. */
 .form-picker {
   width: 100%;
   padding: 6px 8px;
@@ -1378,12 +1415,28 @@ body.dark-mode .adj-row .del-btn:hover { background: #ff0000; }
   color: var(--gw-text-main);
 }
 
+/* If a header action area has only one icon, remove leftover gap */
+.gw-header-actions:has(button:nth-child(1)):not(:has(button:nth-child(2))) {
+  gap: 0;                   /* remove spacing */
+  margin-left: 0;           /* prevents visual gap before the icon */
+}
+
+/* Compress the right side when only one icon exists */
+.gw-header-top:has(.gw-header-actions button:nth-child(1)):not(:has(.gw-header-actions button:nth-child(2))) {
+  justify-content: center;  /* keeps label + single icon centered */
+  gap: 4px;                 /* minimal space between text and icon */
+}
+
+/* Highlight when dropdown receives focus.
+   Example: The select input glows purple when clicked. */
 .form-picker:focus {
   outline: 2px solid var(--gw-purple-soft);
   border-color: var(--gw-purple);
 }
 
-/* Left label column */
+/* Sticky left column for row labels (“Wages”, “AGI”, etc.).
+   Example: When scrolling horizontally across tax scenarios,
+   the label column stays fixed on the left. */
 .gw-grid .col-label {
   position: sticky;
   left: 0;
@@ -1395,17 +1448,21 @@ body.dark-mode .adj-row .del-btn:hover { background: #ff0000; }
   box-shadow: 4px 0 6px rgba(0, 0, 0, 0.04);
 }
 
-/* Zebra rows (skip section bands and spacers) */
+/* Zebra striping for every even row.
+   Example: Every other row gets a faint lavender shade for readability. */
 .gw-grid tbody tr:nth-child(even):not(.section-row):not(.spacer) td {
   background: var(--gw-bg-zebra);
 }
 
-/* Left-align row labels */
+/* Forces left-label column text to stay left aligned.
+   Example: Row names like “Adjusted Gross Income” always align left. */
 .gw-grid .col-label {
   text-align: left !important;
 }
 
-/* Section band rows – INCOMES, DEDUCTIONS, TAX & CREDITS, etc. */
+/* Section banners for big category rows (INCOMES, TAXES, PAYMENTS).
+   Example: The “DEDUCTIONS” bar appears as a purple gradient spanning across
+   the full width to visually separate sections. */
 .gw-grid .section-row td {
   background: linear-gradient(
     90deg,
@@ -1426,12 +1483,14 @@ body.dark-mode .adj-row .del-btn:hover { background: #ff0000; }
     inset 0 -1px 0 rgba(0, 0, 0, 0.08);
 }
 
-/* Make it a single continuous bar across section-row columns */
+/* Removes borders for adjacent section cells.
+   Example: Ensures the gradient bar looks like one continuous ribbon. */
 .gw-grid .section-row td + td {
   border-left: 0;
 }
 
-/* Spacer rows */
+/* Spacer row used to visually separate major groups.
+   Example: Adds blank breathing room between categories. */
 .gw-grid .spacer td {
   height: 8px;
   padding: 0;
@@ -1439,7 +1498,9 @@ body.dark-mode .adj-row .del-btn:hover { background: #ff0000; }
   border: 0;
 }
 
-/* Visual divider between states */
+/* Decorative divider between per-state snapshots.
+   Example: When previewing multiple states, a purple gradient line
+   visually separates State 1, State 2, State 3, etc. */
 .state-divider-row td {
     border: 0;
     height: 12px;
@@ -1452,9 +1513,12 @@ body.dark-mode .adj-row .del-btn:hover { background: #ff0000; }
 }
 
 /* ---------------------------------------------------------
-   Dark Mode
+   Dark Mode - Excel Preview Modal
    --------------------------------------------------------- */
 
+/* Dark-mode styling for the Excel Preview modal shell.
+   Example: When the user flips to dark mode, the Excel Preview dialog
+   turns into a dark card with a stronger drop shadow. */
 body.dark-mode .gw-modal__dialog {
   background: var(--card-dark);
   border-color: var(--border-dark);
@@ -1463,6 +1527,9 @@ body.dark-mode .gw-modal__dialog {
     0 10px 12px rgba(0, 0, 0, 0.45);
 }
 
+/* Dark-mode header bar of the modal.
+   Example: The “Genwealth 360 | Excel Preview” header becomes a deep
+   purple gradient instead of a light lavender strip. */
 body.dark-mode .gw-modal__header {
   background: linear-gradient(
     135deg,
@@ -1472,12 +1539,18 @@ body.dark-mode .gw-modal__header {
   border-color: var(--border-dark);
 }
 
+/* Dark-mode container for the scrollable grid area.
+   Example: The preview grid sits on a dark background with an inset
+   border, instead of a light lavender panel. */
 body.dark-mode .gw-gridwrap {
   border-color: var(--border-dark);
   background: #1b1726;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.6);
 }
 
+/* Dark-mode base cells for the grid (all th/td).
+   Example: Every grid cell flips from white to a dark business-entry
+   color, with light text and dark borders. */
 body.dark-mode .gw-grid th,
 body.dark-mode .gw-grid td {
   background: var(--business-entry);
@@ -1485,28 +1558,42 @@ body.dark-mode .gw-grid td {
   border-color: var(--border-dark);
 }
 
+/* Dark-mode header cells for the grid.
+   Example: The column headings become a dark purple band with light text
+   instead of the light gradient. */
 body.dark-mode .gw-grid thead th {
   background: #38135f;
   color: var(--h3-dark);
   border-bottom-color: var(--border-dark);
 }
 
+/* Dark-mode form-row header (the dropdown row).
+   Example: The “Form” selection row under the header switches to a
+   slightly lighter dark tone but stays clearly separated. */
 body.dark-mode .gw-grid thead tr.form-row th {
   background: #2b2440;
   border-bottom-color: var(--border-dark);
 }
 
+/* Dark-mode styling for the sticky left label column.
+   Example: Row labels (“AGI”, “Taxable Income”) sit on a darker purple
+   band with a stronger right-side shadow. */
 body.dark-mode .gw-grid .col-label {
   background: #2f2247;
   border-right-color: var(--border-dark);
   box-shadow: 4px 0 8px rgba(0, 0, 0, 0.5);
 }
 
+/* Dark-mode zebra striping for even rows.
+   Example: Every other row uses a slightly different dark shade to keep
+   readability when the grid is large. */
 body.dark-mode .gw-grid tbody tr:nth-child(even):not(.section-row):not(.spacer) td {
   background: #2b2440;
 }
 
-/* Dark mode – matching gradient, tuned for low-light */
+/* Dark-mode section bars (Incomes, Deductions, Tax & Credits).
+   Example: The section headers become a darker, low-glare gradient so
+   they pop against the black background without being too bright. */
 body.dark-mode .gw-grid .section-row td {
   background: linear-gradient(
     90deg,
@@ -1533,11 +1620,16 @@ body.dark-mode .gw-grid .section-row td {
     inset 0 -1px 0 rgba(0, 0, 0, 0.4);
 }
 
+/* Removes internal borders between section cells in dark mode.
+   Example: The dark section gradient still appears as one continuous
+   bar across all columns. */
 body.dark-mode .gw-grid .section-row td + td {
   border-left: 0;
 }
 
-/* Visual divider between states */
+/* Dark-mode divider bar between state sections.
+   Example: When previewing multiple state runs, a darker gradient bar
+   separates each state's snapshot. */
 body.dark-mode .state-divider-row td {
     border: 0;
     height: 12px;
@@ -1550,50 +1642,80 @@ body.dark-mode .state-divider-row td {
     ) !important;
 }
 
+/* Dark-mode scrollbar track for the grid area.
+   Example: The scroll track behind the thumb becomes dark to match the
+   grid background. */
 body.dark-mode .gw-gridwrap::-webkit-scrollbar-track {
   background: #1b1726;
 }
 
+/* Dark-mode scrollbar thumb for the grid area.
+   Example: The scroll thumb turns light purple with a dark border so it
+   is visible but still on-brand. */
 body.dark-mode .gw-gridwrap::-webkit-scrollbar-thumb {
   background: #cab9ff;
   border: 3px solid #1b1726;
 }
 
+/* Dark-mode fallback scrollbar colors (for non-WebKit).
+   Example: On browsers that use scrollbar-color, the thumb is purple
+   over a dark track. */
 body.dark-mode .gw-gridwrap {
   scrollbar-color: #7a56c0 #1b1726;
 }
 
+/* Dark-mode background for the form-picker cell row.
+   Example: The header cells that contain the form dropdowns use a matching
+   dark shade so they blend with the rest of the header. */
 body.dark-mode .form-picker-cell {
   background: #2b2440;
 }
 
+/* Dark-mode styling for the form dropdown itself.
+   Example: The “1040 / 1120” dropdown uses a dark input background with
+   light text and dark borders. */
 body.dark-mode .form-picker {
   background: #2f2247;
   color: var(--h3-dark);
   border-color: var(--border-dark);
 }
 
+/* Dark-mode focus ring for the form dropdown.
+   Example: When tabbing to the form picker in dark mode, the outline
+   is an accent gold instead of default blue. */
 body.dark-mode .form-picker:focus {
   outline-color: var(--accent);
   border-color: var(--accent);
 }
 
+/* Dark-mode base styling for header buttons.
+   Example: “Split / Merge” buttons in dark mode use transparent
+   backgrounds and light purple text. */
 body.dark-mode .gw-header-btn {
   background: transparent;
   border-color: var(--border-dark);
   color: #cab9ff;
 }
 
+/* Dark-mode hover effect for header buttons.
+   Example: Hovering “Split” in dark mode flips the button to a light
+   purple pill with dark text. */
 body.dark-mode .gw-header-btn:hover {
   background: #cab9ff;
   color: #1b1726;
 }
 
+/* Dark-mode base for subtle header button (e.g., Merge).
+   Example: “Merge” appears as a low-contrast gray text button in dark
+   mode until hovered. */
 body.dark-mode .gw-header-btn.subtle {
   color: #aaa;
   border-color: var(--border-dark);
 }
 
+/* Dark-mode hover for subtle header button.
+   Example: Hovering “Merge” turns it into a mid-gray button with white
+   text so it reads as active. */
 body.dark-mode .gw-header-btn.subtle:hover {
   background: #777;
   color: #fff;
