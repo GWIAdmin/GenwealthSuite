@@ -1189,6 +1189,17 @@ body.dark-mode .adj-row .del-btn:hover { background: #ff0000; }
   border-bottom: 4px solid var(--gw-purple);
 }
 
+#merge-btn, #split-btn {
+  font-size: 16px ;
+  cursor: pointer ;
+  color: black ;
+}
+
+.dark-mode #merge-btn, .dark-mode #split-btn {
+  color: white ;
+  font-weight: bold ;
+}
+
 #gwPreviewTitle {
   padding: 6px 14px;
   width: auto;

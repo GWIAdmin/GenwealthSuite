@@ -1441,10 +1441,10 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
         // Split button (icon only)
         const splitBtn = document.createElement('button');
         splitBtn.type = 'button';
+        splitBtn.id = 'split-btn';
         splitBtn.className = 'gw-header-btn gw-header-btn--icon';
         splitBtn.title = 'Split this run into more columns';
         splitBtn.textContent = '⇄'; // choose any symbol you like
-        splitBtn.style.fontSize = '1.1em';
         splitBtn.addEventListener('click', () => {
           setSplitCount(group.groupKey, group.columns.length + 1);
           renderGrid();
@@ -1453,12 +1453,10 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
         // Merge button (icon only)
         const mergeBtn = document.createElement('button');
         mergeBtn.type = 'button';
+        mergeBtn.id = 'merge-btn';
         mergeBtn.className = 'gw-header-btn gw-header-btn--icon subtle';
         mergeBtn.title = 'Merge this run into fewer columns';
-        mergeBtn.textContent = '⮆⮄'; // choose a different symbol if you prefer
-        mergeBtn.style.fontSize = '1em';
-        mergeBtn.style.color = 'rgba(0, 0, 0, 1)';
-        mergeBtn.style.fontWeight = 'bold';
+        mergeBtn.textContent = '⟺'; // choose a different symbol if you prefer
         mergeBtn.disabled = group.columns.length <= 1;
         mergeBtn.addEventListener('click', () => {
           if (group.columns.length <= 1) return;
