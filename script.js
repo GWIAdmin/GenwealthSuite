@@ -9590,6 +9590,7 @@ async function handleCalculateStateTaxes() {
 
     renderStateSection(data, stateName);
     captureStateRunSummary(stateName);
+    updateTotalStateTax();
     setStateButtonDirty(false);
   } catch (err) {
     console.error(err);
