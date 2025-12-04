@@ -919,6 +919,12 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
 // ================== Excel Preview (modal) ==================
 (function () {
   const RUNS = []; // volatile, dies on refresh
+  const FORM_OPTIONS = ['1040', '1120', '1120-PC', '1065', '1120-S'];
+  const DEFAULT_FORM = '1040';
+  const previewColumnState = {
+    splits: {}, // groupKey -> count of visible columns under that header
+    forms: {}   // columnId -> selected form label
+  };
 
   function normalizeType(x) {
   const s = String(x || '').trim().toLowerCase();
@@ -946,6 +952,20 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
     add(window.mappingsTotal);
     add(window.mappings); // include the state block mappings
     return map;
+  }
+
+  function detectHasCCorp() {
+    try {
+      const classified = typeof classifyBusinessesForExport === 'function'
+        ? classifyBusinessesForExport()
+        : null;
+      if (classified && Array.isArray(classified.entities)) {
+        return classified.entities.some(e => e && e.type === 'C-Corp');
+      }
+    } catch (err) {
+      console.warn('[Preview] C-Corp detection failed:', err);
+    }
+    return false;
   }
 
   const ROW_GROUPS = [
@@ -1061,7 +1081,7 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
       rows: [
         { id: 'employeeTaxes',             label: 'Employee Payroll Taxes (W-2, FICA)' },
         { id: 'employerTaxes',             label: 'Employer Payroll Taxes (on Reasonable Comp)' },
-        { id: 'staticUnemployment2022_2025', label: 'Employer State Unemployment (All Years 2022–2025)' },
+        { id: 'staticUnemployment2022_2025', label: 'Employer State Unemployment (All Years 2022“2025)' },
         { id: 'staticFUTA',                label: 'Employer FUTA (Federal Unemployment)' }
       ]
     },
@@ -1305,74 +1325,237 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
     updateMultiStatePreviewRowLabels();
     empty.classList.add('hidden');
 
-    // --- build THEAD as before ---
-    const thead = document.createElement('thead');
-    const hrow  = document.createElement('tr');
-    const th0 = document.createElement('th'); th0.textContent = 'Row'; th0.className = 'col-label';
-    hrow.appendChild(th0);
-    contextCol.forEach(run => {
-      const th = document.createElement('th');
-      const col = run.meta?.column ? ` • Col ${run.meta.column}` : '';
-      th.textContent = `${run.meta?.analysisType || ''} ${run.meta?.year || ''}${col}`.trim();
-      hrow.appendChild(th);
-    });
-    thead.appendChild(hrow);
+    const hasCCorp = detectHasCCorp();
 
-    // --- build TBODY as before ---
-    const tbody = document.createElement('tbody');
-    ROW_GROUPS.forEach((group, gi) => {
-      const s = document.createElement('tr'); s.className = 'section-row';
-      const c = document.createElement('td'); c.colSpan = 1 + contextCol.length; c.textContent = group.title;
-      s.appendChild(c); tbody.appendChild(s);
-
-    group.rows.forEach(r => {
-      if (r.id.startsWith('__divider__')) {
-        const sep = document.createElement('tr');
-        sep.className = 'state-divider-row';
-        const td = document.createElement('td');
-        td.colSpan = 1 + contextCol.length;
-        sep.appendChild(td);
-        tbody.appendChild(sep);
-        return;
+    const businessTypeLookup = (() => {
+      const map = {};
+      try {
+        const classified = typeof classifyBusinessesForExport === 'function'
+          ? classifyBusinessesForExport()
+          : null;
+        if (classified && Array.isArray(classified.entities)) {
+          classified.entities.forEach(ent => {
+            if (!ent || !ent.index || !ent.type) return;
+            [`business${ent.index}Income`, `business${ent.index}Expenses`].forEach(id => {
+              map[id] = ent.type;
+            });
+          });
+        }
+      } catch (err) {
+        console.warn('[Preview] business type lookup failed:', err);
       }
-    
-      // NEW: determine whether any run has a non-empty value for this row
-      const hasValue = contextCol.some(run => {
-        const entry = run.values?.[r.id];
-        if (!entry) return false;
-        const val = entry.display;
-        return val !== null && val !== undefined && String(val).trim() !== '';
-      });
-    
-      // If all 5 columns are empty → skip this row
-      if (!hasValue) return;
-    
-      const tr = document.createElement('tr');
-    
-      const labelCell = document.createElement('td');
-      labelCell.className = 'col-label';
-      labelCell.textContent = r.label;
-      tr.appendChild(labelCell);
-    
-      contextCol.forEach(run => {
-        const td = document.createElement('td');
-        const entry = run.values?.[r.id];
-        td.textContent = (entry && entry.display != null) ? entry.display : '';
-        tr.appendChild(td);
-      });
-    
-      tbody.appendChild(tr);
-    });
+      return map;
+    })();
 
-      if (gi < ROW_GROUPS.length - 1) {
-        const sp = document.createElement('tr'); sp.className = 'spacer';
-        const sc = document.createElement('td'); sc.colSpan = 1 + contextCol.length;
-        sp.appendChild(sc); tbody.appendChild(sp);
+    const FORM_TO_ENTITY = {
+      '1120': 'C-Corp',
+      '1120-PC': 'C-Corp',
+      '1065': 'Partnership',
+      '1120-S': 'S-Corp'
+    };
+
+    const shouldShowRowForForm = (rowId, form) => {
+      if (!form || form === '1040') return true;
+      if (!Object.keys(businessTypeLookup).length) return true;
+      const target = FORM_TO_ENTITY[form];
+      if (!target) return true;
+      const rowType = businessTypeLookup[rowId];
+      return !!rowType && rowType === target;
+    };
+
+    const buildGroupKey = (run, idx) => {
+      const meta = run?.meta || {};
+      const base = meta.analysisType || ORDER[idx] || `col-${idx}`;
+      const year = meta.year || '';
+      const ws   = meta.worksheet || '';
+      const fp   = meta.filePath || '';
+      return `${base}|${year}|${ws}|${fp}`;
+    };
+
+    const defaultFormForRun = () => hasCCorp ? '1120-PC' : DEFAULT_FORM;
+
+    const getSplitCount = (groupKey) => {
+      const n = previewColumnState.splits[groupKey];
+      return Math.max(1, Number.isFinite(n) ? n : 1);
+    };
+
+    const pruneFormSelectionsFor = (groupKey, keepCount) => {
+      Object.keys(previewColumnState.forms).forEach(key => {
+        if (!key.startsWith(`${groupKey}::`)) return;
+        const idx = parseInt(key.split('::')[1], 10);
+        if (!Number.isFinite(idx) || idx >= keepCount) {
+          delete previewColumnState.forms[key];
+        }
+      });
+    };
+
+    const setSplitCount = (groupKey, nextCount) => {
+      const clamped = Math.max(1, Math.min(4, nextCount));
+      previewColumnState.splits[groupKey] = clamped;
+      pruneFormSelectionsFor(groupKey, clamped);
+    };
+
+    const ensureFormSelection = (columnId) => {
+      if (!previewColumnState.forms[columnId]) {
+        previewColumnState.forms[columnId] = defaultFormForRun();
       }
-    });
+      return previewColumnState.forms[columnId];
+    };
 
-    grid.appendChild(thead);
-    grid.appendChild(tbody);
+    const renderGrid = () => {
+      grid.innerHTML = '';
+
+      const columnGroups = contextCol.map((run, idx) => {
+        const groupKey = buildGroupKey(run, idx);
+        const splitCount = getSplitCount(groupKey);
+        const columns = [];
+        for (let i = 0; i < splitCount; i++) {
+          const columnId = `${groupKey}::${i}`;
+          const form = ensureFormSelection(columnId);
+          columns.push({ columnId, form, run });
+        }
+        return { run, groupKey, columns };
+      });
+
+      const renderCols = columnGroups.flatMap(g => g.columns);
+
+      const cellDisplay = (col, rowDef) => {
+        const currentForm = col.form || previewColumnState.forms[col.columnId] || defaultFormForRun();
+        if (!shouldShowRowForForm(rowDef.id, currentForm)) return '';
+        const entry = col.run.values?.[rowDef.id];
+        if (entry && entry.display != null) return entry.display;
+        return '';
+      };
+
+      const thead = document.createElement('thead');
+
+      const hrow  = document.createElement('tr');
+      const th0 = document.createElement('th');
+      th0.textContent = 'Row';
+      th0.className = 'col-label';
+      th0.rowSpan = 2;
+      hrow.appendChild(th0);
+
+      columnGroups.forEach((group, groupIdx) => {
+        const th = document.createElement('th');
+        th.colSpan = Math.max(1, group.columns.length);
+
+        const title = document.createElement('div');
+        title.className = 'gw-header-top';
+        const colText = group.run.meta?.column ? ` | Col ${group.run.meta.column}` : '';
+        title.textContent = `${group.run.meta?.analysisType || ORDER[groupIdx] || ''} ${group.run.meta?.year || ''}${colText}`.trim();
+
+        const controls = document.createElement('div');
+        controls.className = 'gw-header-actions';
+
+        const splitBtn = document.createElement('button');
+        splitBtn.type = 'button';
+        splitBtn.className = 'gw-header-btn';
+        splitBtn.textContent = 'Split';
+        splitBtn.addEventListener('click', () => {
+          setSplitCount(group.groupKey, group.columns.length + 1);
+          renderGrid();
+        });
+
+        const mergeBtn = document.createElement('button');
+        mergeBtn.type = 'button';
+        mergeBtn.className = 'gw-header-btn subtle';
+        mergeBtn.textContent = 'Merge';
+        mergeBtn.disabled = group.columns.length <= 1;
+        mergeBtn.addEventListener('click', () => {
+          if (group.columns.length <= 1) return;
+          setSplitCount(group.groupKey, group.columns.length - 1);
+          renderGrid();
+        });
+
+        controls.appendChild(splitBtn);
+        if (group.columns.length > 1) {
+          controls.appendChild(mergeBtn);
+        }
+
+        th.appendChild(title);
+        th.appendChild(controls);
+        hrow.appendChild(th);
+      });
+      thead.appendChild(hrow);
+
+      const formRow = document.createElement('tr');
+      formRow.className = 'form-row';
+
+      renderCols.forEach(col => {
+        const th = document.createElement('th');
+        th.className = 'form-picker-cell';
+        const select = document.createElement('select');
+        select.className = 'form-picker';
+        FORM_OPTIONS.forEach(opt => {
+          const option = document.createElement('option');
+          option.value = opt;
+          option.textContent = opt;
+          select.appendChild(option);
+        });
+        select.value = previewColumnState.forms[col.columnId] || defaultFormForRun();
+        select.addEventListener('change', (e) => {
+          previewColumnState.forms[col.columnId] = e.target.value;
+          renderGrid();
+        });
+        th.appendChild(select);
+        formRow.appendChild(th);
+      });
+
+      thead.appendChild(formRow);
+
+      const tbody = document.createElement('tbody');
+      ROW_GROUPS.forEach((group, gi) => {
+        const s = document.createElement('tr'); s.className = 'section-row';
+        const c = document.createElement('td'); c.colSpan = 1 + renderCols.length; c.textContent = group.title;
+        s.appendChild(c); tbody.appendChild(s);
+
+        group.rows.forEach(r => {
+          if (r.id.startsWith('__divider__')) {
+            const sep = document.createElement('tr');
+            sep.className = 'state-divider-row';
+            const td = document.createElement('td');
+            td.colSpan = 1 + renderCols.length;
+            sep.appendChild(td);
+            tbody.appendChild(sep);
+            return;
+          }
+
+          const hasValue = renderCols.some(col => {
+            const val = cellDisplay(col, r);
+            return val !== null && val !== undefined && String(val).trim() !== '';
+          });
+
+          if (!hasValue) return;
+
+          const tr = document.createElement('tr');
+
+          const labelCell = document.createElement('td');
+          labelCell.className = 'col-label';
+          labelCell.textContent = r.label;
+          tr.appendChild(labelCell);
+
+          renderCols.forEach(col => {
+            const td = document.createElement('td');
+            td.textContent = cellDisplay(col, r);
+            tr.appendChild(td);
+          });
+
+          tbody.appendChild(tr);
+        });
+
+        if (gi < ROW_GROUPS.length - 1) {
+          const sp = document.createElement('tr'); sp.className = 'spacer';
+          const sc = document.createElement('td'); sc.colSpan = 1 + renderCols.length;
+          sp.appendChild(sc); tbody.appendChild(sp);
+        }
+      });
+
+      grid.appendChild(thead);
+      grid.appendChild(tbody);
+    };
+
+    renderGrid();
     showModal(modal, true);
   }
 
