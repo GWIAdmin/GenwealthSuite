@@ -1504,55 +1504,97 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
 
       thead.appendChild(formRow);
 
-      const tbody = document.createElement('tbody');
-      ROW_GROUPS.forEach((group, gi) => {
-        const s = document.createElement('tr'); s.className = 'section-row';
-        const c = document.createElement('td'); c.colSpan = 1 + renderCols.length; c.textContent = group.title;
-        s.appendChild(c); tbody.appendChild(s);
+    const tbody = document.createElement('tbody');
 
-        group.rows.forEach(r => {
-          if (r.id.startsWith('__divider__')) {
-            const sep = document.createElement('tr');
-            sep.className = 'state-divider-row';
-            const td = document.createElement('td');
-            td.colSpan = 1 + renderCols.length;
-            sep.appendChild(td);
-            tbody.appendChild(sep);
+    // Decide which groups to render. We hide "State Details (All States)"
+    // if there are no captured state runs.
+    const hasAnyStateRuns =
+      window.stateRuns && Object.keys(window.stateRuns).length > 0;
+
+    const groupsToRender = ROW_GROUPS.filter(group => {
+      if (group.title === 'State Details (All States)') {
+        return hasAnyStateRuns;
+      }
+      return true;
+    });
+
+    groupsToRender.forEach((group, gi) => {
+      const s = document.createElement('tr');
+      s.className = 'section-row';
+      const c = document.createElement('td');
+      c.colSpan = 1 + renderCols.length;
+      c.textContent = group.title;
+      s.appendChild(c);
+      tbody.appendChild(s);
+    
+      group.rows.forEach((r, rowIdx) => {
+        // Smart handling for divider rows (e.g. __divider__1, __divider__2, __divider__3)
+        if (r.id && r.id.startsWith('__divider__')) {
+          // Only render the divider if at least one *later* row in this group
+          // (before the next divider) has data in any column.
+          const hasFutureValues = group.rows
+            .slice(rowIdx + 1)
+            .some(nextRow => {
+              // Stop the look-ahead at the next divider
+              if (nextRow.id && nextRow.id.startsWith('__divider__')) return false;
+              const valExists = renderCols.some(col => {
+                const val = cellDisplay(col, nextRow);
+                return val !== null && val !== undefined && String(val).trim() !== '';
+              });
+              return valExists;
+            });
+          
+          if (!hasFutureValues) {
+            // No real rows after this divider → skip it (prevents the blank band)
             return;
           }
-
-          const hasValue = renderCols.some(col => {
-            const val = cellDisplay(col, r);
-            return val !== null && val !== undefined && String(val).trim() !== '';
-          });
-
-          if (!hasValue) return;
-
-          const tr = document.createElement('tr');
-
-          const labelCell = document.createElement('td');
-          labelCell.className = 'col-label';
-          labelCell.textContent = r.label;
-          tr.appendChild(labelCell);
-
-          renderCols.forEach(col => {
-            const td = document.createElement('td');
-            td.textContent = cellDisplay(col, r);
-            tr.appendChild(td);
-          });
-
-          tbody.appendChild(tr);
-        });
-
-        if (gi < ROW_GROUPS.length - 1) {
-          const sp = document.createElement('tr'); sp.className = 'spacer';
-          const sc = document.createElement('td'); sc.colSpan = 1 + renderCols.length;
-          sp.appendChild(sc); tbody.appendChild(sp);
+        
+          const sep = document.createElement('tr');
+          sep.className = 'state-divider-row';
+          const td = document.createElement('td');
+          td.colSpan = 1 + renderCols.length;
+          sep.appendChild(td);
+          tbody.appendChild(sep);
+          return;
         }
+      
+        // Normal data rows
+        const hasValue = renderCols.some(col => {
+          const val = cellDisplay(col, r);
+          return val !== null && val !== undefined && String(val).trim() !== '';
+        });
+        if (!hasValue) return;
+      
+        const tr = document.createElement('tr');
+      
+        const labelCell = document.createElement('td');
+        labelCell.className = 'col-label';
+        labelCell.textContent = r.label;
+        tr.appendChild(labelCell);
+      
+        renderCols.forEach(col => {
+          const td = document.createElement('td');
+          td.textContent = cellDisplay(col, r);
+          tr.appendChild(td);
+        });
+      
+        tbody.appendChild(tr);
       });
+    
+      // Spacer between groups, but based on groupsToRender length
+      if (gi < groupsToRender.length - 1) {
+        const sp = document.createElement('tr');
+        sp.className = 'spacer';
+        const sc = document.createElement('td');
+        sc.colSpan = 1 + renderCols.length;
+        sp.appendChild(sc);
+        tbody.appendChild(sp);
+      }
+    });
 
-      grid.appendChild(thead);
-      grid.appendChild(tbody);
+    grid.appendChild(thead);
+    grid.appendChild(tbody);
+
     };
 
     renderGrid();
