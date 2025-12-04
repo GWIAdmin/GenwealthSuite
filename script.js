@@ -293,7 +293,9 @@ async function load1040Mappings() {
     FORM1040_IDS.forEach(id => {
       const cell = map[id];
       if (!cell) {
-        console.warn(`[1040Map] No cell mapping for id="${id}"`);
+        setTimeout(() => {
+          console.warn(`[1040Map] No cell mapping for id="${id}"`);
+        }, 10000);
         return;
       }
       mappings.push({ id, type: 'write', cell });
@@ -307,17 +309,17 @@ async function load1040Mappings() {
   }
 }
   
-window.addEventListener('DOMContentLoaded', async () => {
-    // 1) Build mappingsTotal from live Excel labels
-    await load1040Mappings();
+window.addEventListener('DOMContentLoaded', () => {
+  // Fire and forget; mapping can arrive later.
+  load1040Mappings().catch(err => {
+    console.error('Failed to load 1040 mappings', err);
+  });
 
-    // 2) Existing init work
-    initCollapsibles();
-    initUI();
-
-    const rcField = ensureGlobalRCField();
-    // Append it to the document, for example, to the body or a specific container:
-    document.body.appendChild(rcField);
+  // Run the rest of your UI immediately
+  initCollapsibles();
+  initUI();
+  const rcField = ensureGlobalRCField();
+  document.body.appendChild(rcField);
 
   const userPrefersDark = localStorage.getItem('preferred-theme') === 'dark';
   const darkToggleEl = document.getElementById('darkModeToggle');
@@ -326,31 +328,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.body.classList.add('dark-mode');
   }
 
-    // ─── NOW wire up your live‑update mapping ───
-    (Array.isArray(window.mappings) ? window.mappings : [])
-      .filter(m => m.type === 'write')
-      .forEach(({ id }) => {
-        const el = document.getElementById(id);
-        if (el) {
-          // for text inputs use `input`, for selects use `change`
-          const evt = el.tagName === 'SELECT' ? 'change' : 'input';
-        //   el.addEventListener(evt, debounce(fetchSheetData));
-        }
-      });
-
-    // Initialize Child Tax Credit calculation system
-    initializeChildTaxCreditSystem();
-
-    // kick‐off one initial recalculation now that data is in place
-    updateAllBusinessOwnerResCom(); // fill in each business’s OwnerComp from W‑2s
-    updateAggregateResComp();       // sum into the global RC field
-    recalculateTotals();            // re‑run your full totals (incl. state & employer FICA)
-
-    // Initialize multi-state UI (extra state selectors + cards)
-    initMultiStateUI();
-    // Make sure cards reflect any default state selection
-    renderStateRuns();
-  });
+  initializeChildTaxCreditSystem();
+  updateAllBusinessOwnerResCom();
+  updateAggregateResComp();
+  recalculateTotals();
+  initMultiStateUI();
+  renderStateRuns();
+});
 
 window.getBrackets        = getBrackets;
 window.calculateStateTax  = calculateStateTax;
