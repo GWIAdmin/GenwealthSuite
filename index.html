@@ -36,36 +36,46 @@
     </div>
   </div>
   
-  <nav class="navbar">
+<nav class="navbar">
+  
+  <!-- LEFT SIDE (empty spacer or add buttons later) -->
+  <div class="navbar-left"></div>
 
-  <img src="Assets\genwealth_logo.png" alt="Genwealth 360 Logo" class="logo">
+  <!-- CENTER: LOGO ALWAYS CENTERED -->
+  <div class="navbar-center">
+    <img src="Assets/genwealth_logo.png" alt="Genwealth 360 Logo" class="logo">
+  </div>
 
-    <div class="dark-mode-toggle">
-      <input type="checkbox" id="darkModeToggle" />
-      <label for="darkModeToggle" class="dark-mode-label">
-        <span class="toggle-ball"></span>
-      </label>
-    </div>
-
-    <div class="dropdown">
-      <button class="dropbtn"><i class="fas fa-bars"></i> Menu</button>
-      <div class="dropdown-content">
-        <a href="#personalInformation">Personal Information</a>
-        <a href="#income">Income</a>
-        <a href="#businesses">Business</a>
-        <a href="#adjustedGrossIncome">Adjusted Gross Income</a>
-        <a href="#Deductions">Deductions</a>
-        <a href="#taxAndCredits">Tax and Credits</a>
-        <a href="#payments">Payments</a>
-        <a href="#employerEmployeeTaxes">Employer and Employee Taxes</a>
-        <a href="#stateTaxableIncome">State Taxable Income</a>
-        <a href="#totalTaxSection">Total Tax</a>
-        <a href="#gw-restructure">Restructure</a>
-        <a href="#adjustment-summary">Strategic Adjustment Summary</a>
-        <a href="#submitButton">Submit</a>
+  <!-- RIGHT SIDE: DARK MODE + MENU -->
+  <div class="navbar-right">
+      <div class="dark-mode-toggle">
+          <input type="checkbox" id="darkModeToggle" />
+          <label for="darkModeToggle" class="dark-mode-label">
+            <span class="toggle-ball"></span>
+          </label>
       </div>
-    </div>
-  </nav>
+
+      <div class="dropdown">
+        <button class="dropbtn"><i class="fas fa-bars"></i> Menu</button>
+        <div class="dropdown-content">
+          <a href="#personalInformation">Personal Information</a>
+          <a href="#income">Income</a>
+          <a href="#businesses">Business</a>
+          <a href="#adjustedGrossIncome">Adjusted Gross Income</a>
+          <a href="#Deductions">Deductions</a>
+          <a href="#taxAndCredits">Tax and Credits</a>
+          <a href="#payments">Payments</a>
+          <a href="#employerEmployeeTaxes">Employer and Employee Taxes</a>
+          <a href="#stateTaxableIncome">State Taxable Income</a>
+          <a href="#totalTaxSection">Total Tax</a>
+          <a href="#gw-restructure">Restructure</a>
+          <a href="#adjustment-summary">Strategic Adjustment Summary</a>
+          <a href="#submitButton">Submit</a>
+        </div>
+      </div>
+  </div>
+
+</nav>
  
   <div class="container">
     <h1>Genwealth 1040 Input Form</h1>

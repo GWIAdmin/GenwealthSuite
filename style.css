@@ -91,14 +91,52 @@ h2:hover, h3:hover { background-color: #bbabfc; cursor: pointer; border-radius: 
    3) LAYOUT / NAV / CONTAINERS
    ============================= */
 .navbar {
-  position: fixed; top: 0; left: 0; width: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
   background-color: var(--bg-light);
   z-index: 1000;
-  display: flex; justify-content: flex-end;
+
+  display: flex;
+  align-items: center;
   padding: 5px 20px;
 }
 
-.logo { padding: 0; margin-right: 535px; width: 200px; display: block; }
+/* Left and right get equal flex so center is geometric center */
+.navbar-left,
+.navbar-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.navbar-left {
+  justify-content: flex-start;   /* currently empty, but ready if you add items */
+}
+
+.navbar-right {
+  justify-content: flex-end;     /* keeps toggle + Menu on the far right */
+}
+
+.navbar-right .dark-mode-toggle {
+    margin-right: 10px;           /* visually matches spacing of Menu */
+    display: flex;
+    align-items: center;          /* vertical alignment fix */
+}
+
+/* Center column just wraps the logo, no extra flex growth */
+.navbar-center {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+}
+
+/* Logo stays centered within navbar-center */
+.logo {
+  width: 200px;
+  margin: 0;
+}
 
 .dropdown { position: relative; display: inline-block; }
 .dropbtn {
@@ -387,12 +425,12 @@ body.dark-mode .res-comp-input { background-color: var(--input-dark); color: var
 body.dark-mode .res-comp-btn { background-color: #552583; color: var(--h3-dark); }
 body.dark-mode .res-comp-btn:hover { background-color: var(--accent); color: #552583; }
 
-.dark-mode-toggle { position: relative; width: 60px; height: 25px; }
+.dark-mode-toggle { position: relative; width: 75px; height: 25px; }
 .dark-mode-toggle input[type="checkbox"] { display: none; }
 .dark-mode-label {
-  background-color: #552583; border-radius: 25px; top: 8px; right: 30px;
-  width: 130%; height: 129%; display: block; cursor: pointer; position: relative;
-  transition: background-color .3s ease;
+  background-color: #552583; border-radius: 25px; top: 4px; right: 0px;
+  width: 130%; height: 128%; display: block; cursor: pointer; position: relative;
+  transition: background-color 0.5s ease;
 }
 .toggle-ball { position: absolute; top: 2px; left: 2px; width: 28px; height: 28px; background-color: #fff; border-radius: 50%; transition: transform .5s ease, background-color .5s ease; }
 .dark-mode-toggle input[type="checkbox"]:checked + .dark-mode-label { background-color: var(--accent); }
