@@ -903,7 +903,7 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
 // ================== Excel Preview (modal) ==================
 (function () {
   const RUNS = []; // volatile, dies on refresh
-  const FORM_OPTIONS = ['1040', '1120', '1120-PC', '1065', '1120-S'];
+  const FORM_OPTIONS = ['1040', '1120', '1065', '1120-S'];
   const DEFAULT_FORM = '1040';
   const previewColumnState = {
     splits: {}, // groupKey -> count of visible columns under that header
@@ -1364,12 +1364,30 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
           }
         });
       });
-
       // NEW: inject business / Schedule C / Schedule E rows into preview
       addBusinessPreviewValues(values);
 
       // Existing: inject per-state preview rows
       addStatePreviewValues(values);
+
+      // Per-run C-Corp flag, based on the classification at *this* submit/preview
+      let hasCCorpForThisRun = false;
+      try {
+        if (typeof classifyBusinessesForExport === 'function') {
+          const classified = classifyBusinessesForExport();
+          const ents = classified?.entities || [];
+          hasCCorpForThisRun = ents.some(e =>
+            e &&
+            e.type === 'C-Corp' &&
+            (
+              (Number(e.income)   || 0) !== 0 ||
+              (Number(e.expenses) || 0) !== 0
+            )
+          );
+        }
+      } catch (err) {
+        console.warn('[Preview] hasCCorpForThisRun detection failed:', err);
+      }
 
       const meta = {
         analysisType: normalizeType(analysisType),
@@ -1377,10 +1395,22 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
         column: server?.column || '',
         worksheet: server?.worksheet || '',
         filePath: server?.filePath || '',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        hasCCorp: hasCCorpForThisRun
       };
 
       RUNS.push({ meta, values }); // memory only
+
+      // If the preview modal is already open, refresh it in place
+      try {
+        const modal = document.getElementById('gwExcelPreview');
+        if (modal && !modal.classList.contains('hidden')) {
+          openPreview();
+        }
+      } catch (err) {
+        console.warn('[Preview] auto-refresh failed:', err);
+      }
+
     } catch (e) {
       console.warn('[Preview] persist failed:', e);
     }
@@ -1427,6 +1457,10 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
 
     const runs = RUNS;            // <-- memory only
     grid.innerHTML = '';
+
+    // Reset layout so each open reflects latest runs and entity types
+    previewColumnState.splits = {};
+    previewColumnState.forms  = {};
 
     if (!runs.length) {
       empty.classList.remove('hidden');
@@ -1480,19 +1514,67 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
       return map;
     })();
 
+    const previewBusinessTypeLookup = (() => {
+      const map = {};
+      try {
+        const classified = typeof classifyBusinessesForExport === 'function'
+          ? classifyBusinessesForExport()
+          : null;
+        if (classified && Array.isArray(classified.entities)) {
+          const entities = classified.entities;
+          const maxSlots = 10;
+
+          // Slot order is the same one used in addBusinessPreviewValues
+          entities.slice(0, maxSlots).forEach((biz, idx) => {
+            if (!biz || !biz.type) return;
+            const slot = idx + 1;
+            map[`preview_business${slot}Income`]   = biz.type;
+            map[`preview_business${slot}Expenses`] = biz.type;
+          });
+        }
+      } catch (err) {
+        console.warn('[Preview] previewBusinessTypeLookup failed:', err);
+      }
+      return map;
+    })();
+
+    function getRowEntityType(rowId) {
+      return businessTypeLookup[rowId] || previewBusinessTypeLookup[rowId] || null;
+    }
+
+    // Per-run C-Corp flag now comes directly from the saved meta
+    function hasCCorpInRun(run) {
+      return !!(run && run.meta && run.meta.hasCCorp);
+    }
+
     const FORM_TO_ENTITY = {
-      '1120': 'C-Corp',
-      '1120-PC': 'C-Corp',
-      '1065': 'Partnership',
+      '1120':   'C-Corp',
+      '1065':   'Partnership',
       '1120-S': 'S-Corp'
     };
 
+    // For entity forms we ONLY always show Total Federal Tax;
+    // the "Total Tax (difference)" summary stays 1040-only.
+    const ALWAYS_SHOW_ALL_FORMS = new Set(['totalFederalTax']);
+
     const shouldShowRowForForm = (rowId, form) => {
+      // 1040 always shows everything
       if (!form || form === '1040') return true;
-      if (!Object.keys(businessTypeLookup).length) return true;
+
+      // Certain summary rows (bottom-of-page tax) always show
+      if (ALWAYS_SHOW_ALL_FORMS.has(rowId)) return true;
+
       const target = FORM_TO_ENTITY[form];
-      if (!target) return true;
-      const rowType = businessTypeLookup[rowId];
+      if (!target) {
+        // Non-entity forms (if any) behave like 1040 for now
+        return true;
+      }
+
+      // Look up entity type for this row (original ids + preview_ ids)
+      const rowType = getRowEntityType(rowId);
+
+      // For entity forms, only show rows that we *know* belong to that entity.
+      // Everything else is hidden to keep 1120/1065/1120-S columns "mostly empty."
       return !!rowType && rowType === target;
     };
 
@@ -1505,11 +1587,15 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
       return `${base}|${year}|${ws}|${fp}`;
     };
 
-    const defaultFormForRun = () => hasCCorp ? '1120-PC' : DEFAULT_FORM;
+    // Always default forms to 1040; we will add 1120 only where needed
+    const defaultFormForRun = () => DEFAULT_FORM;
 
-    const getSplitCount = (groupKey) => {
+    const getSplitCount = (groupKey, run) => {
       const n = previewColumnState.splits[groupKey];
-      return Math.max(1, Number.isFinite(n) ? n : 1);
+      if (Number.isFinite(n)) return Math.max(1, n);
+
+      // Auto-split only this group if its run has C-Corp activity
+      return hasCCorpInRun(run) ? 2 : 1;
     };
 
     const pruneFormSelectionsFor = (groupKey, keepCount) => {
@@ -1528,23 +1614,74 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
       pruneFormSelectionsFor(groupKey, clamped);
     };
 
-    const ensureFormSelection = (columnId) => {
+    const ensureFormSelection = (columnId, run, slotIndex) => {
       if (!previewColumnState.forms[columnId]) {
-        previewColumnState.forms[columnId] = defaultFormForRun();
+        const autoSplit = hasCCorpInRun(run);
+
+        // Slot 0 stays 1040. If we auto-split this header because of C-Corp,
+        // the second slot (index 1) defaults to 1120. Everything else
+        // defaults to 1040 until the user manually changes it.
+        if (autoSplit && slotIndex === 1) {
+          previewColumnState.forms[columnId] = '1120';
+        } else {
+          previewColumnState.forms[columnId] = DEFAULT_FORM; // 1040
+        }
       }
       return previewColumnState.forms[columnId];
     };
+
+        function computeTotalCcorpTaxDueForPreview() {
+      let total = 0;
+      const numBusinesses = parseInt(
+        document.getElementById('numOfBusinesses')?.value || '0',
+        10
+      ) || 0;
+
+      const overrides =
+        (typeof apportionmentOverrides !== 'undefined')
+          ? apportionmentOverrides
+          : null;
+
+      for (let i = 1; i <= numBusinesses; i++) {
+        const typeEl = document.getElementById(`business${i}Type`);
+        if (!typeEl || typeEl.value !== 'C-Corp') continue;
+
+        let base = 0;
+        try {
+          if (typeof getBaseCcorpTaxDue === 'function') {
+            base = getBaseCcorpTaxDue(i);
+          }
+        } catch (e) {
+          console.warn('[Preview] getBaseCcorpTaxDue failed for biz', i, e);
+        }
+
+        let value = base;
+        if (overrides) {
+          const key = `ccorpTaxDue-biz${i}`;
+          if (Object.prototype.hasOwnProperty.call(overrides, key)) {
+            const overrideVal = Number(overrides[key]);
+            if (!Number.isNaN(overrideVal)) {
+              value = overrideVal;
+            }
+          }
+        }
+
+        total += Number(value) || 0;
+      }
+
+      return total;
+    }
 
     const renderGrid = () => {
       grid.innerHTML = '';
 
       const columnGroups = contextCol.map((run, idx) => {
         const groupKey = buildGroupKey(run, idx);
-        const splitCount = getSplitCount(groupKey);
+        const splitCount = getSplitCount(groupKey, run);
         const columns = [];
         for (let i = 0; i < splitCount; i++) {
           const columnId = `${groupKey}::${i}`;
-          const form = ensureFormSelection(columnId);
+          const form = ensureFormSelection(columnId, run, i);
           columns.push({ columnId, form, run });
         }
         return { run, groupKey, columns };
@@ -1553,8 +1690,25 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
       const renderCols = columnGroups.flatMap(g => g.columns);
 
       const cellDisplay = (col, rowDef) => {
-        const currentForm = col.form || previewColumnState.forms[col.columnId] || defaultFormForRun();
+        const currentForm =
+          col.form ||
+          previewColumnState.forms[col.columnId] ||
+          defaultFormForRun();
+
         if (!shouldShowRowForForm(rowDef.id, currentForm)) return '';
+
+        // Special case: in 1120 columns, "Total Federal Tax"
+        // shows the client's aggregate C-Corp tax due (from your C-Corp logic).
+        if (
+          rowDef.id === 'totalFederalTax' &&
+          (currentForm === '1120')
+        ) {
+          const val = computeTotalCcorpTaxDueForPreview();
+          if (val === null || val === undefined) return '';
+          return displayFor(rowDef.label, val);
+        }
+
+        // Default: show the run's stored display value
         const entry = col.run.values?.[rowDef.id];
         if (entry && entry.display != null) return entry.display;
         return '';

@@ -1159,16 +1159,23 @@ body.dark-mode .adj-row .del-btn:hover { background: #ff0000; }
 /* Dialog */
 .gw-modal__dialog {
   position: relative;
-  margin: 5vh auto;
+  margin: 1.5vh auto;
   max-width: 2100px;
   width: min(100% - 40px, 2100px);
+
+  /* key change: let content drive the height */
+  height: auto;
+  height: 95vh;       /* still prevents it from going off-screen */
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 15px;
+
   background: #ffffff;
   border: 4px solid var(--gw-purple);
   border-radius: 30px;
   box-shadow:
     0 14px 28px rgba(0, 0, 0, 0.18),
     0 10px 10px rgba(0, 0, 0, 0.12);
-  overflow: hidden;
   transform: translateY(0);
 }
 
@@ -1178,7 +1185,7 @@ body.dark-mode .adj-row .del-btn:hover { background: #ff0000; }
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 18px;
+  padding: 6px 18px;
 
   background: linear-gradient(
     135deg,
@@ -1254,7 +1261,7 @@ body.dark-mode .adj-row .del-btn:hover { background: #ff0000; }
    --------------------------------------------------------- */
 
 .gw-gridwrap {
-  max-height: 70vh;
+  max-height: 82vh;
   overflow: auto;
   border: 2px solid var(--gw-purple);
   border-radius: 14px;
