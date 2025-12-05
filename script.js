@@ -968,6 +968,72 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
         { id: 'longTermCapitalGains',      label: 'Long-Term Capital Gain (Loss)' },
         { id: 'shortTermCapitalGains',     label: 'Short-Term Capital Gain (Loss)' },
 
+        // ---- Business entities (S-Corp / Partnership / C-Corp) ----
+        { id: 'preview_business1Income',   label: 'Business 1 Income -' },
+        { id: 'preview_business1Expenses', label: 'Business 1 Expenses -' },
+        { id: 'preview_business2Income',   label: 'Business 2 Income -' },
+        { id: 'preview_business2Expenses', label: 'Business 2 Expenses -' },
+        { id: 'preview_business3Income',   label: 'Business 3 Income -' },
+        { id: 'preview_business3Expenses', label: 'Business 3 Expenses -' },
+        { id: 'preview_business4Income',   label: 'Business 4 Income -' },
+        { id: 'preview_business4Expenses', label: 'Business 4 Expenses -' },
+        { id: 'preview_business5Income',   label: 'Business 5 Income -' },
+        { id: 'preview_business5Expenses', label: 'Business 5 Expenses -' },
+        { id: 'preview_business6Income',   label: 'Business 6 Income -' },
+        { id: 'preview_business6Expenses', label: 'Business 6 Expenses -' },
+        { id: 'preview_business7Income',   label: 'Business 7 Income -' },
+        { id: 'preview_business7Expenses', label: 'Business 7 Expenses -' },
+        { id: 'preview_business8Income',   label: 'Business 8 Income -' },
+        { id: 'preview_business8Expenses', label: 'Business 8 Expenses -' },
+        { id: 'preview_business9Income',   label: 'Business 9 Income -' },
+        { id: 'preview_business9Expenses', label: 'Business 9 Expenses -' },
+        { id: 'preview_business10Income',  label: 'Business 10 Income -' },
+        { id: 'preview_business10Expenses',label: 'Business 10 Expenses -' },
+
+        // ---- Schedule C slots ----
+        { id: 'preview_schedC1Income',   label: 'Schedule C-1 Income -' },
+        { id: 'preview_schedC1Expenses', label: 'Schedule C-1 Expenses -' },
+        { id: 'preview_schedC2Income',   label: 'Schedule C-2 Income -' },
+        { id: 'preview_schedC2Expenses', label: 'Schedule C-2 Expenses -' },
+        { id: 'preview_schedC3Income',   label: 'Schedule C-3 Income -' },
+        { id: 'preview_schedC3Expenses', label: 'Schedule C-3 Expenses -' },
+        { id: 'preview_schedC4Income',   label: 'Schedule C-4 Income -' },
+        { id: 'preview_schedC4Expenses', label: 'Schedule C-4 Expenses -' },
+        { id: 'preview_schedC5Income',   label: 'Schedule C-5 Income -' },
+        { id: 'preview_schedC5Expenses', label: 'Schedule C-5 Expenses -' },
+        { id: 'preview_schedC6Income',   label: 'Schedule C-6 Income -' },
+        { id: 'preview_schedC6Expenses', label: 'Schedule C-6 Expenses -' },
+        { id: 'preview_schedC7Income',   label: 'Schedule C-7 Income -' },
+        { id: 'preview_schedC7Expenses', label: 'Schedule C-7 Expenses -' },
+        { id: 'preview_schedC8Income',   label: 'Schedule C-8 Income -' },
+        { id: 'preview_schedC8Expenses', label: 'Schedule C-8 Expenses -' },
+        { id: 'preview_schedC9Income',   label: 'Schedule C-9 Income -' },
+        { id: 'preview_schedC9Expenses', label: 'Schedule C-9 Expenses -' },
+        { id: 'preview_schedC10Income',  label: 'Schedule C-10 Income -' },
+        { id: 'preview_schedC10Expenses',label: 'Schedule C-10 Expenses -' },
+
+        // ---- Schedule E slots ----
+        { id: 'preview_schedE1Income',   label: 'Schedule E-1 Income -' },
+        { id: 'preview_schedE1Expenses', label: 'Schedule E-1 Expenses -' },
+        { id: 'preview_schedE2Income',   label: 'Schedule E-2 Income -' },
+        { id: 'preview_schedE2Expenses', label: 'Schedule E-2 Expenses -' },
+        { id: 'preview_schedE3Income',   label: 'Schedule E-3 Income -' },
+        { id: 'preview_schedE3Expenses', label: 'Schedule E-3 Expenses -' },
+        { id: 'preview_schedE4Income',   label: 'Schedule E-4 Income -' },
+        { id: 'preview_schedE4Expenses', label: 'Schedule E-4 Expenses -' },
+        { id: 'preview_schedE5Income',   label: 'Schedule E-5 Income -' },
+        { id: 'preview_schedE5Expenses', label: 'Schedule E-5 Expenses -' },
+        { id: 'preview_schedE6Income',   label: 'Schedule E-6 Income -' },
+        { id: 'preview_schedE6Expenses', label: 'Schedule E-6 Expenses -' },
+        { id: 'preview_schedE7Income',   label: 'Schedule E-7 Income -' },
+        { id: 'preview_schedE7Expenses', label: 'Schedule E-7 Expenses -' },
+        { id: 'preview_schedE8Income',   label: 'Schedule E-8 Income -' },
+        { id: 'preview_schedE8Expenses', label: 'Schedule E-8 Expenses -' },
+        { id: 'preview_schedE9Income',   label: 'Schedule E-9 Income -' },
+        { id: 'preview_schedE9Expenses', label: 'Schedule E-9 Expenses -' },
+        { id: 'preview_schedE10Income',  label: 'Schedule E-10 Income -' },
+        { id: 'preview_schedE10Expenses',label: 'Schedule E-10 Expenses -' },
+
         // Schedule D special-rate items
         { id: 'unrecapturedSection1250Gain', label: 'Unrecaptured §1250 Gain (25% Rate)' },
         { id: 'collectiblesGain',           label: '28% Rate Gain (Collectibles / §1202)' },
@@ -1178,6 +1244,86 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
     });
   }
 
+  // Inject Business / Schedule C / Schedule E rows into the preview
+  function addBusinessPreviewValues(values) {
+    if (!values) return;
+    if (typeof classifyBusinessesForExport !== 'function') return;
+
+    let entities = [];
+    let schedC = [];
+    let scheduleE = [];
+
+    try {
+      const result = classifyBusinessesForExport();
+      entities  = result.entities  || [];
+      schedC    = result.schedC    || [];
+      scheduleE = result.scheduleE || [];
+    } catch (e) {
+      console.warn('[Preview] classifyBusinessesForExport failed:', e);
+      return;
+    }
+
+    function setRow(id, label, amount) {
+      if (amount == null) return;
+      const numeric = Number(amount);
+      if (Number.isNaN(numeric)) return;
+
+      values[id] = {
+        label,
+        display: displayFor(label, numeric),
+        raw: numeric,
+        cell: null
+      };
+    }
+
+    const maxSlots = 10;
+
+    // Business entities: S-Corp / Partnership / C-Corp
+    entities.slice(0, maxSlots).forEach((biz, idx) => {
+      const slot = idx + 1;
+      setRow(
+        `preview_business${slot}Income`,
+        `Business ${slot} Income - ${biz.name}`,
+        biz.income
+      );
+      setRow(
+        `preview_business${slot}Expenses`,
+        `Business ${slot} Expenses - ${biz.name}`,
+        biz.expenses
+      );
+    });
+
+    // Schedule C businesses
+    schedC.slice(0, maxSlots).forEach((biz, idx) => {
+      const slot = idx + 1;
+      setRow(
+        `preview_schedC${slot}Income`,
+        `Schedule C-${slot} Income - ${biz.name}`,
+        biz.income
+      );
+      setRow(
+        `preview_schedC${slot}Expenses`,
+        `Schedule C-${slot} Expenses - ${biz.name}`,
+        biz.expenses
+      );
+    });
+
+    // Schedule E properties
+    scheduleE.slice(0, maxSlots).forEach((se, idx) => {
+      const slot = idx + 1;
+      setRow(
+        `preview_schedE${slot}Income`,
+        `Schedule E-${slot} Income - ${se.name}`,
+        se.income
+      );
+      setRow(
+        `preview_schedE${slot}Expenses`,
+        `Schedule E-${slot} Expenses - ${se.name}`,
+        se.expenses
+      );
+    });
+  }
+
   /** Persist a run exactly as sent */
   window.persistExcelRun = function persistExcelRun({ writes, analysisType, year, server }) {
     try {
@@ -1219,7 +1365,10 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
         });
       });
 
-      // NEW: inject per-state preview rows from stateRuns
+      // NEW: inject business / Schedule C / Schedule E rows into preview
+      addBusinessPreviewValues(values);
+
+      // Existing: inject per-state preview rows
       addStatePreviewValues(values);
 
       const meta = {
@@ -1571,10 +1720,21 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
         if (!hasValue) return;
       
         const tr = document.createElement('tr');
-      
+
         const labelCell = document.createElement('td');
         labelCell.className = 'col-label';
-        labelCell.textContent = r.label;
+
+        // Prefer dynamic label from values (e.g., "Business 1 Income - ACME LLC")
+        let dynamicLabel = '';
+        if (renderCols.length > 0) {
+          const firstRun = renderCols[0].run;
+          const entry = firstRun && firstRun.values && firstRun.values[r.id];
+          if (entry && entry.label) {
+            dynamicLabel = entry.label;
+          }
+        }
+      
+        labelCell.textContent = dynamicLabel || r.label;  // fallback to static label
         tr.appendChild(labelCell);
       
         renderCols.forEach(col => {
