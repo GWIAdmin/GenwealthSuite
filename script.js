@@ -1179,9 +1179,9 @@ document.getElementById('taxForm').addEventListener('submit', async function (e)
     },
 
     {
-      title: 'Summary',
+      title: 'Total (Federal + State)',
       rows: [
-        { id: 'totalTax', label: 'Total Estimated Difference in Federal & State Taxes Saved' }
+        { id: 'totalTax', label: 'Total Tax' }
       ]
     }
   ];
